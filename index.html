@@ -589,24 +589,25 @@ const Net = {
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
         
-        this.peer = new Peer(peerConfig); // Aplicando STUN
+        this.peer = new Peer(peerConfig);
         
         this.peer.on('open', id => {
-            document.getElementById('lobby-room-id').innerText = id;
+            document.getElementById('lobby-room-id').innerText = "✅ Host pronto! ID: " + id + " (copie e envie para o amigo)";
             this.updateLobbyUI();
+            console.log("Host aberto com ID:", id);
         });
         
         this.peer.on('connection', c => {
-            if (this.conn) { c.close(); return; } // Apenas 1 cliente
+            if (this.conn) { c.close(); return; }
             this.conn = c;
             this.setupConn();
             this.updateLobbyUI();
+            console.log("Cliente conectado com sucesso!");
         });
 
-        // 4️⃣ peer.on('error') real
         this.peer.on('error', err => {
             console.error("PeerJS Error (Host):", err);
-            document.getElementById('lobby-room-id').innerText = "Erro na rede. Verifique conexão.";
+            document.getElementById('lobby-room-id').innerText = "Erro no host: " + (err.message || "Verifique conexão");
         });
     },
 
@@ -616,33 +617,32 @@ const Net = {
         this.isOnline = true;
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
-        document.getElementById('lobby-room-id').innerText = "Conectando...";
-        
-        this.peer = new Peer(peerConfig); // Aplicando STUN
-        
+        document.getElementById('lobby-room-id').innerText = "Tentando conectar ao host... (pode demorar até 30s)";
+
+        this.peer = new Peer(peerConfig);
+
         this.peer.on('open', id => {
             this.conn = this.peer.connect(targetId, { reliable: true });
-            
-            // 3️⃣ Timeout de conexão (adeus conectando infinito)
+
+            // Timeout aumentado para 30 segundos (GitHub Pages precisa de mais tempo)
             const connTimeout = setTimeout(() => {
                 if (!this.conn || !this.conn.open) {
-                    document.getElementById('lobby-room-id').innerText = "Tempo esgotado. Host não encontrado.";
+                    document.getElementById('lobby-room-id').innerText = "Tempo esgotado. Host não encontrado. Tente novamente ou verifique se o host está aberto.";
                     if (this.conn) this.conn.close();
                 }
-            }, 10000); // 10 segundos
-            
+            }, 30000);
+
             this.conn.on('open', () => {
                 clearTimeout(connTimeout);
-                document.getElementById('lobby-room-id').innerText = "Conectado à sala: " + targetId;
+                document.getElementById('lobby-room-id').innerText = "✅ Conectado com sucesso!";
                 this.setupConn();
                 this.updateLobbyUI();
                 this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
             });
 
-            // 5️⃣ conn.on('error') real
             this.conn.on('error', err => {
                 console.error("Connection Error:", err);
-                document.getElementById('lobby-room-id').innerText = "Erro ao conectar!";
+                document.getElementById('lobby-room-id').innerText = "Erro na conexão: " + err.message;
             });
         });
 
@@ -2982,4 +2982,5 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
