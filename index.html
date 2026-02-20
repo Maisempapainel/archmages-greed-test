@@ -335,7 +335,8 @@ let isHost = true;
 let isMultiplayer = false;
 
 function initMultiplayer() {
-    peer = new Peer(); // Conecta ao servidor público do PeerJS para gerar o ID
+    peer = new Peer(); 
+    
     peer.on('open', (id) => {
         document.getElementById('my-id').innerText = id;
     });
@@ -345,33 +346,57 @@ function initMultiplayer() {
         conn = connection;
         isHost = true;
         isMultiplayer = true;
-        document.getElementById('multiplayer-status').innerText = "Amigo conectou! Começando...";
+        document.getElementById('multiplayer-status').innerText = "Amigo conectando...";
+        document.getElementById('multiplayer-status').style.color = "yellow";
         setupConnection();
-        setTimeout(() => startGameSingle(), 1500); // Host inicia o jogo automaticamente
+    });
+
+    peer.on('error', (err) => {
+        document.getElementById('multiplayer-status').innerText = "Erro P2P: " + err.type;
+        document.getElementById('multiplayer-status').style.color = "red";
     });
 }
 
 function joinGame() {
-    const friendId = document.getElementById('friend-id').value;
+    // O .trim() previne que espaços em branco acidentais quebrem a conexão
+    const friendId = document.getElementById('friend-id').value.trim();
     if(!friendId) return;
+    
     conn = peer.connect(friendId);
     isHost = false;
     isMultiplayer = true;
     document.getElementById('multiplayer-status').innerText = "A conectar...";
+    document.getElementById('multiplayer-status').style.color = "yellow";
     setupConnection();
 }
 
 function setupConnection() {
     conn.on('open', () => {
         console.log("Conectado P2P estabelecido!");
-        if(!isHost) {
-            document.getElementById('multiplayer-status').innerText = "Conectado à sala! Começando...";
-            setTimeout(() => startGameSingle(), 1500); // Guest inicia o jogo
+        
+        if (isHost) {
+            document.getElementById('multiplayer-status').innerText = "Conectado! Começando...";
+            document.getElementById('multiplayer-status').style.color = "#00ff00";
+            
+            // Host dita as regras: Diz pro Guest começar, e depois ele mesmo começa
+            setTimeout(() => {
+                conn.send({ type: 'start_game' });
+                startGameSingle();
+            }, 1000);
+        } else {
+            document.getElementById('multiplayer-status').innerText = "Conectado! Aguardando Host...";
+            document.getElementById('multiplayer-status').style.color = "#00ff00";
         }
     });
 
     conn.on('data', (data) => {
         if (!game) return;
+
+        // O Guest só começa o jogo quando o Host mandar (Garante que os dois começam juntos)
+        if (data.type === 'start_game' && !isHost) {
+            document.getElementById('multiplayer-status').innerText = "Partida iniciada!";
+            startGameSingle();
+        }
 
         // Receber posição do jogador parceiro
         if (data.type === 'player_update') {
@@ -393,15 +418,23 @@ function setupConnection() {
 
         // Guest recebe estado dos inimigos e da wave do Host
         if (!isHost && data.type === 'host_state') {
-            game.wave = data.wave;
-            syncEnemies(data.enemies);
+            // Só sincroniza os inimigos se o Guest já estiver com o jogo rodando na tela
+            if (game.state === 'PLAYING') {
+                game.wave = data.wave;
+                syncEnemies(data.enemies);
+            }
         }
     });
 }
 
 // O Guest apenas renderiza os inimigos onde o Host mandou
 function syncEnemies(remoteEnemies) {
-    // Para simplificar, recriamos a lista visual dos inimigos baseado no que o Host mandou
+    // 1. Limpa os inimigos da tela do Guest devolvendo-os para a Pool corretamente
+    game.enemies.forEach(e => {
+        if (e.type !== 'boss' && e.type !== 'miniboss') ObjectPool.releaseEnemy(e);
+    });
+    
+    // 2. Posiciona os inimigos exatamente como o Host ordenou
     game.enemies = remoteEnemies.map(re => {
         let e = ObjectPool.getEnemy(re.x, re.y, re.eType);
         e.hp = re.hp;
@@ -411,7 +444,7 @@ function syncEnemies(remoteEnemies) {
         e.height = re.height;
         e.shieldActive = re.shieldActive;
         e.poisonActive = re.poisonActive;
-        e.type = re.eType; // 'boss', 'miniboss', 'triangulo' etc.
+        e.type = re.eType; 
         return e;
     });
 }
