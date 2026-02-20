@@ -564,10 +564,17 @@ const ObjectPool = {
  */
 // 1️⃣ e 2️⃣ Configuração do STUN confiável do Google
 const peerConfig = {
+    host: '0.peerjs.com',
+    secure: true,
+    port: 443,
     config: {
-        'iceServers': [
+        iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
+            { urls: 'stun:stun1.l.google.com:19302' },
+            // TURN gratuito e confiável (20 GB/mês grátis)
+            { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
         ]
     }
 };
@@ -592,22 +599,23 @@ const Net = {
         this.peer = new Peer(peerConfig);
         
         this.peer.on('open', id => {
-            document.getElementById('lobby-room-id').innerText = "✅ Host pronto! ID: " + id + " (copie e envie para o amigo)";
+            document.getElementById('lobby-room-id').innerText = "✅ Host aberto! ID: " + id + "\n(Copie e envie para o amigo)";
+            console.log("Host criado com sucesso - ID:", id);
             this.updateLobbyUI();
-            console.log("Host aberto com ID:", id);
         });
         
         this.peer.on('connection', c => {
             if (this.conn) { c.close(); return; }
             this.conn = c;
             this.setupConn();
+            document.getElementById('lobby-room-id').innerText = "✅ Cliente conectado!";
             this.updateLobbyUI();
             console.log("Cliente conectado com sucesso!");
         });
 
         this.peer.on('error', err => {
-            console.error("PeerJS Error (Host):", err);
-            document.getElementById('lobby-room-id').innerText = "Erro no host: " + (err.message || "Verifique conexão");
+            console.error("PeerJS Host Error:", err);
+            document.getElementById('lobby-room-id').innerText = "Erro no host: " + (err.message || "Verifique internet");
         });
     },
 
@@ -617,38 +625,39 @@ const Net = {
         this.isOnline = true;
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
-        document.getElementById('lobby-room-id').innerText = "Tentando conectar ao host... (pode demorar até 30s)";
+        document.getElementById('lobby-room-id').innerText = "🔄 Tentando conectar... (pode demorar até 45 segundos)";
 
         this.peer = new Peer(peerConfig);
 
         this.peer.on('open', id => {
+            console.log("Cliente Peer aberto, conectando ao host:", targetId);
             this.conn = this.peer.connect(targetId, { reliable: true });
 
-            // Timeout aumentado para 30 segundos (GitHub Pages precisa de mais tempo)
             const connTimeout = setTimeout(() => {
                 if (!this.conn || !this.conn.open) {
-                    document.getElementById('lobby-room-id').innerText = "Tempo esgotado. Host não encontrado. Tente novamente ou verifique se o host está aberto.";
+                    document.getElementById('lobby-room-id').innerText = "⛔ Tempo esgotado. Host não encontrado.\nVerifique se o host está aberto e tente novamente.";
                     if (this.conn) this.conn.close();
                 }
-            }, 30000);
+            }, 45000); // 45 segundos
 
             this.conn.on('open', () => {
                 clearTimeout(connTimeout);
                 document.getElementById('lobby-room-id').innerText = "✅ Conectado com sucesso!";
+                console.log("Conexão P2P estabelecida!");
                 this.setupConn();
                 this.updateLobbyUI();
                 this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
             });
 
             this.conn.on('error', err => {
-                console.error("Connection Error:", err);
-                document.getElementById('lobby-room-id').innerText = "Erro na conexão: " + err.message;
+                console.error("Connection Error (Client):", err);
+                document.getElementById('lobby-room-id').innerText = "Erro na conexão: " + (err.message || "Tente novamente");
             });
         });
 
         this.peer.on('error', err => {
-            console.error("PeerJS Error (Client):", err);
-            document.getElementById('lobby-room-id').innerText = "Host inválido ou rede bloqueada.";
+            console.error("PeerJS Client Error:", err);
+            document.getElementById('lobby-room-id').innerText = "Erro ao iniciar cliente: " + (err.message || "Rede bloqueada?");
         });
     },
 
@@ -2982,5 +2991,6 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
