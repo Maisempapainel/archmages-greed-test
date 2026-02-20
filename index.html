@@ -562,6 +562,16 @@ const ObjectPool = {
 /**
  * REDE & MULTIPLAYER (WebRTC / PeerJS)
  */
+// 1️⃣ e 2️⃣ Configuração do STUN confiável do Google
+const peerConfig = {
+    config: {
+        'iceServers': [
+            { urls: 'stun:stun.l.google.com:19302' },
+            { urls: 'stun:stun1.l.google.com:19302' }
+        ]
+    }
+};
+
 const Net = {
     isOnline: false,
     isHost: false,
@@ -574,58 +584,87 @@ const Net = {
     p1Ready: false, p2Ready: false,
 
     initHost() {
-        this.isHost = true; this.isOnline = true;
+        this.isHost = true;
+        this.isOnline = true;
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
         
-        this.peer = new Peer();
+        this.peer = new Peer(peerConfig); // Aplicando STUN
+        
         this.peer.on('open', id => {
             document.getElementById('lobby-room-id').innerText = id;
             this.updateLobbyUI();
         });
-
+        
         this.peer.on('connection', c => {
             if (this.conn) { c.close(); return; } // Apenas 1 cliente
             this.conn = c;
             this.setupConn();
             this.updateLobbyUI();
         });
+
+        // 4️⃣ peer.on('error') real
+        this.peer.on('error', err => {
+            console.error("PeerJS Error (Host):", err);
+            document.getElementById('lobby-room-id').innerText = "Erro na rede. Verifique conexão.";
+        });
     },
 
     initClient(targetId) {
         if (!targetId) return;
-        this.isHost = false; this.isOnline = true;
+        this.isHost = false;
+        this.isOnline = true;
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
         document.getElementById('lobby-room-id').innerText = "Conectando...";
         
-        this.peer = new Peer();
+        this.peer = new Peer(peerConfig); // Aplicando STUN
+        
         this.peer.on('open', id => {
-            this.conn = this.peer.connect(targetId);
+            this.conn = this.peer.connect(targetId, { reliable: true });
+            
+            // 3️⃣ Timeout de conexão (adeus conectando infinito)
+            const connTimeout = setTimeout(() => {
+                if (!this.conn || !this.conn.open) {
+                    document.getElementById('lobby-room-id').innerText = "Tempo esgotado. Host não encontrado.";
+                    if (this.conn) this.conn.close();
+                }
+            }, 10000); // 10 segundos
+            
             this.conn.on('open', () => {
+                clearTimeout(connTimeout);
                 document.getElementById('lobby-room-id').innerText = "Conectado à sala: " + targetId;
                 this.setupConn();
                 this.updateLobbyUI();
-                // Envia info do cliente
                 this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
             });
-            this.conn.on('error', err => alert("Erro ao conectar!"));
+
+            // 5️⃣ conn.on('error') real
+            this.conn.on('error', err => {
+                console.error("Connection Error:", err);
+                document.getElementById('lobby-room-id').innerText = "Erro ao conectar!";
+            });
+        });
+
+        this.peer.on('error', err => {
+            console.error("PeerJS Error (Client):", err);
+            document.getElementById('lobby-room-id').innerText = "Host inválido ou rede bloqueada.";
         });
     },
 
     setupConn() {
         this.conn.on('data', data => {
+            // 8️⃣ Descomente a linha abaixo caso queira debugar mensagens no console:
+            // console.log("P2P DATA:", data.type);
+            
             if (data.type === 'LOBBY') {
                 if (data.p1Char !== undefined) this.p1Char = data.p1Char;
                 if (data.p2Char !== undefined) this.p2Char = data.p2Char;
                 if (data.p1Ready !== undefined) this.p1Ready = data.p1Ready;
                 if (data.p2Ready !== undefined) this.p2Ready = data.p2Ready;
                 
-                if (data.start) {
-                    startGame(this.p1Char, this.p2Char);
-                } else {
-                    this.updateLobbyUI();
-                }
+                if (data.start) startGame(this.p1Char, this.p2Char);
+                else this.updateLobbyUI();
             }
             if (data.type === 'INPUT' && this.isHost) {
                 if (game) {
@@ -635,8 +674,11 @@ const Net = {
                     if(data.input.cmdTeleport) game.player2.activateTeleport();
                 }
             }
+            // 7️⃣ Proteção de STATE antes do game existir (game.player tem que estar vivo)
             if (data.type === 'STATE' && !this.isHost) {
-                if (game) game.syncState(data.state);
+                if (game && game.player && game.state === 'PLAYING') {
+                    game.syncState(data.state);
+                }
             }
             if (data.type === 'PICK_PERK') {
                 if (this.isHost && game) {
@@ -644,6 +686,7 @@ const Net = {
                 }
             }
         });
+        
         this.conn.on('close', () => {
             alert("Conexão perdida.");
             location.reload();
@@ -655,11 +698,9 @@ const Net = {
     },
 
     toggleReady() {
-        if (this.isHost) {
-            this.p1Ready = !this.p1Ready;
-        } else {
-            this.p2Ready = !this.p2Ready;
-        }
+        if (this.isHost) this.p1Ready = !this.p1Ready;
+        else this.p2Ready = !this.p2Ready;
+        
         this.send({ type: 'LOBBY', p1Char: this.p1Char, p2Char: this.p2Char, p1Ready: this.p1Ready, p2Ready: this.p2Ready });
         this.updateLobbyUI();
     },
@@ -1177,15 +1218,24 @@ class Game {
 
     // MULTIPLAYER SYNC
     serializeState() {
+        // 6️⃣ Proteção contra this.player.orb === null e player2.orb
+        let p1OrbX = (this.player && this.player.orb) ? this.player.orb.x : 0;
+        let p1OrbY = (this.player && this.player.orb) ? this.player.orb.y : 0;
+        let p2OrbX = (this.player2 && this.player2.orb) ? this.player2.orb.x : 0;
+        let p2OrbY = (this.player2 && this.player2.orb) ? this.player2.orb.y : 0;
+
         return {
             st: this.state,
             wv: this.wave,
             so: this.souls,
             tpz: this.showTeleportZonesUntil,
-            p1: { x: this.player.x, y: this.player.y, hp: this.player.hp, mx: this.player.maxHp, la: this.player.laserActive, fa: this.player.facing, ms: this.player.manaShieldReady, or: this.player.orb.x, oy: this.player.orb.y, iu: this.player.invulnUntil },
-            p2: this.player2 ? { x: this.player2.x, y: this.player2.y, hp: this.player2.hp, mx: this.player2.maxHp, la: this.player2.laserActive, fa: this.player2.facing, ms: this.player2.manaShieldReady, or: this.player2.orb.x, oy: this.player2.orb.y, iu: this.player2.invulnUntil } : null,
+            p1: { x: this.player.x, y: this.player.y, hp: this.player.hp, mx: this.player.maxHp, la: this.player.laserActive, fa: this.player.facing, ms: this.player.manaShieldReady, 
+            or: p1OrbX, oy: p1OrbY, iu: this.player.invulnUntil },
+            p2: this.player2 ?
+            { x: this.player2.x, y: this.player2.y, hp: this.player2.hp, mx: this.player2.maxHp, la: this.player2.laserActive, fa: this.player2.facing, ms: this.player2.manaShieldReady, or: p2OrbX, oy: p2OrbY, iu: this.player2.invulnUntil } : null,
             en: this.enemies.map(e => ({ x: e.x, y: e.y, hp: e.hp, mx: e.maxHp, t: e.type, s: e.shieldActive, po: e.poisonActive, w: e.width, h: e.height, lh: e.lastHitTime, isB: e.isBigBoss, aX: e.anchorX, cU: e.colorUntil })),
             bu: this.bullets.map(b => ({ x: b.x, y: b.y, c: b.color, r: b.radius, hi: b.history })),
+         
             pa: this.particles.map(p => ({ x: p.x, y: p.y, c: p.color, s: p.size })),
             ft: this.floatingTexts.map(f => ({ x: f.x, y: f.y, t: f.text, c: f.color, d: f.duration, st: f.spawnTime })),
             le: this.lightningEffects.map(l => ({ x: l.x, y: l.y, t: l.isThick, d: l.duration, st: l.spawnTime }))
