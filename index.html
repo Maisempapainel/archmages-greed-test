@@ -1700,6 +1700,9 @@ serializeState() {
         menu.classList.remove('hidden');
         
         const targetP = (!Net.isOnline || Net.isHost) ? this.player : this.player2;
+        const cpText = document.getElementById('choose-perk-text');
+        cpText.innerText = TEXTS[currentLang].choosePerk;
+        cpText.style.color = "#ccc";
 
         let secondsLeft = 20;
         const timerText = document.getElementById('timer-text');
@@ -1715,11 +1718,58 @@ serializeState() {
             const card = document.createElement('div');
             card.className = 'upgrade-card card-locked';
             
-            // (mesma lógica de escolha de perk do código antigo - mantida)
             let selectedUpgrade = null;
-            // ... (todo o bloco de escolha de rarity e perks especiais - igual ao original)
-            // Para não ficar gigante, assuma que você mantém a parte de escolha de selectedUpgrade exatamente igual ao original
 
+            if (!chosenUpgrades.includes('teleport') && !targetP.perks.teleport && Math.random() < 0.015) {
+                selectedUpgrade = UPGRADES_DB.legendary.find(u => u.id === 'teleport');
+            } else if (!chosenUpgrades.includes('phoenix') && !targetP.perks.phoenix && Math.random() < 0.02) {
+                selectedUpgrade = UPGRADES_DB.legendary.find(u => u.id === 'phoenix');
+            } else if (!chosenUpgrades.includes('homing') && !maxTierCheck(targetP, 'homing', 3)) {
+                let hc = targetP.perksCounts['homing'] || 0;
+                let hChance = hc === 0 ? 0.06 : (hc === 1 ? 0.04 : 0.02);
+                if (Math.random() < hChance) selectedUpgrade = UPGRADES_DB.uncommon.find(u => u.id === 'homing');
+            }
+
+            if (!selectedUpgrade) {
+                let rarityRoll = Math.random();
+                let chosenPool = UPGRADES_DB.common; let rarityClass = 'rarity-common';
+                let ignoreList = ['teleport', 'phoenix', 'homing'];
+
+                if (rarityRoll > 0.90) { chosenPool = UPGRADES_DB.epic; rarityClass = 'rarity-epic'; }
+                else if (rarityRoll > 0.65) { chosenPool = UPGRADES_DB.uncommon; rarityClass = 'rarity-uncommon'; }
+
+                let validPool = chosenPool.filter(u => {
+                    if (chosenUpgrades.includes(u.id)) return false;
+                    if (ignoreList.includes(u.id)) return false;
+                    if (u.id === 'resonance' || u.id === 'resonance_plus') {
+                        let totalAtkSpd = (targetP.perksCounts['resonance'] || 0) + (targetP.perksCounts['resonance_plus'] || 0);
+                        if (totalAtkSpd >= 3) return false;
+                    }
+                    return !maxTierCheck(targetP, u.id, u.max);
+                });
+
+                if (validPool.length === 0) {
+                    let allValid = [...UPGRADES_DB.common, ...UPGRADES_DB.uncommon, ...UPGRADES_DB.epic, ...UPGRADES_DB.legendary].filter(u => {
+                        if (chosenUpgrades.includes(u.id)) return false;
+                        if (ignoreList.includes(u.id)) return false;
+                        if (u.id === 'resonance' || u.id === 'resonance_plus') {
+                            let totalAtkSpd = (targetP.perksCounts['resonance'] || 0) + (targetP.perksCounts['resonance_plus'] || 0);
+                            if (totalAtkSpd >= 3) return false;
+                        }
+                        return !maxTierCheck(targetP, u.id, u.max);
+                    });
+                    validPool = allValid.length > 0 ? allValid : UPGRADES_DB.common;
+                }
+
+                if (validPool.length > 0) {
+                    let candidate = validPool[Math.floor(Math.random() * validPool.length)];
+                    let currentCount = targetP.perksCounts[candidate.id] || 0;
+                    if (currentCount === 1 && Math.random() < 0.3) candidate = validPool[Math.floor(Math.random() * validPool.length)];
+                    if (currentCount === 2 && candidate.id !== 'thunderbolt' && Math.random() < 0.4) candidate = validPool[Math.floor(Math.random() * validPool.length)];
+                    selectedUpgrade = candidate;
+                }
+            }
+            
             if (!selectedUpgrade) selectedUpgrade = UPGRADES_DB.common.find(u => u.id === 'growth');
             chosenUpgrades.push(selectedUpgrade.id);
             
@@ -1730,7 +1780,7 @@ serializeState() {
             card.classList.add(rClass);
 
             let count = targetP.perksCounts[selectedUpgrade.id] || 0;
-            let tierText = (selectedUpgrade.max > 3) ? `x${count}` : (selectedUpgrade.max === 1 ? "" : `${TEXTS[currentLang].tier} ${count + 1}`);
+            let tierText = selectedUpgrade.max > 3 ? `x${count}` : (selectedUpgrade.max === 1 ? "" : `${TEXTS[currentLang].tier} ${count + 1}`);
             let dName = (currentLang === 'pt') ? selectedUpgrade.name_pt : selectedUpgrade.name_en;
             let dDesc = (currentLang === 'pt') ? selectedUpgrade.desc_pt : selectedUpgrade.desc_en;
 
@@ -1739,14 +1789,19 @@ serializeState() {
             const pickUpgrade = () => {
                 if (card.classList.contains('card-locked')) return;
                 audioManager.playWav('botton');
-                
                 clearInterval(this.menuTimer);
+
                 selectedUpgrade.apply(targetP);
                 targetP.perksCounts[selectedUpgrade.id] = (targetP.perksCounts[selectedUpgrade.id] || 0) + 1;
 
                 if (Net.isOnline) {
                     if (Net.isHost) this.p1PickedPerk = selectedUpgrade.id;
                     else Net.send({type: 'PICK_PERK', perkId: selectedUpgrade.id});
+                } else {
+                    menu.classList.add('hidden');
+                    if (targetP.perks.manaShield && !targetP.manaShieldReady) targetP.manaShieldCooldown = Date.now() + this.manaShieldPausedTime;
+                    targetP.updateStatsUI();
+                    this.wave++; this.state = 'PLAYING'; this.startWave();
                 }
 
                 card.style.borderColor = "#4dff4d";
@@ -1758,7 +1813,6 @@ serializeState() {
             container.appendChild(card);
         }
 
-        // Timer
         this.menuTimer = setInterval(() => {
             secondsLeft--;
             timerText.innerText = secondsLeft + "s";
@@ -1825,14 +1879,17 @@ serializeState() {
         this.blocks.forEach(b => { ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h); });
         
         // Desenha miras e lasers
-        let localInputMouse = this.input.mouse;
-        if (this.player && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
+        // Mira/laser SÓ do jogador LOCAL (nunca do outro)
+        if (this.player && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC' &&
+            ((this.player.isPlayer1 && Net.isHost) || (!this.player.isPlayer1 && !Net.isHost) || !Net.isOnline)) {
             
-            // P1
             const centerX = this.player.x + this.player.width / 2;
             const centerY = this.player.y + this.player.height / 2;
-            const angle = Math.atan2((Net.isOnline && !Net.isHost ? this.netInput.mouse.y : this.input.mouse.y) - centerY, (Net.isOnline && !Net.isHost ? this.netInput.mouse.x : this.input.mouse.x) - centerX);
-            const endX = centerX + Math.cos(angle) * 2000; const endY = centerY + Math.sin(angle) * 2000;
+            const mx = this.input.mouse.x;
+            const my = this.input.mouse.y;
+            const angle = Math.atan2(my - centerY, mx - centerX);
+            const endX = centerX + Math.cos(angle) * 2000;
+            const endY = centerY + Math.sin(angle) * 2000;
             
             if (this.player.laserActive) {
                 ctx.save();
@@ -1841,7 +1898,6 @@ serializeState() {
                 ctx.lineCap = 'round';
                 ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
                 ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
-                
                 ctx.strokeStyle = 'white';
                 ctx.lineWidth = 8;
                 ctx.globalAlpha = 0.9;
@@ -1850,31 +1906,6 @@ serializeState() {
             } else {
                 ctx.save(); ctx.strokeStyle = 'red'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
                 ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke(); ctx.restore();
-            }
-        }
-
-        if (this.player2 && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
-            const cX = this.player2.x + this.player2.width / 2;
-            const cY = this.player2.y + this.player2.height / 2;
-            const a = Math.atan2((Net.isOnline && !Net.isHost ? this.input.mouse.y : this.netInput.mouse.y) - cY, (Net.isOnline && !Net.isHost ? this.input.mouse.x : this.netInput.mouse.x) - cX);
-            const eX = cX + Math.cos(a) * 2000; const eY = cY + Math.sin(a) * 2000;
-
-            if (this.player2.laserActive) {
-                ctx.save();
-                ctx.strokeStyle = 'blue';
-                ctx.lineWidth = 25;
-                ctx.lineCap = 'round';
-                ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
-                ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke();
-                
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 8;
-                ctx.globalAlpha = 0.9;
-                ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke();
-                ctx.restore();
-            } else {
-                ctx.save(); ctx.strokeStyle = 'blue'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
-                ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke(); ctx.restore();
             }
         }
 
@@ -1965,7 +1996,8 @@ class Player {
         this.vx = 0; this.vy = 0; this.grounded = false; this.charIndex = charIndex; 
         this.walkTimer = 0; this.hp = 100; this.maxHp = 100;
         this.isPlayer1 = isPlayer1; 
-        
+        this.dead = false; // ← ESSENCIAL para cliente morrer de verdade
+
         this.stats = { speed: CONFIG.playerSpeed, jumpPower: CONFIG.jumpForce, damage: 10, fireRate: 1150, critChance: 0.05, critDmg: 2.0, lifesteal: 0, soulChance: 0.01, pierce: 0, projSize: 4, jumpsMax: 1, defense: 0 };
         this.jumpsLeft = 0; this.perksCounts = {}; 
         this.perks = { fragmentation: false, thunderbolt: 0, cold: false, pursuingOrb: 0, homing: 0, timeWarp: 0, multishot: false, execute: false, bouncing: false, manaShield: false, phoenix: false, swift: 0, chainLightning: 0, decimator: 0, poison: 0, teleport: false };
@@ -2062,6 +2094,8 @@ class Player {
     }
 
     update(inputObj) {
+        if (this.dead) return; // ← Cliente morre de verdade agora
+
         if (this.perks.manaShield && !this.manaShieldReady) {
             if (Date.now() > this.manaShieldCooldown) {
                 this.manaShieldReady = true; 
@@ -2071,7 +2105,7 @@ class Player {
             }
         }
 
-        // Lógica Visual UI para Player Local
+        // UI só para o jogador local
         if ((this.isPlayer1 && Net.isHost) || (!this.isPlayer1 && !Net.isHost) || !Net.isOnline) {
             let laserUI = document.getElementById('laser-ui');
             if (this.perks.decimator > 0) {
@@ -2079,8 +2113,7 @@ class Player {
                 if (this.laserActive || Date.now() < this.laserCooldown) {
                     laserUI.style.opacity = 0.5;
                     let cdRemaining = Math.ceil((this.laserCooldown - Date.now()) / 1000);
-                    if (this.laserActive) document.getElementById('laser-cd').innerText = "ATV";
-                    else document.getElementById('laser-cd').innerText = cdRemaining > 0 ? cdRemaining : "PRONTO";
+                    document.getElementById('laser-cd').innerText = this.laserActive ? "ATV" : (cdRemaining > 0 ? cdRemaining : "PRONTO");
                 } else {
                     laserUI.style.opacity = 1;
                     document.getElementById('laser-cd').innerText = 'PRONTO';
@@ -2108,7 +2141,7 @@ class Player {
 
         if (inputObj && inputObj.keys['KeyA']) { this.vx = -this.stats.speed * speedMult; this.facing = -1; if(this.grounded) this.walkTimer += 0.2 * window.timeScale; }
         else if (inputObj && inputObj.keys['KeyD']) { this.vx = this.stats.speed * speedMult; this.facing = 1; if(this.grounded) this.walkTimer += 0.2 * window.timeScale; }
-        else { this.vx *= CONFIG.friction; this.walkTimer = 0; }
+        else { this.vx *= CONFIG.friction; }
 
         if (inputObj && inputObj.keys['Space']) {
             if (!this.jumpKeyHeld) { 
@@ -2144,17 +2177,14 @@ class Player {
         const now = Date.now();
         
         if (this.laserActive) {
-            if (now > this.laserTimer) {
-                this.laserActive = false;
-            } else if (now - this.laserLastTick >= 500) {
+            if (now > this.laserTimer) this.laserActive = false;
+            else if (now - this.laserLastTick >= 500) {
                 if(inputObj) this.fireLaserTick(inputObj);
                 this.laserLastTick = now;
             }
-        } else {
-            if (game.state !== 'BOSS_DEATH_CINEMATIC' && now - this.lastShot > this.stats.fireRate) {
-                if(inputObj) this.shoot(inputObj);
-                this.lastShot = now;
-            }
+        } else if (game.state !== 'BOSS_DEATH_CINEMATIC' && now - this.lastShot > this.stats.fireRate) {
+            if(inputObj) this.shoot(inputObj);
+            this.lastShot = now;
         }
 
         this.orb.update(inputObj);
@@ -2177,8 +2207,8 @@ class Player {
         audioManager.playSfx('shoot');
     }
 
-  takeDamage(amount, isBossAttack = false) {
-        if (Date.now() < this.invulnUntil) return;
+    takeDamage(amount, isBossAttack = false) {
+        if (Date.now() < this.invulnUntil || this.dead) return;
 
         if (this.manaShieldReady) {
             this.manaShieldReady = false; this.manaShieldCooldown = Date.now() + 20000; 
@@ -2207,6 +2237,7 @@ class Player {
 
         if (this.hp <= 0) {
             this.hp = 0;
+            this.dead = true;
 
             if (!Net.isOnline) {
                 game.state = 'GAME_OVER';
@@ -2216,11 +2247,9 @@ class Player {
                 return;
             }
 
-            // MULTIPLAYER - morte assimétrica
             const isP1 = this.isPlayer1;
             game.deadThisWave[isP1 ? 'p1' : 'p2'] = true;
 
-            // Se os dois morreram na mesma wave → GAME OVER para ambos
             if (game.deadThisWave.p1 && game.deadThisWave.p2) {
                 game.state = 'GAME_OVER';
                 document.getElementById('final-wave').innerText = game.wave;
@@ -2230,9 +2259,9 @@ class Player {
                 return;
             }
 
-            // Só um morreu → o outro continua
+            // Mensagem só aparece para o jogador que morreu
             if ((this.isPlayer1 && Net.isHost) || (!this.isPlayer1 && !Net.isHost) || !Net.isOnline) {
-                game.addFloatingText(this.x, this.y - 40, "MORREU - RESSUSCITA NA PRÓXIMA WAVE", "#ff4444");
+                game.addFloatingText(this.x + 10, this.y - 40, "MORREU - RESSUSCITA NA PRÓXIMA WAVE", "#ff4444");
             }
             game.reviveNextWave[isP1 ? 'p1' : 'p2'] = true;
         }
@@ -2989,6 +3018,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
