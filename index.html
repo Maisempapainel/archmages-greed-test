@@ -293,8 +293,8 @@
         </div>
         <h1>Archmage's Greed</h1>
         <div class="char-select-container" id="char-selection"></div>
-        <button class="btn" id="btn-play" onclick="startGameLocal()">SINGLEPLAYER</button>
-        <button class="btn" id="btn-multiplayer" onclick="showMultiplayerMenu()">MULTIPLAYER</button>
+        <button class="btn" id="btn-play">SINGLEPLAYER</button>
+        <button class="btn" id="btn-multiplayer">MULTIPLAYER</button>
         <p id="controls-hint" style="font-size: 10px; color: #888; margin-top:20px;">Use A/D para Mover, Espaço p/ Pular, Mouse p/ Mirar, F p/ Habilidade</p>
         <div id="audio-hint">Clique para ativar o som</div>
     </div>
@@ -2958,7 +2958,18 @@ function initGame() {
     });
 
 
-    window.selectedChar = 1; requestAnimationFrame(() => game.loop());
+    window.selectedChar = 1;
+
+    // Adiciona event listeners para botões (evita erro de "not defined")
+    document.getElementById('btn-play').addEventListener('click', () => {
+        startGameLocal();
+    });
+
+    document.getElementById('btn-multiplayer').addEventListener('click', () => {
+        showMultiplayerMenu();
+    });
+
+    requestAnimationFrame(() => game.loop());
 }
 
 function startGameLocal() {
@@ -2999,6 +3010,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
