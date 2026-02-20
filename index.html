@@ -1217,23 +1217,46 @@ class Game {
     }
 
     // MULTIPLAYER SYNC
-    serializeState() {
-        const p1OrbX = (this.player && this.player.orb) ? this.player.orb.x : (this.player ? this.player.x + this.player.width/2 : 0);
-        const p1OrbY = (this.player && this.player.orb) ? this.player.orb.y : (this.player ? this.player.y + this.player.height/2 : 0);
-        const p2OrbX = (this.player2 && this.player2.orb) ? this.player2.orb.x : (this.player2 ? this.player2.x + this.player2.width/2 : 0);
-        const p2OrbY = (this.player2 && this.player2.orb) ? this.player2.orb.y : (this.player2 ? this.player2.y + this.player2.height/2 : 0);
+serializeState() {
+        if (!this.player) {
+            return { st: this.state, wv: this.wave, so: this.souls || 0 };
+        }
+        const p1OrbX = this.player.orb ? this.player.orb.x : this.player.x + this.player.width / 2;
+        const p1OrbY = this.player.orb ? this.player.orb.y : this.player.y + this.player.height / 2;
+        const p2OrbX = (this.player2 && this.player2.orb) ? this.player2.orb.x : (this.player2 ? this.player2.x + this.player2.width / 2 : 0);
+        const p2OrbY = (this.player2 && this.player2.orb) ? this.player2.orb.y : (this.player2 ? this.player2.y + this.player2.height / 2 : 0);
 
         return {
             st: this.state,
             wv: this.wave,
             so: this.souls,
             tpz: this.showTeleportZonesUntil,
-            p1: { x: this.player.x, y: this.player.y, hp: this.player.hp, mx: this.player.maxHp, la: this.player.laserActive, fa: this.player.facing, ms: this.player.manaShieldReady, 
-            or: p1OrbX, oy: p1OrbY, iu: this.player.invulnUntil },
-            p2: this.player2 ?
-            { x: this.player2.x, y: this.player2.y, hp: this.player2.hp, mx: this.player2.maxHp, la: this.player2.laserActive, fa: this.player2.facing, ms: this.player2.manaShieldReady, or: p2OrbX, oy: p2OrbY, iu: this.player2.invulnUntil } : null,
-            en: this.enemies.map(e => ({ x: e.x, y: e.y, hp: e.hp, mx: e.maxHp, t: e.type, s: e.shieldActive, po: e.poisonActive, w: e.width, h: e.height, lh: e.lastHitTime, isB: e.isBigBoss, aX: e.anchorX, cU: e.colorUntil })),
-            bu: this.bullets.map(b => ({ x: b.x, y: b.y, c: b.color, r: b.radius, hi: b.history })),
+            p1: { 
+                x: this.player.x, 
+                y: this.player.y, 
+                hp: this.player.hp, 
+                mx: this.player.maxHp, 
+                la: this.player.laserActive, 
+                fa: this.player.facing, 
+                ms: this.player.manaShieldReady, 
+                or: p1OrbX, 
+                oy: p1OrbY, 
+                iu: this.player.invulnUntil 
+            },
+            p2: this.player2 ? {
+                x: this.player2.x, 
+                y: this.player2.y, 
+                hp: this.player2.hp, 
+                mx: this.player2.maxHp, 
+                la: this.player2.laserActive, 
+                fa: this.player2.facing, 
+                ms: this.player2.manaShieldReady, 
+                or: p2OrbX, 
+                oy: p2OrbY, 
+                iu: this.player2.invulnUntil 
+            } : null,
+            en: this.enemies.map(e => ({ x: e.x, y: e.y, hp: e.hp, mx: e.maxHp, t: e.type, s: e.shieldActive, po: e.poisonActive, w: e.width, h: e.height, lh: e.lastHitTime, isB: e.isBigBoss || false, aX: e.anchorX, cU: e.colorUntil })),
+            bu: this.bullets.map(b => ({ x: b.x, y: b.y, c: b.color, r: b.radius, hi: b.history || [] })),
             pa: this.particles.map(p => ({ x: p.x, y: p.y, c: p.color, s: p.size })),
             ft: this.floatingTexts.map(f => ({ x: f.x, y: f.y, t: f.text, c: f.color, d: f.duration, st: f.spawnTime })),
             le: this.lightningEffects.map(l => ({ x: l.x, y: l.y, t: l.isThick, d: l.duration, st: l.spawnTime }))
@@ -1320,19 +1343,20 @@ class Game {
 
 
     loop() {
+        // Proteção: só envia STATE se o player já existe
+        if (Net.isOnline && Net.isHost && this.player && 
+            (this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC')) {
+            Net.send({ type: 'STATE', state: this.serializeState() });
+        }
+
         if (!Net.isOnline || Net.isHost) {
-            // Lógica do Host (ou Singleplayer)
             if ((this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC') && !this.paused) {
                 this.update();
                 this.draw();
             } else {
                 if (this.state !== 'MENU' && this.player) this.draw();
             }
-            if (Net.isOnline && Net.isHost) {
-                Net.send({ type: 'STATE', state: this.serializeState() });
-            }
         } else {
-            // Lógica do Client
             if (this.state !== 'MENU' && this.state !== 'GAME_OVER' && this.state !== 'UPGRADE_MENU') {
                 Net.send({ type: 'INPUT', input: { keys: this.input.keys, mouse: this.input.mouse } });
             }
@@ -2958,3 +2982,4 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
