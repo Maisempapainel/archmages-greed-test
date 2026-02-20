@@ -571,10 +571,14 @@ const peerConfig = {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            // TURN gratuito e confiável (20 GB/mês grátis)
+            { urls: 'stun:stun2.l.google.com:19302' },
+            { urls: 'stun:stun3.l.google.com:19302' },
+            { urls: 'stun:stun4.l.google.com:19302' },
+            // TURN gratuitos extras
             { urls: 'turn:openrelay.metered.ca:80', username: 'openrelayproject', credential: 'openrelayproject' },
             { urls: 'turn:openrelay.metered.ca:443', username: 'openrelayproject', credential: 'openrelayproject' },
-            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' }
+            { urls: 'turn:openrelay.metered.ca:443?transport=tcp', username: 'openrelayproject', credential: 'openrelayproject' },
+            { urls: 'turn:turn.anyfirewall.com:443?transport=tcp', username: 'webrtc', credential: 'webrtc' }
         ]
     }
 };
@@ -619,53 +623,79 @@ const Net = {
         });
     },
 
-    initClient(targetId) {
+      initClient(targetId) {
         if (!targetId) return;
         this.isHost = false;
         this.isOnline = true;
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
-        document.getElementById('lobby-room-id').innerText = "🔄 Tentando conectar... (pode demorar até 45 segundos)";
+        document.getElementById('lobby-room-id').innerText = "Tentando conectar (1/3)... (pode demorar 60s)";
 
-        this.peer = new Peer(peerConfig);
+        let attempts = 0;
+        const maxAttempts = 3;
 
-        this.peer.on('open', id => {
-            console.log("Cliente Peer aberto, conectando ao host:", targetId);
-            this.conn = this.peer.connect(targetId, { reliable: true });
+        const tryConnect = () => {
+            attempts++;
+            if (attempts > maxAttempts) {
+                document.getElementById('lobby-room-id').innerText = "Falhou após 3 tentativas. Host offline ou rede ruim.";
+                return;
+            }
 
-            const connTimeout = setTimeout(() => {
-                if (!this.conn || !this.conn.open) {
-                    document.getElementById('lobby-room-id').innerText = "⛔ Tempo esgotado. Host não encontrado.\nVerifique se o host está aberto e tente novamente.";
-                    if (this.conn) this.conn.close();
-                }
-            }, 45000); // 45 segundos
+            this.peer = new Peer(peerConfig);
 
-            this.conn.on('open', () => {
-                clearTimeout(connTimeout);
-                document.getElementById('lobby-room-id').innerText = "✅ Conectado com sucesso!";
-                console.log("Conexão P2P estabelecida!");
-                this.setupConn();
-                this.updateLobbyUI();
-                this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
+            this.peer.on('open', id => {
+                console.log(`Tentativa ${attempts}: Peer cliente aberto. Conectando ao host...`);
+                this.conn = this.peer.connect(targetId, { reliable: true });
+
+                const connTimeout = setTimeout(() => {
+                    if (!this.conn || !this.conn.open) {
+                        console.warn(`Tentativa ${attempts} falhou. Tentando novamente...`);
+                        this.peer.destroy();
+                        tryConnect();
+                    }
+                }, 60000); // 60s por tentativa
+
+                this.conn.on('open', () => {
+                    clearTimeout(connTimeout);
+                    document.getElementById('lobby-room-id').innerText = "✅ Conectado na tentativa " + attempts + "!";
+                    console.log("Conexão estabelecida!");
+                    this.setupConn();
+                    this.updateLobbyUI();
+                    this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
+
+                    // Ping a cada 30s para manter viva
+                    setInterval(() => {
+                        if (this.conn && this.conn.open) {
+                            this.send({ type: 'PING' });
+                        }
+                    }, 30000);
+                });
+
+                this.conn.on('error', err => {
+                    console.error(`Connection Error (Tentativa ${attempts}):`, err);
+                    document.getElementById('lobby-room-id').innerText = `Erro na tentativa ${attempts}: ` + err.message;
+                    setTimeout(tryConnect, 5000); // Espera 5s antes de retry
+                });
             });
 
-            this.conn.on('error', err => {
-                console.error("Connection Error (Client):", err);
-                document.getElementById('lobby-room-id').innerText = "Erro na conexão: " + (err.message || "Tente novamente");
+            this.peer.on('error', err => {
+                console.error(`PeerJS Error (Tentativa ${attempts}):`, err);
+                document.getElementById('lobby-room-id').innerText = `Erro na tentativa ${attempts}: Rede bloqueada?`;
+                setTimeout(tryConnect, 5000);
             });
-        });
+        };
 
-        this.peer.on('error', err => {
-            console.error("PeerJS Client Error:", err);
-            document.getElementById('lobby-room-id').innerText = "Erro ao iniciar cliente: " + (err.message || "Rede bloqueada?");
-        });
+        tryConnect();
     },
 
-    setupConn() {
+  setupConn() {
         this.conn.on('data', data => {
-            // 8️⃣ Descomente a linha abaixo caso queira debugar mensagens no console:
-            // console.log("P2P DATA:", data.type);
-            
+            if (data.type === 'PING') {
+                // Responde ping para manter viva
+                this.send({ type: 'PONG' });
+                return;
+            }
+
             if (data.type === 'LOBBY') {
                 if (data.p1Char !== undefined) this.p1Char = data.p1Char;
                 if (data.p2Char !== undefined) this.p2Char = data.p2Char;
@@ -683,9 +713,8 @@ const Net = {
                     if(data.input.cmdTeleport) game.player2.activateTeleport();
                 }
             }
-            // 7️⃣ Proteção de STATE antes do game existir (game.player tem que estar vivo)
             if (data.type === 'STATE' && !this.isHost) {
-                if (game && game.player && game.state === 'PLAYING') {
+                if (game && game.state === 'PLAYING') {
                     game.syncState(data.state);
                 }
             }
@@ -697,7 +726,7 @@ const Net = {
         });
         
         this.conn.on('close', () => {
-            alert("Conexão perdida.");
+            alert("Conexão perdida com o outro jogador.");
             location.reload();
         });
     },
@@ -2991,6 +3020,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
