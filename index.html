@@ -238,12 +238,12 @@
         </div>
         
         <div id="laser-ui" onclick="if(game && game.player && (!Net.isOnline || Net.isHost)) game.player.activateLaser(); else if (Net.isOnline && !Net.isHost) Net.sendInputCmd('laser');">
-            <span style="color:red; font-size:16px;">?</span>
+            <span style="color:red; font-size:16px;">⚡</span>
             <span id="laser-cd" style="font-size:8px; margin-top:2px;">PRONTO</span>
         </div>
         
         <div id="teleport-ui" onclick="if(game && game.player && (!Net.isOnline || Net.isHost)) game.player.activateTeleport(); else if (Net.isOnline && !Net.isHost) Net.sendInputCmd('teleport');">
-            <span style="color:cyan; font-size:16px;">??</span>
+            <span style="color:cyan; font-size:16px;">🌀</span>
             <span id="teleport-cd" style="font-size:8px; margin-top:2px;">PRONTO</span>
         </div>
 
@@ -282,14 +282,14 @@
     </div>
 
     <div id="audio-controls">
-        <button id="mute-btn" class="btn" onclick="audioManager.playWav('botton'); audioManager.toggleMute()" style="padding: 5px; font-size: 10px; border:none; width: 30px;">??</button>
+        <button id="mute-btn" class="btn" onclick="audioManager.playWav('botton'); audioManager.toggleMute()" style="padding: 5px; font-size: 10px; border:none; width: 30px;">🔊</button>
         <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" oninput="audioManager.setVolume(this.value)">
     </div>
 
     <div id="main-menu" class="menu-screen">
         <div class="lang-select">
-            <button class="flag-btn active" id="lang-pt" onclick="audioManager.playWav('botton'); setLanguage('pt')">???? PT-BR</button>
-            <button class="flag-btn" id="lang-en" onclick="audioManager.playWav('botton'); setLanguage('en')">???? EN-US</button>
+            <button class="flag-btn active" id="lang-pt" onclick="audioManager.playWav('botton'); setLanguage('pt')">🇧🇷 PT-BR</button>
+            <button class="flag-btn" id="lang-en" onclick="audioManager.playWav('botton'); setLanguage('en')">🇺🇸 EN-US</button>
         </div>
         <h1>Archmage's Greed</h1>
         <div class="char-select-container" id="char-selection"></div>
@@ -466,7 +466,7 @@ const audioManager = {
     },
     toggleMute() {
         this.isMuted = !this.isMuted;
-        document.getElementById('mute-btn').innerText = this.isMuted ? '??' : '??';
+        document.getElementById('mute-btn').innerText = this.isMuted ? '🔇' : '🔊';
         ASSETS.audio.main.muted = this.isMuted; ASSETS.audio.principal.muted = this.isMuted; ASSETS.audio.boss.muted = this.isMuted;
     },
     play(trackName) {
@@ -572,31 +572,13 @@ const Net = {
     // Status do Lobby
     p1Char: 1, p2Char: 1,
     p1Ready: false, p2Ready: false,
-    isConnected: false,
 
     initHost() {
         this.isHost = true; this.isOnline = true;
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
         
-        // Gera um ID curto (Ex: AMG-X8K9A)
-        const shortId = "AMG-" + Math.random().toString(36).substring(2, 7).toUpperCase();
-        
-        // ===== PATCH 1 – Peer HOST com STUN e servidor confiável =====
-this.peer = new Peer(shortId, {
-    host: 'peerjs-server.herokuapp.com',
-    secure: true,
-    port: 443,
-    debug: 2,
-    config: {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-    }
-});
-// ===== FIM PATCH 1 =====
-        
+        this.peer = new Peer();
         this.peer.on('open', id => {
             document.getElementById('lobby-room-id').innerText = id;
             this.updateLobbyUI();
@@ -605,79 +587,34 @@ this.peer = new Peer(shortId, {
         this.peer.on('connection', c => {
             if (this.conn) { c.close(); return; } // Apenas 1 cliente
             this.conn = c;
-            
-            c.on('open', () => {
-                this.isConnected = true;
-                this.setupConn();
-                this.updateLobbyUI();
-                // O Host manda logo o estado dele pra quem acabou de conectar
-                this.send({ type: 'LOBBY', p1Char: this.p1Char, p1Ready: this.p1Ready });
-            });
-        });
-        
-        this.peer.on('error', err => {
-            if (err.type === 'unavailable-id') {
-                this.peer.destroy();
-                this.initHost(); // Se der um ultra azar de colidir o ID, cria outro
-            } else {
-                alert("Erro no Servidor: " + err.type);
-            }
+            this.setupConn();
+            this.updateLobbyUI();
         });
     },
 
     initClient(targetId) {
         if (!targetId) return;
-        targetId = targetId.trim().toUpperCase(); // Remove os espaços safados e deixa maiúsculo
-        
         this.isHost = false; this.isOnline = true;
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
         document.getElementById('lobby-room-id').innerText = "Conectando...";
         
-        // ===== PATCH 2 – Peer CLIENT com STUN e servidor confiável =====
-this.peer = new Peer(undefined, {
-    host: 'peerjs-server.herokuapp.com',
-    secure: true,
-    port: 443,
-    debug: 2,
-    config: {
-        iceServers: [
-            { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
-        ]
-    }
-});
-// ===== FIM PATCH 2 =====
+        this.peer = new Peer();
         this.peer.on('open', id => {
-            this.conn = this.peer.connect(targetId, { reliable: true });
-            
+            this.conn = this.peer.connect(targetId);
             this.conn.on('open', () => {
-                this.isConnected = true;
                 document.getElementById('lobby-room-id').innerText = "Conectado à sala: " + targetId;
                 this.setupConn();
                 this.updateLobbyUI();
-                // Envia info do cliente pro Host
+                // Envia info do cliente
                 this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
             });
-        });
-        
-        this.peer.on('error', err => {
-            alert("Erro de Conexão: O ID da sala está incorreto ou a sala não existe. (" + err.type + ")");
-            location.reload(); 
+            this.conn.on('error', err => alert("Erro ao conectar!"));
         });
     },
 
     setupConn() {
-        // ===== PATCH 5 – Tratamento de erro da conexão =====
-this.conn.on('error', err => {
-    console.error("Connection error:", err);
-    alert("Erro na conexão P2P.");
-});
-// ===== FIM PATCH 5 =====
-
-// ===== PATCH 8 – Debug de mensagens =====
-this.conn.on('data', data => {
-    console.log("P2P DATA:", data);
+        this.conn.on('data', data => {
             if (data.type === 'LOBBY') {
                 if (data.p1Char !== undefined) this.p1Char = data.p1Char;
                 if (data.p2Char !== undefined) this.p2Char = data.p2Char;
@@ -708,15 +645,13 @@ this.conn.on('data', data => {
             }
         });
         this.conn.on('close', () => {
-            alert("Conexão perdida com o outro jogador.");
+            alert("Conexão perdida.");
             location.reload();
         });
     },
 
     send(data) {
-        if (this.conn && this.isConnected) {
-            this.conn.send(data);
-        }
+        if (this.conn && this.conn.open) this.conn.send(data);
     },
 
     toggleReady() {
@@ -749,7 +684,7 @@ this.conn.on('data', data => {
         if (this.p1Ready) { p1Status.innerText = "PRONTO"; p1Status.style.color = "#4dff4d"; }
         else { p1Status.innerText = "Aguardando..."; p1Status.style.color = "gray"; }
 
-        if (this.conn && this.isConnected) {
+        if (this.conn && this.conn.open) {
             p2Img.style.opacity = 1;
             if (this.p2Ready) { p2Status.innerText = "PRONTO"; p2Status.style.color = "#4dff4d"; }
             else { p2Status.innerText = "Aguardando..."; p2Status.style.color = "gray"; }
@@ -758,7 +693,7 @@ this.conn.on('data', data => {
             p2Status.innerText = "Desconectado"; p2Status.style.color = "gray";
         }
 
-        if (this.isHost && this.p1Ready && this.p2Ready && this.conn && this.isConnected) {
+        if (this.isHost && this.p1Ready && this.p2Ready && this.conn && this.conn.open) {
             btnStart.classList.remove('hidden');
         } else {
             btnStart.classList.add('hidden');
