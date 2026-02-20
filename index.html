@@ -1218,11 +1218,10 @@ class Game {
 
     // MULTIPLAYER SYNC
     serializeState() {
-        // 6️⃣ Proteção contra this.player.orb === null e player2.orb
-        let p1OrbX = (this.player && this.player.orb) ? this.player.orb.x : 0;
-        let p1OrbY = (this.player && this.player.orb) ? this.player.orb.y : 0;
-        let p2OrbX = (this.player2 && this.player2.orb) ? this.player2.orb.x : 0;
-        let p2OrbY = (this.player2 && this.player2.orb) ? this.player2.orb.y : 0;
+        const p1OrbX = (this.player && this.player.orb) ? this.player.orb.x : (this.player ? this.player.x + this.player.width/2 : 0);
+        const p1OrbY = (this.player && this.player.orb) ? this.player.orb.y : (this.player ? this.player.y + this.player.height/2 : 0);
+        const p2OrbX = (this.player2 && this.player2.orb) ? this.player2.orb.x : (this.player2 ? this.player2.x + this.player2.width/2 : 0);
+        const p2OrbY = (this.player2 && this.player2.orb) ? this.player2.orb.y : (this.player2 ? this.player2.y + this.player2.height/2 : 0);
 
         return {
             st: this.state,
@@ -1235,7 +1234,6 @@ class Game {
             { x: this.player2.x, y: this.player2.y, hp: this.player2.hp, mx: this.player2.maxHp, la: this.player2.laserActive, fa: this.player2.facing, ms: this.player2.manaShieldReady, or: p2OrbX, oy: p2OrbY, iu: this.player2.invulnUntil } : null,
             en: this.enemies.map(e => ({ x: e.x, y: e.y, hp: e.hp, mx: e.maxHp, t: e.type, s: e.shieldActive, po: e.poisonActive, w: e.width, h: e.height, lh: e.lastHitTime, isB: e.isBigBoss, aX: e.anchorX, cU: e.colorUntil })),
             bu: this.bullets.map(b => ({ x: b.x, y: b.y, c: b.color, r: b.radius, hi: b.history })),
-         
             pa: this.particles.map(p => ({ x: p.x, y: p.y, c: p.color, s: p.size })),
             ft: this.floatingTexts.map(f => ({ x: f.x, y: f.y, t: f.text, c: f.color, d: f.duration, st: f.spawnTime })),
             le: this.lightningEffects.map(l => ({ x: l.x, y: l.y, t: l.isThick, d: l.duration, st: l.spawnTime }))
@@ -1243,60 +1241,39 @@ class Game {
     }
 
     syncState(s) {
-        // Se mudou pra upgrade, exibe o menu local
-        if (this.state !== 'UPGRADE_MENU' && s.st === 'UPGRADE_MENU') {
-            this.showUpgradeMenu();
-        }
-        // Se saiu do upgrade, esconde
-        if (this.state === 'UPGRADE_MENU' && s.st === 'PLAYING') {
-            document.getElementById('upgrade-menu').classList.add('hidden');
-        }
+        if (!s) return;
 
-        // Se Boss Confirm
-        if (this.state !== 'BOSS_CONFIRM' && s.st === 'BOSS_CONFIRM') {
-            const title = (s.wv % CONFIG.bossWaveInterval === 0) ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
-            document.getElementById('boss-wave-title').innerText = title;
-            document.getElementById('boss-wave-title').style.color = (s.wv % CONFIG.bossWaveInterval === 0) ? 'red' : '#bf00ff';
-            document.getElementById('boss-confirm-menu').classList.remove('hidden');
-        }
-        if (this.state === 'BOSS_CONFIRM' && s.st === 'PLAYING') {
-            document.getElementById('boss-confirm-menu').classList.add('hidden');
-        }
-
-        // Se GameOver
-        if (this.state !== 'GAME_OVER' && s.st === 'GAME_OVER') {
-            document.getElementById('final-wave').innerText = s.wv;
-            document.getElementById('game-over-menu').classList.remove('hidden');
-        }
-
-        this.state = s.st;
-        this.wave = s.wv;
-        this.souls = s.so;
-        this.showTeleportZonesUntil = s.tpz;
+        this.state = s.st || this.state;
+        this.wave = s.wv || this.wave;
+        this.souls = s.so || this.souls;
+        this.showTeleportZonesUntil = s.tpz || 0;
 
         if (this.player && s.p1) {
             this.player.x = s.p1.x; this.player.y = s.p1.y;
             this.player.hp = s.p1.hp; this.player.maxHp = s.p1.mx;
             this.player.laserActive = s.p1.la; this.player.facing = s.p1.fa;
-            this.player.manaShieldReady = s.p1.ms; this.player.orb.x = s.p1.or; this.player.orb.y = s.p1.oy;
-            this.player.invulnUntil = s.p1.iu;
+            this.player.manaShieldReady = s.p1.ms; this.player.invulnUntil = s.p1.iu;
+            if (this.player.orb && s.p1.or !== undefined) {
+                this.player.orb.x = s.p1.or;
+                this.player.orb.y = s.p1.oy;
+            }
         }
 
         if (this.player2 && s.p2) {
             this.player2.x = s.p2.x; this.player2.y = s.p2.y;
             this.player2.hp = s.p2.hp; this.player2.maxHp = s.p2.mx;
             this.player2.laserActive = s.p2.la; this.player2.facing = s.p2.fa;
-            this.player2.manaShieldReady = s.p2.ms; this.player2.orb.x = s.p2.or; this.player2.orb.y = s.p2.oy;
-            this.player2.invulnUntil = s.p2.iu;
+            this.player2.manaShieldReady = s.p2.ms; this.player2.invulnUntil = s.p2.iu;
+            if (this.player2.orb && s.p2.or !== undefined) {
+                this.player2.orb.x = s.p2.or;
+                this.player2.orb.y = s.p2.oy;
+            }
         }
 
-        // Client UI maps to Player2
-        if (this.player2) {
-            this.player2.updateHpUI(); // P2 acts as Local for the Client UI HUD
-        }
+        if (this.player2) this.player2.updateHpUI();
         this.updateSoulsUI();
 
-        // Enemies
+        // resto do sync (enemies, bullets, particles, etc.) fica igual ao que você já tinha
         while(this.enemies.length < s.en.length) this.enemies.push(new Enemy(0,0,'redondo'));
         while(this.enemies.length > s.en.length) this.enemies.pop();
         for(let i=0; i<s.en.length; i++){
@@ -1309,7 +1286,6 @@ class Game {
              this.enemies[i].anchorX = s.en[i].aX; this.enemies[i].colorUntil = s.en[i].cU;
         }
 
-        // Bullets
         while(this.bullets.length < s.bu.length) this.bullets.push(new Projectile(0,0,0,0,false));
         while(this.bullets.length > s.bu.length) this.bullets.pop();
         for(let i=0; i<s.bu.length; i++){
@@ -1318,7 +1294,6 @@ class Game {
             this.bullets[i].history = s.bu[i].hi || [];
         }
 
-        // Particles
         while(this.particles.length < s.pa.length) this.particles.push(new Particle(0,0,'white',0));
         while(this.particles.length > s.pa.length) this.particles.pop();
         for(let i=0; i<s.pa.length; i++){
@@ -1326,7 +1301,6 @@ class Game {
             this.particles[i].size = s.pa[i].s; this.particles[i].color = s.pa[i].c;
         }
 
-        // Floating texts
         while(this.floatingTexts.length < s.ft.length) this.floatingTexts.push(new FloatingText(0,0,'',''));
         while(this.floatingTexts.length > s.ft.length) this.floatingTexts.pop();
         for(let i=0; i<s.ft.length; i++){
@@ -1335,7 +1309,6 @@ class Game {
             this.floatingTexts[i].duration = s.ft[i].d; this.floatingTexts[i].spawnTime = s.ft[i].st;
         }
 
-        // Lightnings
         while(this.lightningEffects.length < s.le.length) this.lightningEffects.push(new LightningBeam(0,0,false));
         while(this.lightningEffects.length > s.le.length) this.lightningEffects.pop();
         for(let i=0; i<s.le.length; i++){
