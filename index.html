@@ -262,12 +262,12 @@
             <div id="souls-container">
                 <span id="souls-label">Almas</span>: <span id="souls-text">0</span>
             </div>
-            <button id="pause-btn-ingame" onclick="audioManager.playWav('botton'); game.togglePause()">PAUSE (ESC)</button>
+            <button id="pause-btn-ingame" onclick="game.togglePause()">PAUSE (ESC)</button>
         </div>
         <div id="wave-display">WAVE 1</div>
         
-        <button id="perk-list-btn" onclick="audioManager.playWav('botton'); togglePerkModal()">PERKS</button>
-        <button id="stats-btn" onclick="audioManager.playWav('botton'); document.getElementById('stats-panel').classList.toggle('hidden');">STATS</button>
+        <button id="perk-list-btn" onclick="togglePerkModal()">PERKS</button>
+        <button id="stats-btn" onclick="document.getElementById('stats-panel').classList.toggle('hidden');">STATS</button>
     </div>
 
     <div id="dev-console" class="hidden">
@@ -288,13 +288,13 @@
 
     <div id="main-menu" class="menu-screen">
         <div class="lang-select">
-            <button class="flag-btn active" id="lang-pt" onclick="audioManager.playWav('botton'); setLanguage('pt')">🇧🇷 PT-BR</button>
-            <button class="flag-btn" id="lang-en" onclick="audioManager.playWav('botton'); setLanguage('en')">🇺🇸 EN-US</button>
+            <button class="flag-btn active" id="lang-pt" onclick="setLanguage('pt')">🇧🇷 PT-BR</button>
+            <button class="flag-btn" id="lang-en" onclick="setLanguage('en')">🇺🇸 EN-US</button>
         </div>
         <h1>Archmage's Greed</h1>
         <div class="char-select-container" id="char-selection"></div>
-        <button class="btn" id="btn-play" onclick="audioManager.playWav('botton'); startGameLocal()">SINGLEPLAYER</button>
-        <button class="btn" id="btn-multiplayer" onclick="audioManager.playWav('botton'); showMultiplayerMenu()">MULTIPLAYER</button>
+        <button class="btn" id="btn-play" onclick="startGameLocal()">SINGLEPLAYER</button>
+        <button class="btn" id="btn-multiplayer" onclick="showMultiplayerMenu()">MULTIPLAYER</button>
         <p id="controls-hint" style="font-size: 10px; color: #888; margin-top:20px;">Use A/D para Mover, Espaço p/ Pular, Mouse p/ Mirar, F p/ Habilidade</p>
         <div id="audio-hint">Clique para ativar o som</div>
     </div>
@@ -888,13 +888,25 @@ const ctx = canvas.getContext('2d');
 let game; 
 
 function togglePerkModal() {
-    if (game && game.state === 'PLAYING') game.togglePause();
+    audioManager.playWav('botton');
     const modal = document.getElementById('perk-modal');
-    if (modal.classList.contains('hidden')) {
-        updatePerkListUI();
-        modal.classList.remove('hidden');
-    } else {
-        modal.classList.add('hidden');
+    modal.classList.toggle('hidden');
+    const content = document.getElementById('perk-list-content');
+    content.innerHTML = '';
+    const targetP = (!Net.isOnline || Net.isHost) ? game.player : game.player2;
+    for (let p in targetP.perksCounts) {
+        let count = targetP.perksCounts[p];
+        if (count > 0) {
+            const perkObj = [...UPGRADES_DB.common, ...UPGRADES_DB.uncommon, ...UPGRADES_DB.epic, ...UPGRADES_DB.legendary].find(u => u.id === p);
+            if (perkObj) {
+                let pName = (currentLang === 'pt') ? perkObj.name_pt : perkObj.name_en;
+                let pDesc = (currentLang === 'pt') ? perkObj.desc_pt : perkObj.desc_en;
+                const entry = document.createElement('div');
+                entry.className = 'perk-entry';
+                entry.innerHTML = `<div class="header"><span>${pName}</span><span>${count}/${perkObj.max}</span></div><div class="perk-desc">${pDesc}</div>`;
+                content.appendChild(entry);
+            }
+        }
     }
 }
 
@@ -2963,6 +2975,7 @@ function startGameLocal() {
 }
 
 function showMultiplayerMenu() {
+    audioManager.playWav('botton');
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('multiplayer-menu').classList.remove('hidden');
 }
@@ -2986,6 +2999,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
