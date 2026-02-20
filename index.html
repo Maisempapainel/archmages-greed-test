@@ -1415,7 +1415,6 @@ serializeState() {
 
 
     loop() {
-        // Proteção: só envia STATE se o player já existe
         if (Net.isOnline && Net.isHost && this.player && 
             (this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC')) {
             Net.send({ type: 'STATE', state: this.serializeState() });
@@ -1425,14 +1424,14 @@ serializeState() {
             if ((this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC') && !this.paused) {
                 this.update();
                 this.draw();
-            } else {
-                if (this.state !== 'MENU' && this.player) this.draw();
-            }
+            } else if (this.state !== 'MENU' && this.player) this.draw();
         } else {
-            if (this.state !== 'MENU' && this.state !== 'GAME_OVER' && this.state !== 'UPGRADE_MENU') {
+            // CLIENTE: envia input e atualiza SEU próprio player (player2)
+            if (this.state !== 'MENU' && this.state !== 'GAME_OVER' && this.state !== 'UPGRADE_MENU' && this.player2) {
                 Net.send({ type: 'INPUT', input: { keys: this.input.keys, mouse: this.input.mouse } });
+                this.player2.update(this.input);   // ← CLIENTE usa this.input no player2
             }
-            if (this.player) this.draw();
+            if (this.player2) this.draw();   // desenha o player2 local
         }
 
         requestAnimationFrame(() => this.loop());
@@ -1443,13 +1442,11 @@ serializeState() {
 
         if (this.state === 'BOSS_DEATH_CINEMATIC') {
             window.timeScale = 0.2; 
-            
             this.player.update(this.input);
             if (this.player2) this.player2.update(this.netInput);
-            
+            // resto do cinematic igual
             this.bullets.forEach(b => b.update());
             this.enemies.forEach(e => { if(!e.dead) e.update(this.enemies); });
-            
             for (let i = this.particles.length - 1; i >= 0; i--) {
                 let p = this.particles[i]; p.update();
                 if (p.dead) { ObjectPool.releaseParticle(p); this.particles.splice(i, 1); }
@@ -1458,42 +1455,34 @@ serializeState() {
                 let t = this.floatingTexts[i]; t.update();
                 if (t.dead) this.floatingTexts.splice(i, 1);
             }
-            
             let elapsed = Date.now() - this.cinematicStartTime;
-            
             if (elapsed >= 3000 && !this.cinematicExplosionDone) {
                 this.triggerCinematicExplosions();
                 this.cinematicExplosionDone = true;
             }
-            
             if (elapsed >= 3000) {
                 let fadeProgress = (elapsed - 3000) / 2000;
                 document.getElementById('fade-overlay').style.opacity = Math.min(1, fadeProgress);
             } else {
                 document.getElementById('fade-overlay').style.opacity = 0;
             }
-            
-            if (elapsed >= 5000) {
-                this.endCinematic();
-            }
-            
+            if (elapsed >= 5000) this.endCinematic();
             return; 
         }
 
         window.timeScale = 1.0;
         document.getElementById('fade-overlay').style.opacity = 0;
 
-        this.player.update(this.input);
-        if (this.player2) this.player2.update(this.netInput);
-
-        // Processa comando TP do P2
-        if (Net.isOnline && Net.isHost && this.netInput.cmdTeleport) {
-            this.player2.activateTeleport();
-            this.netInput.cmdTeleport = false; // reset
+        // HOST: atualiza ambos
+        if (Net.isHost || !Net.isOnline) {
+            this.player.update(this.input);
+            if (this.player2) this.player2.update(this.netInput);
         }
-        if (Net.isOnline && Net.isHost && this.netInput.cmdLaser) {
-            this.player2.activateLaser();
-            this.netInput.cmdLaser = false; 
+
+        // Processa comandos do cliente (só host faz isso)
+        if (Net.isOnline && Net.isHost) {
+            if (this.netInput.cmdTeleport) { this.player2.activateTeleport(); this.netInput.cmdTeleport = false; }
+            if (this.netInput.cmdLaser) { this.player2.activateLaser(); this.netInput.cmdLaser = false; }
         }
 
         this.manageWaves();
@@ -1515,7 +1504,6 @@ serializeState() {
                 if (e.type !== 'boss' && e.type !== 'miniboss') ObjectPool.releaseEnemy(e);
                 this.enemies.splice(i, 1);
                 audioManager.playSfx('hit');
-                // Almas dropam pro host, client recebe sync
                 let p1Soul = Math.random() < this.player.stats.soulChance;
                 let p2Soul = this.player2 ? (Math.random() < this.player2.stats.soulChance) : false;
                 if (p1Soul || p2Soul) {
@@ -1528,10 +1516,7 @@ serializeState() {
         for (let i = this.particles.length - 1; i >= 0; i--) {
             let p = this.particles[i];
             p.update();
-            if (p.dead) {
-                ObjectPool.releaseParticle(p);
-                this.particles.splice(i, 1);
-            }
+            if (p.dead) { ObjectPool.releaseParticle(p); this.particles.splice(i, 1); }
         }
 
         for (let i = this.lightningEffects.length - 1; i >= 0; i--) {
@@ -1804,6 +1789,11 @@ serializeState() {
                     this.wave++; this.state = 'PLAYING'; this.startWave();
                 }
 
+                // Sinaliza que escolheu (host espera o cliente)
+                if (Net.isHost && this.p1PickedPerk && this.p2PickedPerk) {
+                    // já vai ser tratado no manageWaves
+                }
+
                 card.style.borderColor = "#4dff4d";
                 document.querySelectorAll('.upgrade-card').forEach(c => c.classList.add('card-locked'));
             };
@@ -1880,20 +1870,20 @@ serializeState() {
         
         // Desenha miras e lasers
         // Mira/laser SÓ do jogador LOCAL (nunca do outro)
-        if (this.player && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC' &&
-            ((this.player.isPlayer1 && Net.isHost) || (!this.player.isPlayer1 && !Net.isHost) || !Net.isOnline)) {
-            
-            const centerX = this.player.x + this.player.width / 2;
-            const centerY = this.player.y + this.player.height / 2;
+        // Mira/laser SÓ do jogador LOCAL (corrigido para cliente ver a dele)
+        let localPlayer = (!Net.isOnline || Net.isHost) ? this.player : this.player2;
+        if (localPlayer && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC' && !localPlayer.dead) {
+            const centerX = localPlayer.x + localPlayer.width / 2;
+            const centerY = localPlayer.y + localPlayer.height / 2;
             const mx = this.input.mouse.x;
             const my = this.input.mouse.y;
             const angle = Math.atan2(my - centerY, mx - centerX);
             const endX = centerX + Math.cos(angle) * 2000;
             const endY = centerY + Math.sin(angle) * 2000;
             
-            if (this.player.laserActive) {
+            if (localPlayer.laserActive) {
                 ctx.save();
-                ctx.strokeStyle = 'red';
+                ctx.strokeStyle = Net.isHost ? 'red' : 'blue';
                 ctx.lineWidth = 25;
                 ctx.lineCap = 'round';
                 ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
@@ -1904,26 +1894,10 @@ serializeState() {
                 ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
                 ctx.restore();
             } else {
-                ctx.save(); ctx.strokeStyle = 'red'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
+                ctx.save(); ctx.strokeStyle = Net.isHost ? 'red' : 'blue'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
                 ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke(); ctx.restore();
             }
         }
-
-        if (this.player2) this.player2.draw(ctx);
-        if (this.player) this.player.draw(ctx);
-        this.enemies.forEach(e => { if (!e.dead) e.draw(ctx); });
-        this.bullets.forEach(b => b.draw(ctx));
-        this.particles.forEach(p => p.draw(ctx));
-        this.lightningEffects.forEach(l => l.draw(ctx));
-        this.floatingTexts.forEach(t => t.draw(ctx));
-
-        ctx.restore();
-
-        if (this.state === 'BOSS_CONFIRM' || this.state === 'UPGRADE_MENU' || this.state === 'PAUSED') {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, this.width, this.height);
-        }
-    }
-}
 
 class FloatingText {
     constructor(x, y, text, color) {
@@ -3018,6 +2992,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
