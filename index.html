@@ -119,6 +119,7 @@
             margin-bottom: 15px;
             text-align: center;
             outline: none;
+            text-transform: uppercase;
         }
 
         /* Character Select */
@@ -578,22 +579,52 @@ const Net = {
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
         
-        this.peer = new Peer();
+        // Gerar ID curto e legível (8 caracteres)
+        const generateShortId = () => Math.random().toString(36).substring(2, 10).toUpperCase();
+        this.hostId = generateShortId();
+        
+        this.peer = new Peer(this.hostId);
+        
         this.peer.on('open', id => {
             document.getElementById('lobby-room-id').innerText = id;
             this.updateLobbyUI();
         });
 
+        this.peer.on('error', err => {
+            console.error(err);
+            if (err.type === 'unavailable-id') {
+                this.initHost(); // Se o ID curtos der conflito (raro), tenta gerar outro
+            } else {
+                document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
+            }
+        });
+
         this.peer.on('connection', c => {
-            if (this.conn) { c.close(); return; } // Apenas 1 cliente
+            if (this.conn && this.conn.open) { 
+                // Se já tem um jogador na sala, fecha a conexão do intruso
+                c.on('open', () => {
+                    c.send({ type: 'LOBBY', error: 'A sala já está cheia!' });
+                    setTimeout(() => c.close(), 500);
+                });
+                return; 
+            }
+            
             this.conn = c;
-            this.setupConn();
-            this.updateLobbyUI();
+            
+            // Só configura e atualiza quando o canal de dados for aberto com sucesso
+            this.conn.on('open', () => {
+                this.setupConn();
+                this.updateLobbyUI();
+                // O Host PRECISA enviar seu estado inicial assim que a conexão abrir!
+                this.send({ type: 'LOBBY', p1Char: this.p1Char, p1Ready: this.p1Ready });
+            });
         });
     },
 
     initClient(targetId) {
         if (!targetId) return;
+        targetId = targetId.trim().toUpperCase(); // Força maiúsculo para evitar erro humano
+        
         this.isHost = false; this.isOnline = true;
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
@@ -606,16 +637,30 @@ const Net = {
                 document.getElementById('lobby-room-id').innerText = "Conectado à sala: " + targetId;
                 this.setupConn();
                 this.updateLobbyUI();
-                // Envia info do cliente
+                // Cliente envia seu status para o Host
                 this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
             });
-            this.conn.on('error', err => alert("Erro ao conectar!"));
+            this.conn.on('error', err => {
+                alert("Erro ao conectar na sala!");
+                location.reload();
+            });
+        });
+        
+        this.peer.on('error', err => {
+            console.error(err);
+            alert("Erro de conexão (PeerJS): " + err.type);
+            location.reload();
         });
     },
 
     setupConn() {
         this.conn.on('data', data => {
             if (data.type === 'LOBBY') {
+                if (data.error) {
+                    alert(data.error);
+                    location.reload();
+                    return;
+                }
                 if (data.p1Char !== undefined) this.p1Char = data.p1Char;
                 if (data.p2Char !== undefined) this.p2Char = data.p2Char;
                 if (data.p1Ready !== undefined) this.p1Ready = data.p1Ready;
@@ -645,8 +690,12 @@ const Net = {
             }
         });
         this.conn.on('close', () => {
-            alert("Conexão perdida.");
+            alert("Conexão perdida com o outro jogador.");
             location.reload();
+        });
+        this.conn.on('error', err => {
+            console.error(err);
+            alert("Erro na conexão com o outro jogador.");
         });
     },
 
