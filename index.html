@@ -119,7 +119,6 @@
             margin-bottom: 15px;
             text-align: center;
             outline: none;
-            text-transform: uppercase;
         }
 
         /* Character Select */
@@ -573,57 +572,49 @@ const Net = {
     // Status do Lobby
     p1Char: 1, p2Char: 1,
     p1Ready: false, p2Ready: false,
+    isConnected: false,
 
     initHost() {
         this.isHost = true; this.isOnline = true;
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
         
-        // Gerar ID curto e legível (8 caracteres)
-        const generateShortId = () => Math.random().toString(36).substring(2, 10).toUpperCase();
-        this.hostId = generateShortId();
+        // Gera um ID curto (Ex: AMG-X8K9A)
+        const shortId = "AMG-" + Math.random().toString(36).substring(2, 7).toUpperCase();
         
-        this.peer = new Peer(this.hostId);
+        this.peer = new Peer(shortId);
         
         this.peer.on('open', id => {
             document.getElementById('lobby-room-id').innerText = id;
             this.updateLobbyUI();
         });
 
-        this.peer.on('error', err => {
-            console.error(err);
-            if (err.type === 'unavailable-id') {
-                this.initHost(); // Se o ID curtos der conflito (raro), tenta gerar outro
-            } else {
-                document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
-            }
-        });
-
         this.peer.on('connection', c => {
-            if (this.conn && this.conn.open) { 
-                // Se já tem um jogador na sala, fecha a conexão do intruso
-                c.on('open', () => {
-                    c.send({ type: 'LOBBY', error: 'A sala já está cheia!' });
-                    setTimeout(() => c.close(), 500);
-                });
-                return; 
-            }
-            
+            if (this.conn) { c.close(); return; } // Apenas 1 cliente
             this.conn = c;
             
-            // Só configura e atualiza quando o canal de dados for aberto com sucesso
-            this.conn.on('open', () => {
+            c.on('open', () => {
+                this.isConnected = true;
                 this.setupConn();
                 this.updateLobbyUI();
-                // O Host PRECISA enviar seu estado inicial assim que a conexão abrir!
+                // O Host manda logo o estado dele pra quem acabou de conectar
                 this.send({ type: 'LOBBY', p1Char: this.p1Char, p1Ready: this.p1Ready });
             });
+        });
+        
+        this.peer.on('error', err => {
+            if (err.type === 'unavailable-id') {
+                this.peer.destroy();
+                this.initHost(); // Se der um ultra azar de colidir o ID, cria outro
+            } else {
+                alert("Erro no Servidor: " + err.type);
+            }
         });
     },
 
     initClient(targetId) {
         if (!targetId) return;
-        targetId = targetId.trim().toUpperCase(); // Força maiúsculo para evitar erro humano
+        targetId = targetId.trim().toUpperCase(); // Remove os espaços safados e deixa maiúsculo
         
         this.isHost = false; this.isOnline = true;
         document.getElementById('multiplayer-menu').classList.add('hidden');
@@ -632,35 +623,27 @@ const Net = {
         
         this.peer = new Peer();
         this.peer.on('open', id => {
-            this.conn = this.peer.connect(targetId);
+            this.conn = this.peer.connect(targetId, { reliable: true });
+            
             this.conn.on('open', () => {
+                this.isConnected = true;
                 document.getElementById('lobby-room-id').innerText = "Conectado à sala: " + targetId;
                 this.setupConn();
                 this.updateLobbyUI();
-                // Cliente envia seu status para o Host
+                // Envia info do cliente pro Host
                 this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
-            });
-            this.conn.on('error', err => {
-                alert("Erro ao conectar na sala!");
-                location.reload();
             });
         });
         
         this.peer.on('error', err => {
-            console.error(err);
-            alert("Erro de conexão (PeerJS): " + err.type);
-            location.reload();
+            alert("Erro de Conexão: O ID da sala está incorreto ou a sala não existe. (" + err.type + ")");
+            location.reload(); 
         });
     },
 
     setupConn() {
         this.conn.on('data', data => {
             if (data.type === 'LOBBY') {
-                if (data.error) {
-                    alert(data.error);
-                    location.reload();
-                    return;
-                }
                 if (data.p1Char !== undefined) this.p1Char = data.p1Char;
                 if (data.p2Char !== undefined) this.p2Char = data.p2Char;
                 if (data.p1Ready !== undefined) this.p1Ready = data.p1Ready;
@@ -693,14 +676,12 @@ const Net = {
             alert("Conexão perdida com o outro jogador.");
             location.reload();
         });
-        this.conn.on('error', err => {
-            console.error(err);
-            alert("Erro na conexão com o outro jogador.");
-        });
     },
 
     send(data) {
-        if (this.conn && this.conn.open) this.conn.send(data);
+        if (this.conn && this.isConnected) {
+            this.conn.send(data);
+        }
     },
 
     toggleReady() {
@@ -733,7 +714,7 @@ const Net = {
         if (this.p1Ready) { p1Status.innerText = "PRONTO"; p1Status.style.color = "#4dff4d"; }
         else { p1Status.innerText = "Aguardando..."; p1Status.style.color = "gray"; }
 
-        if (this.conn && this.conn.open) {
+        if (this.conn && this.isConnected) {
             p2Img.style.opacity = 1;
             if (this.p2Ready) { p2Status.innerText = "PRONTO"; p2Status.style.color = "#4dff4d"; }
             else { p2Status.innerText = "Aguardando..."; p2Status.style.color = "gray"; }
@@ -742,7 +723,7 @@ const Net = {
             p2Status.innerText = "Desconectado"; p2Status.style.color = "gray";
         }
 
-        if (this.isHost && this.p1Ready && this.p2Ready && this.conn && this.conn.open) {
+        if (this.isHost && this.p1Ready && this.p2Ready && this.conn && this.isConnected) {
             btnStart.classList.remove('hidden');
         } else {
             btnStart.classList.add('hidden');
