@@ -687,7 +687,6 @@ initClient(targetId) {
             });
 
             this.conn.on('error', err => {
-                console.log(`[NET] Recebido do outro jogador: ${data.type}`);
                 console.error("[CLIENT] Conn Error:", err);
             });
         });
@@ -1065,28 +1064,29 @@ class Game {
             const perkId = parts[1];
             const allPerks = [...UPGRADES_DB.common, ...UPGRADES_DB.uncommon, ...UPGRADES_DB.epic, ...UPGRADES_DB.legendary];
             
-            // CORREÇÃO DO BUG DO /PERK ALL PARA EVITAR CRASH
+            const target = (!Net.isOnline || Net.isHost) ? this.player : this.player2;
+            
             if (perkId === 'all') {
-                if (this.player) {
+                if (target) {
                     allPerks.forEach(pObj => {
-                        let currentCount = this.player.perksCounts[pObj.id] || 0;
+                        let currentCount = target.perksCounts[pObj.id] || 0;
                         let missing = pObj.max - currentCount;
-                        if (missing > 3 && pObj.max > 10) missing = 3; // Evita crashes com stats exponenciais absurdos
+                        if (missing > 3 && pObj.max > 10) missing = 3;
                         for(let i=0; i < missing; i++){
-                            pObj.apply(this.player);
-                            this.player.perksCounts[pObj.id] = (this.player.perksCounts[pObj.id] || 0) + 1;
+                            pObj.apply(target);
+                            target.perksCounts[pObj.id] = (target.perksCounts[pObj.id] || 0) + 1;
                         }
                     });
-                    this.player.updateStatsUI();
-                    this.addFloatingText(this.player.x, this.player.y - 40, `+ALL PERKS MAXED`, "#4dff4d");
+                    target.updateStatsUI();
+                    this.addFloatingText(target.x, target.y - 40, `+ALL PERKS MAXED`, "#4dff4d");
                 }
             } else {
                 const pObj = allPerks.find(p => p.id === perkId);
-                if (pObj && this.player) {
-                    pObj.apply(this.player);
-                    this.player.perksCounts[pObj.id] = (this.player.perksCounts[pObj.id] || 0) + 1;
-                    this.player.updateStatsUI();
-                    this.addFloatingText(this.player.x, this.player.y - 40, `+${perkId}`, "#4dff4d");
+                if (pObj && target) {
+                    pObj.apply(target);
+                    target.perksCounts[pObj.id] = (target.perksCounts[pObj.id] || 0) + 1;
+                    target.updateStatsUI();
+                    this.addFloatingText(target.x, target.y - 40, `+${perkId}`, "#4dff4d");
                 }
             }
         }
@@ -1789,11 +1789,6 @@ serializeState() {
                     this.wave++; this.state = 'PLAYING'; this.startWave();
                 }
 
-                // Sinaliza que escolheu (host espera o cliente)
-                if (Net.isHost && this.p1PickedPerk && this.p2PickedPerk) {
-                    // já vai ser tratado no manageWaves
-                }
-
                 card.style.borderColor = "#4dff4d";
                 document.querySelectorAll('.upgrade-card').forEach(c => c.classList.add('card-locked'));
             };
@@ -1820,7 +1815,7 @@ serializeState() {
             });
         }, 500);
     }
-
+    
     draw() {
         ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0, 0, this.width, this.height);
         
@@ -1869,8 +1864,7 @@ serializeState() {
         this.blocks.forEach(b => { ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h); });
         
         // Desenha miras e lasers
-        // Mira/laser SÓ do jogador LOCAL (nunca do outro)
-        // Mira/laser SÓ do jogador LOCAL (corrigido para cliente ver a dele)
+        // Mira/laser SÓ do jogador LOCAL (cliente vê a dele)
         let localPlayer = (!Net.isOnline || Net.isHost) ? this.player : this.player2;
         if (localPlayer && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC' && !localPlayer.dead) {
             const centerX = localPlayer.x + localPlayer.width / 2;
@@ -2992,6 +2986,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
