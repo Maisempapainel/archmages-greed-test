@@ -564,33 +564,13 @@ const ObjectPool = {
  */
 // 1️⃣ e 2️⃣ Configuração do STUN confiável do Google
 const peerConfig = {
-    debug: 3,                    // ← mostra logs úteis no console
+    debug: 3, 
     config: {
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
-            { urls: 'stun:stun2.l.google.com:19302' },
-            { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' },
-            // TURN mais estáveis (prioridade TCP - essencial no Brasil)
-            {
-                urls: 'turn:openrelay.metered.ca:443?transport=tcp',
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            {
-                urls: 'turn:openrelay.metered.ca:80',
-                username: 'openrelayproject',
-                credential: 'openrelayproject'
-            },
-            {
-                urls: 'turn:turn.anyfirewall.com:443?transport=tcp',
-                username: 'webrtc',
-                credential: 'webrtc'
-            }
-        ],
-        iceTransportPolicy: 'all',
-        iceCandidatePoolSize: 10
+            { urls: 'stun:stun2.l.google.com:19302' }
+        ]
     }
 };
 
@@ -3106,3 +3086,4 @@ window.onload = initGame;
 </html>
     
     
+
