@@ -560,19 +560,20 @@ const ObjectPool = {
 
 
 /**
- * REDE & MULTIPLAYER (WebRTC / PeerJS)
+ * REDE & MULTIPLAYER
  */
-// 1️⃣ e 2️⃣ Configuração do STUN confiável do Google
 const peerConfig = {
-    debug: 2, // Nível 2 mostra erros e avisos, 3 é muito verboso
+    debug: 2,
     config: {
         iceServers: [
-            // Servidores STUN do Google são gratuitos e altamente confiáveis para P2P direto
+            // Google STUNs (Primários)
             { urls: 'stun:stun.l.google.com:19302' },
             { urls: 'stun:stun1.l.google.com:19302' },
             { urls: 'stun:stun2.l.google.com:19302' },
             { urls: 'stun:stun3.l.google.com:19302' },
-            { urls: 'stun:stun4.l.google.com:19302' }
+            { urls: 'stun:stun4.l.google.com:19302' },
+            // Mozilla STUN (Secundário - Ajuda se o Google falhar)
+            { urls: 'stun:global.stun.twilio.com:3478' }
         ],
         iceCandidatePoolSize: 10
     }
@@ -583,73 +584,65 @@ const Net = {
     isHost: false,
     peer: null,
     conn: null,
-    hostId: null,
     
     // Status do Lobby
     p1Char: 1, p2Char: 1,
     p1Ready: false, p2Ready: false,
 
-    // GERA O ID ALEATÓRIO DE 5 CARACTERES (Mais curto e fácil de digitar)
     generateId() {
-        return Math.random().toString(36).substring(2, 7).toUpperCase();
+        return Math.random().toString(36).substring(2, 6).toUpperCase();
     },
 
     initHost() {
-        if (this.peer) this.peer.destroy(); // Garante que não haja lixo de sessões anteriores
+        if (this.peer) this.peer.destroy();
 
         this.isHost = true;
         this.isOnline = true;
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
-        document.getElementById('lobby-room-id').innerText = "Criando servidor...";
-        
-        const roomId = this.generateId();
-        this.peer = new Peer(roomId, peerConfig);
+        document.getElementById('lobby-room-id').innerText = "Iniciando...";
+        document.getElementById('lobby-room-id').style.color = "yellow";
+
+        this.peer = new Peer(this.generateId(), peerConfig);
         
         this.peer.on('open', id => {
-            document.getElementById('lobby-room-id').innerText = id; // Mostra apenas o ID
-            console.log("Host criado. ID:", id);
+            document.getElementById('lobby-room-id').innerText = id;
+            console.log("Host ID:", id);
             this.updateLobbyUI();
         });
         
         this.peer.on('connection', c => {
-            // Se já tiver uma conexão, fecha a nova (aceita apenas 1 cliente)
-            if (this.conn && this.conn.open) { 
-                c.close(); 
-                return; 
-            }
-
+            if (this.conn && this.conn.open) { c.close(); return; }
             this.conn = c;
-            console.log("Cliente tentando conectar...");
+            
+            console.log("Cliente conectando...");
             
             this.conn.on('open', () => {
-                console.log("✅ Conexão estabelecida com Cliente!");
-                this.setupConn();
+                console.log("✅ Cliente conectado!");
                 document.getElementById('lobby-room-id').style.color = "#4dff4d";
+                this.setupConn();
                 this.updateLobbyUI();
                 
-                // Envia estado atual do lobby para o cliente sincronizar
-                this.send({ type: 'LOBBY', p1Char: this.p1Char, p1Ready: this.p1Ready });
+                // Envia dados iniciais com um pequeno delay para garantir que o canal está pronto
+                setTimeout(() => {
+                    this.send({ type: 'LOBBY', p1Char: this.p1Char, p1Ready: this.p1Ready });
+                }, 500);
             });
-
-            this.conn.on('error', (err) => console.error("Erro na conexão do Host:", err));
+            
+            this.conn.on('close', () => {
+                document.getElementById('lobby-room-id').style.color = "red";
+                this.updateLobbyUI();
+            });
         });
 
         this.peer.on('error', err => {
-            console.error("PeerJS Host Error:", err);
-            let msg = "Erro de conexão.";
-            if (err.type === 'unavailable-id') msg = "ID já em uso. Tente novamente.";
-            if (err.type === 'network') msg = "Erro de rede/firewall.";
-            document.getElementById('lobby-room-id').innerText = msg;
+            console.error(err);
+            document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
         });
     },
 
     initClient(targetId) {
-        if (!targetId) {
-            alert("❌ Digite o ID da sala!");
-            return;
-        }
-        
+        if (!targetId) { alert("Digite o ID!"); return; }
         targetId = targetId.trim().toUpperCase();
         
         if (this.peer) this.peer.destroy();
@@ -659,58 +652,53 @@ const Net = {
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
         document.getElementById('lobby-room-id').innerText = "Conectando...";
+        document.getElementById('lobby-room-id').style.color = "yellow";
 
-        // Cliente não precisa de ID fixo, o PeerJS gera um hash automático
         this.peer = new Peer(peerConfig);
 
         this.peer.on('open', id => {
-            console.log(`[CLIENT] Meu ID temporário: ${id}. Conectando a: ${targetId}`);
-
-            // A conexão é iniciada aqui. 'reliable: true' pode ajudar em algumas redes, 
-            // mas 'serialization: json' é o mais compatível.
-            this.conn = this.peer.connect(targetId, { 
+            console.log("Meu ID Cliente:", id);
+            
+            // Tenta conectar com opção 'reliable'
+            this.conn = this.peer.connect(targetId, {
+                reliable: true,
                 serialization: 'json'
             });
 
-            // Se a conexão não abrir em 5 segundos, avisa o usuário
-            const timeout = setTimeout(() => {
-                if (!this.conn || !this.conn.open) {
-                    document.getElementById('lobby-room-id').innerText = "Tempo esgotado. Verifique o ID.";
+            // Timeout manual se não conectar em 10 segundos
+            const timer = setTimeout(() => {
+                if (!this.conn.open) {
+                    document.getElementById('lobby-room-id').innerText = "Tempo Esgotado (NAT)";
+                    document.getElementById('lobby-room-id').style.color = "red";
+                    console.log("Falha ao abrir canal de dados. Possível bloqueio de firewall/NAT.");
                 }
-            }, 8000);
+            }, 10000);
 
             this.conn.on('open', () => {
-                clearTimeout(timeout);
-                console.log("✅ [CLIENT] Conectado ao Host!");
+                clearTimeout(timer);
+                console.log("✅ Conectado ao Host!");
                 document.getElementById('lobby-room-id').innerText = "Conectado: " + targetId;
                 document.getElementById('lobby-room-id').style.color = "#4dff4d";
-                
                 this.setupConn();
                 this.updateLobbyUI();
-                // Envia meus dados iniciais
                 this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
             });
 
+            this.conn.on('error', err => console.error("Erro na conexão:", err));
+            
             this.conn.on('close', () => {
-                alert("Conexão encerrada pelo Host.");
+                alert("Desconectado do Host.");
                 location.reload();
             });
-
-            this.conn.on('error', err => {
-                console.error("[CLIENT] Conn Error:", err);
-                document.getElementById('lobby-room-id').innerText = "Erro ao conectar.";
-            });
         });
-
+        
         this.peer.on('error', err => {
-            console.error(`[CLIENT] Peer Error:`, err.type);
-            document.getElementById('lobby-room-id').innerText = "Erro fatal: " + err.type;
+            document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
         });
     },
 
     setupConn() {
         this.conn.on('data', data => {
-            // Lógica de recebimento de dados (igual ao anterior)
             if (data.type === 'PING') { this.send({ type: 'PONG' }); return; }
 
             if (data.type === 'LOBBY') {
@@ -738,7 +726,7 @@ const Net = {
             if (data.type === 'PICK_PERK') {
                 if (this.isHost && game) {
                     game.p2PickedPerk = data.perkId;
-                    game.checkMultiplayerPerks(); 
+                    game.checkMultiplayerPerks();
                 }
             }
             if (data.type === 'GAME_OVER') {
@@ -749,7 +737,7 @@ const Net = {
             if (data.type === 'NEXT_WAVE') {
                 game.wave = data.wave;
                 game.handleRevives();
-                document.getElementById('upgrade-menu').classList.add('hidden'); 
+                document.getElementById('upgrade-menu').classList.add('hidden');
             }
             if (data.type === 'BOSS_START') {
                 document.getElementById('boss-confirm-menu').classList.add('hidden');
@@ -767,34 +755,22 @@ const Net = {
                 }
             }
         });
-        
-        this.conn.on('close', () => {
-            alert("Conexão perdida.");
-            location.reload();
-        });
     },
 
     send(data) {
         if (this.conn && this.conn.open) {
-            try {
-                this.conn.send(data);
-            } catch (e) {
-                console.error("Erro ao enviar dados:", e);
-            }
+            try { this.conn.send(data); } catch(e) { console.error(e); }
         }
     },
 
     toggleReady() {
-        if (this.isHost) this.p1Ready = !this.p1Ready;
-        else this.p2Ready = !this.p2Ready;
-        
+        if (this.isHost) this.p1Ready = !this.p1Ready; else this.p2Ready = !this.p2Ready;
         this.send({ type: 'LOBBY', p1Char: this.p1Char, p2Char: this.p2Char, p1Ready: this.p1Ready, p2Ready: this.p2Ready });
         this.updateLobbyUI();
     },
 
     setChar(charId) {
-        if (this.isHost) this.p1Char = charId;
-        else this.p2Char = charId;
+        if (this.isHost) this.p1Char = charId; else this.p2Char = charId;
         this.send({ type: 'LOBBY', p1Char: this.p1Char, p2Char: this.p2Char, p1Ready: this.p1Ready, p2Ready: this.p2Ready });
         this.updateLobbyUI();
     },
@@ -821,7 +797,6 @@ const Net = {
             p2Status.innerText = "Desconectado"; p2Status.style.color = "gray";
         }
 
-        // Host só pode iniciar se ambos estiverem prontos e conectados
         if (this.isHost && this.p1Ready && this.p2Ready && this.conn && this.conn.open) {
             btnStart.classList.remove('hidden');
         } else {
@@ -849,7 +824,6 @@ const Net = {
         }
     }
 };
-
 
 /**
  * UPGRADES DATA 
@@ -3126,5 +3100,6 @@ window.onload = initGame;
 </html>
     
     
+
 
 
