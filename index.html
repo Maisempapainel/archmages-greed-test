@@ -559,44 +559,19 @@ const ObjectPool = {
 };
 
 /**
- * CONFIGURAÇÃO DE SERVIDORES (OPEN RELAY PROJECT + GOOGLE)
- * Tentativa de usar a camada gratuita de 20GB do Open Relay.
+ * CONFIGURAÇÃO DE SERVIDORES OTIMIZADA (CLEAN)
+ * Removemos o lixo da internet. Usamos apenas o que funciona.
  */
 const ICE_SERVERS = [
-    // 1. STUNs do Google (Os mais rápidos e confiáveis para achar IP)
+    // 1. Google STUNs (Prioridade Máxima - Rapidez)
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun3.l.google.com:19302" },
     { urls: "stun:stun4.l.google.com:19302" },
 
-    // 2. STUNs Adicionais da sua lista (Backups confiáveis)
-    { urls: "stun:stun.ekiga.net" },
-    { urls: "stun:stun.schlund.de" },
-    { urls: "stun:stun.voipbuster.com" },
-    { urls: "stun:stun.1und1.de:3478" },
-    { urls: "stun:stun.gmx.net:3478" },
-
-    // 3. TURNs da sua lista (Tentativa de conexão direta sem firewall)
-    // Aviso: Estes servidores são antigos e podem falhar, mas vale a tentativa.
-    {
-        urls: "turn:numb.viagenie.ca",
-        username: "webrtc@live.com",
-        credential: "muazkh"
-    },
-    {
-        urls: "turn:turn.bistri.com:80",
-        username: "homeo",
-        credential: "homeo"
-    },
-    {
-        urls: "turn:turn.anyfirewall.com:443?transport=tcp",
-        username: "webrtc",
-        credential: "webrtc"
-    },
-
-    // 4. Open Relay Project (Seu servidor principal de 20GB)
-    // Deixamos por último ou no meio para garantir que tente os outros se este falhar
+    // 2. Open Relay Project (TURN - Para furar Firewall/4G)
+    // Credenciais estáticas do projeto comunitário (20GB/mês)
     {
         urls: "turn:openrelay.metered.ca:80",
         username: "openrelayproject",
@@ -629,21 +604,28 @@ const Net = {
     },
 
     initHost() {
-        console.log("%c[HOST] Iniciando com Open Relay...", "color: cyan");
-        if (this.peer) this.peer.destroy();
+        console.log("%c[HOST] Iniciando...", "color: cyan");
+        
+        // Limpeza de segurança
+        if (this.peer) {
+            this.peer.destroy();
+            this.peer = null;
+        }
 
         this.isHost = true;
         this.isOnline = true;
+        
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
-        document.getElementById('lobby-room-id').innerText = "Iniciando Servidor...";
+        document.getElementById('lobby-room-id').innerText = "Criando...";
         document.getElementById('lobby-room-id').style.color = "yellow";
 
         const config = {
-            debug: 2, 
+            debug: 2, // Mostra erros críticos
             config: {
                 iceServers: ICE_SERVERS,
-                iceCandidatePoolSize: 10
+                iceCandidatePoolSize: 10,
+                iceTransportPolicy: 'all' // Tenta tudo (UDP e TCP)
             }
         };
 
@@ -651,7 +633,7 @@ const Net = {
             this.peer = new Peer(this.generateId(), config);
         } catch (e) {
             console.error("Erro fatal PeerJS:", e);
-            document.getElementById('lobby-room-id').innerText = "Erro ao criar Host";
+            document.getElementById('lobby-room-id').innerText = "Erro Crítico";
             return;
         }
         
@@ -672,7 +654,7 @@ const Net = {
                 this.setupConn();
                 this.updateLobbyUI();
                 
-                // Delay pequeno para garantir estabilidade antes de enviar dados
+                // Delay para garantir estabilidade
                 setTimeout(() => {
                     this.send({ type: 'LOBBY', p1Char: this.p1Char, p1Ready: this.p1Ready });
                 }, 500);
@@ -688,7 +670,10 @@ const Net = {
 
         this.peer.on('error', err => {
             console.error(err);
-            document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
+            let msg = "Erro: " + err.type;
+            if (err.type === 'network') msg = "Erro de Rede (Firewall?)";
+            if (err.type === 'unavailable-id') msg = "ID Indisponível";
+            document.getElementById('lobby-room-id').innerText = msg;
         });
     },
 
@@ -697,7 +682,10 @@ const Net = {
         if (!targetId) { alert("Digite o ID!"); return; }
         targetId = targetId.trim().toUpperCase();
         
-        if (this.peer) this.peer.destroy();
+        if (this.peer) {
+            this.peer.destroy();
+            this.peer = null;
+        }
 
         this.isHost = false;
         this.isOnline = true;
@@ -719,20 +707,19 @@ const Net = {
             console.log("Meu ID:", id);
             document.getElementById('lobby-room-id').innerText = "Buscando Host...";
 
-            // Tenta conectar usando os servidores robustos
             this.conn = this.peer.connect(targetId, {
                 reliable: true,
                 serialization: 'json'
             });
 
-            // Timeout aumentado para 20s (conexão via TURN pode demorar um pouco mais)
+            // Timeout de 15 segundos
             const timer = setTimeout(() => {
-                if (!this.conn.open) {
-                    document.getElementById('lobby-room-id').innerText = "Tempo Esgotado";
+                if (!this.conn || !this.conn.open) {
+                    document.getElementById('lobby-room-id').innerText = "Falha: Timeout";
                     document.getElementById('lobby-room-id').style.color = "red";
-                    console.log("Falha de conexão. Verifique se o Host está online.");
+                    console.log("Timeout atingido. Servidores ICE falharam ou Host offline.");
                 }
-            }, 20000);
+            }, 15000);
 
             this.conn.on('open', () => {
                 clearTimeout(timer);
@@ -3198,4 +3185,5 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
