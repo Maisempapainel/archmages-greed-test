@@ -693,7 +693,7 @@ const Net = {
         });
     },
 
-    setupConn() {
+ setupConn() {
         this.conn.on('data', data => {
             if (data.type === 'PING') {
                 this.send({ type: 'PONG' });
@@ -718,7 +718,7 @@ const Net = {
                 }
             }
             if (data.type === 'STATE' && !this.isHost) {
-                if (game && game.state === 'PLAYING') {
+                if (game && game.state === 'PLAYING' || game.state === 'UPGRADE_MENU' || game.state === 'BOSS_CONFIRM') {
                     game.syncState(data.state);
                 }
             }
@@ -735,8 +735,10 @@ const Net = {
             if (data.type === 'NEXT_WAVE') {
                 game.wave = data.wave;
                 game.handleRevives();
+                document.getElementById('upgrade-menu').classList.add('hidden'); // Oculta UI do client
             }
             if (data.type === 'BOSS_START') {
+                document.getElementById('boss-confirm-menu').classList.add('hidden'); // Oculta UI do client
                 game.triggerConfirmedBossWave();
             }
             if (data.type === 'BOSS_CONFIRM_READY') {
@@ -1323,6 +1325,8 @@ serializeState() {
             p1: { 
                 x: this.player.x, 
                 y: this.player.y, 
+                w: this.player.width,   // <- Novo: altura e largura pro Shrink não bugar
+                h: this.player.height, 
                 hp: this.player.hp, 
                 mx: this.player.maxHp, 
                 la: this.player.laserActive, 
@@ -1337,6 +1341,8 @@ serializeState() {
             p2: this.player2 ? {
                 x: this.player2.x, 
                 y: this.player2.y, 
+                w: this.player2.width, 
+                h: this.player2.height, 
                 hp: this.player2.hp, 
                 mx: this.player2.maxHp, 
                 la: this.player2.laserActive, 
@@ -1366,6 +1372,17 @@ serializeState() {
         if (this.state === 'UPGRADE_MENU' && s.st === 'PLAYING') {
             document.getElementById('upgrade-menu').classList.add('hidden');
         }
+        
+        // Força o Client a ver a tela de Boss caso o Host ative
+        if (this.state !== 'BOSS_CONFIRM' && s.st === 'BOSS_CONFIRM') {
+            const title = (s.wv % CONFIG.bossWaveInterval === 0) ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
+            document.getElementById('boss-wave-title').innerText = title;
+            document.getElementById('boss-wave-title').style.color = (s.wv % CONFIG.bossWaveInterval === 0) ? 'red' : '#bf00ff';
+            document.getElementById('boss-confirm-menu').classList.remove('hidden');
+        }
+        if (this.state === 'BOSS_CONFIRM' && s.st === 'PLAYING') {
+            document.getElementById('boss-confirm-menu').classList.add('hidden');
+        }
 
         this.state = s.st || this.state;
         this.wave = s.wv || this.wave;
@@ -1374,6 +1391,8 @@ serializeState() {
 
         if (this.player && s.p1) {
             this.player.x = s.p1.x; this.player.y = s.p1.y;
+            if (s.p1.w) this.player.width = s.p1.w;
+            if (s.p1.h) this.player.height = s.p1.h;
             this.player.hp = s.p1.hp; this.player.maxHp = s.p1.mx;
             this.player.laserActive = s.p1.la; this.player.facing = s.p1.fa;
             this.player.manaShieldReady = s.p1.ms; this.player.invulnUntil = s.p1.iu;
@@ -1385,6 +1404,8 @@ serializeState() {
 
         if (this.player2 && s.p2) {
             this.player2.x = s.p2.x; this.player2.y = s.p2.y;
+            if (s.p2.w) this.player2.width = s.p2.w;
+            if (s.p2.h) this.player2.height = s.p2.h;
             this.player2.hp = s.p2.hp; this.player2.maxHp = s.p2.mx;
             this.player2.laserActive = s.p2.la; this.player2.facing = s.p2.fa;
             this.player2.manaShieldReady = s.p2.ms; this.player2.invulnUntil = s.p2.iu;
@@ -1397,13 +1418,6 @@ serializeState() {
         if (this.player2) this.player2.updateHpUI();
         this.updateSoulsUI();
 
-        // Resto do sync (enemies, bullets, particles, etc.) fica igual ao que você já tinha
-    }
-
-        // Resto do sync de enemies, bullets, particles, etc. mantém igual ao seu código original
-    }
-
-        // resto do sync (enemies, bullets, particles, etc.) fica igual ao que você já tinha
         while(this.enemies.length < s.en.length) this.enemies.push(new Enemy(0,0,'redondo'));
         while(this.enemies.length > s.en.length) this.enemies.pop();
         for(let i=0; i<s.en.length; i++){
@@ -1641,19 +1655,15 @@ serializeState() {
         if (this.player2) checkThunder(this.player2);
     }
 
-   manageWaves() {
+manageWaves() {
         if (this.state === 'UPGRADE_MENU') {
             if (Net.isOnline && Net.isHost) {
                 if (this.p1PickedPerk && this.p2PickedPerk) {
-                    // Aplica perk do Host
-                    let p1Perk = [...UPGRADES_DB.common, ...UPGRADES_DB.uncommon, ...UPGRADES_DB.epic, ...UPGRADES_DB.legendary].find(u => u.id === this.p1PickedPerk);
-                    if(p1Perk) { p1Perk.apply(this.player); this.player.perksCounts[p1Perk.id] = (this.player.perksCounts[p1Perk.id] || 0) + 1; }
-
-                    // Aplica perk do Client
-                    let p2Perk = [...UPGRADES_DB.common, ...UPGRADES_DB.uncommon, ...UPGRADES_DB.epic, ...UPGRADES_DB.legendary].find(u => u.id === this.p2PickedPerk);
-                    if(p2Perk && this.player2) { p2Perk.apply(this.player2); this.player2.perksCounts[p2Perk.id] = (this.player2.perksCounts[p2Perk.id] || 0) + 1; }
+                    this.applyPerkToPlayer(this.player, this.p1PickedPerk);
+                    if (this.player2) this.applyPerkToPlayer(this.player2, this.p2PickedPerk);
 
                     document.getElementById('upgrade-menu').classList.add('hidden');
+                    if (this.menuTimer) clearInterval(this.menuTimer);
 
                     this.handleRevives();
 
@@ -1672,12 +1682,26 @@ serializeState() {
 
         if (this.enemies.length === 0 && this.enemiesToSpawn <= 0) {
             this.state = 'UPGRADE_MENU';
-            this.showUpgradeMenu(); // agora mostra para os dois
+            this.showUpgradeMenu(); 
         }
         if (this.enemiesToSpawn > 0) {
             if (Date.now() - this.lastSpawnTime > 1000) { 
                 this.spawnEnemy(); this.enemiesToSpawn--; this.lastSpawnTime = Date.now();
             }
+        }
+    }
+
+    applyPerkToPlayer(playerObj, perkId) {
+        if (perkId === 'fallback_heal') {
+            playerObj.hp = Math.min(playerObj.maxHp, playerObj.hp + 20);
+            if((playerObj.isPlayer1 && Net.isHost) || (!playerObj.isPlayer1 && !Net.isHost) || !Net.isOnline) playerObj.updateHpUI();
+            return;
+        }
+        const allPerks = [...UPGRADES_DB.common, ...UPGRADES_DB.uncommon, ...UPGRADES_DB.epic, ...UPGRADES_DB.legendary];
+        const pObj = allPerks.find(p => p.id === perkId);
+        if (pObj && playerObj) {
+            pObj.apply(playerObj);
+            playerObj.perksCounts[pObj.id] = (playerObj.perksCounts[pObj.id] || 0) + 1;
         }
     }
 
@@ -1750,19 +1774,91 @@ serializeState() {
                 timerText.innerText = secondsLeft + "s";
                 timerBar.style.width = (secondsLeft / 20 * 100) + "%";
                 if (secondsLeft <= 0) {
+                    clearInterval(this.menuTimer);
                     this.autoPickPerk();
                 }
             }, 1000);
         }
 
-        // Gera as cartas de upgrade (mantém sua lógica de raridade)
-        // ... (o resto do código de geração de cartas fica igual ao seu original)
-        // Apenas adicione no final do pickUpgrade:
-        if (Net.isOnline) {
-            if (Net.isHost) this.p1PickedPerk = selectedUpgrade.id;
-            else Net.send({type: 'PICK_PERK', perkId: selectedUpgrade.id});
+        let targetP = (!Net.isOnline || Net.isHost) ? this.player : this.player2;
+        
+        let available = [];
+        const addAvailable = (pool, rarity) => {
+            pool.forEach(u => {
+                if (!maxTierCheck(targetP, u.id, u.max)) available.push({ ...u, rarity });
+            });
+        };
+        addAvailable(UPGRADES_DB.common, 'common');
+        addAvailable(UPGRADES_DB.uncommon, 'uncommon');
+        addAvailable(UPGRADES_DB.epic, 'epic');
+        addAvailable(UPGRADES_DB.legendary, 'legendary');
+
+        let choices = [];
+        for(let i=0; i<3; i++) {
+            if (available.length === 0) break;
+            let idx = Math.floor(Math.random() * available.length);
+            choices.push(available[idx]);
+            available.splice(idx, 1);
+        }
+
+        if (choices.length === 0) {
+            choices.push({ id: 'fallback_heal', name_pt: 'Cura Leve', name_en: 'Light Heal', desc_pt: 'Cura 20 HP', desc_en: 'Heals 20 HP', rarity: 'common' });
+        }
+
+        this.currentUpgradeChoices = choices; 
+
+        choices.forEach(c => {
+            let card = document.createElement('div');
+            card.className = `upgrade-card rarity-${c.rarity}`;
+            let title = currentLang === 'pt' ? (c.name_pt || c.id) : (c.name_en || c.id);
+            let desc = currentLang === 'pt' ? (c.desc_pt || '') : (c.desc_en || '');
+
+            card.innerHTML = `
+                <span class="card-tier">${c.rarity.toUpperCase()}</span>
+                <div class="card-title">${title}</div>
+                <div class="card-desc">${desc}</div>
+            `;
+            card.onclick = () => {
+                audioManager.playWav('botton');
+                this.pickUpgrade(c.id);
+                container.innerHTML = `<p style="color:#4da6ff; margin-top: 50px; font-size: 12px;">Aguardando outro jogador...</p>`;
+            };
+            container.appendChild(card);
+        });
+    }
+
+    pickUpgrade(perkId) {
+        if (!Net.isOnline) {
+            this.applyPerkToPlayer(this.player, perkId);
+            document.getElementById('upgrade-menu').classList.add('hidden');
+            if (this.menuTimer) clearInterval(this.menuTimer);
+            this.wave++;
+            this.startWave();
         } else {
-            // singleplayer original
+            if (Net.isHost) {
+                this.p1PickedPerk = perkId;
+            } else {
+                Net.send({ type: 'PICK_PERK', perkId: perkId });
+            }
+        }
+    }
+
+    autoPickPerk() {
+        if (!Net.isOnline) {
+            if (this.currentUpgradeChoices && this.currentUpgradeChoices.length > 0) {
+                this.pickUpgrade(this.currentUpgradeChoices[0].id);
+            } else {
+                this.pickUpgrade('fallback_heal');
+            }
+        } else {
+            if (Net.isHost) {
+                if (!this.p1PickedPerk) {
+                    this.p1PickedPerk = (this.currentUpgradeChoices && this.currentUpgradeChoices.length > 0) ? this.currentUpgradeChoices[0].id : 'fallback_heal';
+                }
+                if (!this.p2PickedPerk) {
+                    this.p2PickedPerk = 'fallback_heal'; 
+                }
+            }
         }
     }
 
@@ -1844,7 +1940,7 @@ serializeState() {
             }
         }
 
-        if (this.player && !this.player.isDead && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
+        if (this.player2 && !this.player2.isDead && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
             if (Net.isOnline && !Net.isHost) {
                 const cX = this.player2.x + this.player2.width / 2;
                 const cY = this.player2.y + this.player2.height / 2;
@@ -3000,3 +3096,4 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
