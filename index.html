@@ -215,7 +215,17 @@
         #dev-input {
             background: #000; color: #0f0; border: none; font-family: inherit; font-size: 10px; width: 300px; outline: none; padding: 5px;
         }
-
+/* Server Select */
+        .server-item {
+            display: flex; justify-content: space-between; align-items: center;
+            border: 1px solid #444; padding: 15px; cursor: pointer; background: #111; transition: 0.2s;
+        }
+        .server-item:hover { background: #222; border-color: white; }
+        .server-name { font-size: 12px; color: white; }
+        .server-ping { font-size: 12px; font-weight: bold; }
+        .ping-good { color: #4dff4d; }
+        .ping-medium { color: yellow; }
+        .ping-bad { color: red; }
         .lobby-players { display: flex; gap: 40px; margin-bottom: 20px; font-size: 12px; text-align: center; }
         .lobby-player-box { padding: 20px; border: 2px solid #555; width: 200px; }
         .ready-text { color: #4dff4d; display: none; margin-top: 10px; }
@@ -308,6 +318,12 @@
             <button class="btn" onclick="audioManager.playWav('botton'); Net.initClient(document.getElementById('join-id-input').value)">ENTRAR NA SALA</button>
         </div>
         <button class="btn" onclick="audioManager.playWav('botton'); document.getElementById('multiplayer-menu').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden');" style="border-color:gray; color:gray">VOLTAR</button>
+    </div>
+    <div id="server-select-menu" class="menu-screen hidden">
+        <h2>SELECIONAR SERVIDOR</h2>
+        <p style="font-size:10px; color:#aaa; margin-bottom:20px;">Escolha o servidor com menor Ping</p>
+        <div id="server-list" style="display:flex; flex-direction:column; gap:10px; max-height:400px; overflow-y:auto; width:600px;"></div>
+        <button class="btn" onclick="audioManager.playWav('botton'); document.getElementById('server-select-menu').classList.add('hidden'); document.getElementById('multiplayer-menu').classList.remove('hidden');" style="margin-top:20px; border-color:gray; color:gray">VOLTAR</button>
     </div>
 
     <div id="lobby-menu" class="menu-screen hidden">
@@ -562,81 +578,71 @@ const ObjectPool = {
  * REDE & MULTIPLAYER (WebRTC / PeerJS)
  * Lista consolidada de servidores STUN (Google) e TURN (Cloudflare, Metered, Viagenie)
  */
-const ICE_SERVERS = [
-    // 1. Google STUNs (Sempre úteis e rápidos para conexões simples)
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" },
-
-    // 2. Cloudflare TURN (Credencial do seu snippet JSON)
+const SERVER_LIST = [
     {
-        urls: [
-            "stun:stun.cloudflare.com:3478",
-            "turn:turn.cloudflare.com:3478?transport=udp",
-            "turn:turn.cloudflare.com:3478?transport=tcp",
-            "turns:turn.cloudflare.com:5349?transport=tcp"
-        ],
-        username: "g0522d79a759b2b434ef65c4aba66dff0996900c8cc0d87d4a6fbe028bee82af",
-        credential: "4dc3f21572f4e826be48117ecf2a2e53dda6df093f7a6f2a167de2f04a0e8601"
-    },
-
-    // 3. Cloudflare TURN (Credencial Alternativa da lista)
-    {
-        urls: [
-            "turn:turn.cloudflare.com:3478?transport=udp",
-            "turns:turn.cloudflare.com:5349?transport=tcp"
-        ],
-        username: "g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75",
-        credential: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3=" // Com o '=' no final
-    },
-
-    // 4. Servidores TURN Públicos/Antigos (Viagenie, Bistri, Anyfirewall)
-    {
-        urls: "turn:numb.viagenie.ca",
-        username: "webrtc@live.com",
-        credential: "muazkh"
+        name: "Google STUN (Geral)",
+        region: "Global",
+        pingUrl: "https://www.google.com/favicon.ico", // Endpoint rápido para estimar latência
+        config: {
+            iceServers: [
+                { urls: "stun:stun.l.google.com:19302" },
+                { urls: "stun:stun1.l.google.com:19302" },
+                { urls: "stun:stun2.l.google.com:19302" },
+                { urls: "stun:stun3.l.google.com:19302" },
+                { urls: "stun:stun4.l.google.com:19302" }
+            ]
+        }
     },
     {
-        urls: "turn:turn.bistri.com:80",
-        username: "homeo",
-        credential: "homeo"
+        name: "Cloudflare TURN (Rápido/Pago)",
+        region: "Global CDN",
+        pingUrl: "https://www.cloudflare.com/favicon.ico",
+        config: {
+            iceServers: [{
+                urls: [
+                    "stun:stun.cloudflare.com:3478",
+                    "turn:turn.cloudflare.com:3478?transport=udp",
+                    "turn:turn.cloudflare.com:3478?transport=tcp",
+                    "turns:turn.cloudflare.com:5349?transport=tcp"
+                ],
+                username: "g0522d79a759b2b434ef65c4aba66dff0996900c8cc0d87d4a6fbe028bee82af",
+                credential: "4dc3f21572f4e826be48117ecf2a2e53dda6df093f7a6f2a167de2f04a0e8601"
+            }]
+        }
     },
     {
-        urls: "turn:turn.anyfirewall.com:443?transport=tcp",
-        username: "webrtc",
-        credential: "webrtc"
+        name: "Metered TURN (Backup)",
+        region: "North America",
+        pingUrl: "https://metered.ca/favicon.ico",
+        config: {
+            iceServers: [{
+                urls: "turn:192.158.29.39:3478?transport=udp",
+                username: "28224511:1379330808",
+                credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
+            }]
+        }
     },
-
-    // 5. Servidores IP Direto (OpenRelay / Metered)
     {
-        urls: "turn:192.158.29.39:3478?transport=udp",
-        username: "28224511:1379330808",
-        credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
-    },
-    {
-        urls: "turn:192.158.29.39:3478?transport=tcp",
-        username: "28224511:1379330808",
-        credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
+        name: "Viagenie TURN (Lento/Free)",
+        region: "Canada",
+        pingUrl: "https://numb.viagenie.ca/", // Pode falhar CORS, fallback visual
+        config: {
+            iceServers: [{
+                urls: "turn:numb.viagenie.ca",
+                username: "webrtc@live.com",
+                credential: "muazkh"
+            }]
+        }
     }
 ];
-
-// Configuração usada pelo objeto Net
-const peerConfig = {
-    debug: 3, // Nível de log alto para ver qual servidor funcionou
-    config: {
-        iceServers: ICE_SERVERS,
-        iceTransportPolicy: 'all', // Permite escolher entre Relay (TURN) ou Host (STUN)
-        iceCandidatePoolSize: 10
-    }
-};
 
 const Net = {
     isOnline: false,
     isHost: false,
     peer: null,
     conn: null,
+    selectedConfig: SERVER_LIST[0].config, // Padrão
+    pingInterval: null,
     
     // Status do Lobby
     p1Char: 1, p2Char: 1,
@@ -646,42 +652,94 @@ const Net = {
         return Math.random().toString(36).substring(2, 6).toUpperCase();
     },
 
-    initHost() {
-        console.log("%c[HOST] Iniciando...", "color: cyan");
-        
-        // Limpeza de segurança
-        if (this.peer) {
-            this.peer.destroy();
-            this.peer = null;
-        }
-
-        this.isHost = true;
-        this.isOnline = true;
-        
+    // UI de Seleção de Servidor
+    showServerSelect() {
         document.getElementById('multiplayer-menu').classList.add('hidden');
+        document.getElementById('server-select-menu').classList.remove('hidden');
+        this.updateServerList();
+        
+        if (this.pingInterval) clearInterval(this.pingInterval);
+        this.pingInterval = setInterval(() => this.updatePings(), 2000); // Atualiza pings a cada 2s
+        this.updatePings(); // Primeira chamada imediata
+    },
+
+    updateServerList() {
+        const container = document.getElementById('server-list');
+        container.innerHTML = '';
+        SERVER_LIST.forEach((srv, index) => {
+            const el = document.createElement('div');
+            el.className = 'server-item';
+            el.innerHTML = `
+                <div>
+                    <div class="server-name" style="color:#4da6ff; font-weight:bold;">${srv.name}</div>
+                    <div style="font-size:10px; color:#666;">Região: ${srv.region}</div>
+                </div>
+                <div class="server-ping" id="ping-${index}">Calculando...</div>
+            `;
+            el.onclick = () => {
+                audioManager.playWav('botton');
+                this.selectedConfig = srv.config;
+                clearInterval(this.pingInterval);
+                this.initHost();
+            };
+            container.appendChild(el);
+        });
+    },
+
+    async updatePings() {
+        SERVER_LIST.forEach(async (srv, index) => {
+            const el = document.getElementById(`ping-${index}`);
+            if (!el) return;
+            
+            const start = Date.now();
+            try {
+                // Tenta fetch com no-cors apenas para medir tempo de RTT
+                await fetch(srv.pingUrl, { mode: 'no-cors', cache: 'no-store' });
+                const ping = Date.now() - start;
+                
+                let colorClass = 'ping-good';
+                if (ping > 150) colorClass = 'ping-medium';
+                if (ping > 300) colorClass = 'ping-bad';
+                
+                el.className = `server-ping ${colorClass}`;
+                el.innerText = `${ping}ms`;
+            } catch (e) {
+                el.className = 'server-ping ping-bad';
+                el.innerText = 'Timeout';
+            }
+        });
+    },
+
+    initHost() {
+        console.log("%c[HOST] Iniciando com config selecionada...", "color: cyan");
+        document.getElementById('server-select-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
         document.getElementById('lobby-room-id').innerText = "Criando...";
         document.getElementById('lobby-room-id').style.color = "yellow";
 
-        const config = {
-            debug: 2, // Mostra erros críticos
+        if (this.peer) { this.peer.destroy(); this.peer = null; }
+
+        this.isHost = true;
+        this.isOnline = true;
+        
+        const peerConfig = {
+            debug: 2,
             config: {
-                iceServers: ICE_SERVERS,
-                iceCandidatePoolSize: 10,
-                iceTransportPolicy: 'all' // Tenta tudo (UDP e TCP)
+                ...this.selectedConfig.iceServers,
+                iceTransportPolicy: 'all',
+                iceCandidatePoolSize: 10
             }
         };
 
         try {
-            this.peer = new Peer(this.generateId(), config);
+            this.peer = new Peer(this.generateId(), peerConfig);
         } catch (e) {
-            console.error("Erro fatal PeerJS:", e);
-            document.getElementById('lobby-room-id').innerText = "Erro Crítico";
+            console.error("Erro PeerJS:", e);
             return;
         }
         
         this.peer.on('open', id => {
-            console.log(`[HOST] Servidor pronto. ID: ${id}`);
+            console.log(`[HOST] ID: ${id}`);
             document.getElementById('lobby-room-id').innerText = id;
             this.updateLobbyUI();
         });
@@ -696,8 +754,6 @@ const Net = {
                 document.getElementById('lobby-room-id').style.color = "#4dff4d";
                 this.setupConn();
                 this.updateLobbyUI();
-                
-                // Delay para garantir estabilidade
                 setTimeout(() => {
                     this.send({ type: 'LOBBY', p1Char: this.p1Char, p1Ready: this.p1Ready });
                 }, 500);
@@ -707,16 +763,12 @@ const Net = {
                 document.getElementById('lobby-room-id').style.color = "red";
                 this.updateLobbyUI();
             });
-            
              this.conn.on('error', err => console.error("Erro conexão:", err));
         });
 
         this.peer.on('error', err => {
             console.error(err);
-            let msg = "Erro: " + err.type;
-            if (err.type === 'network') msg = "Erro de Rede (Firewall?)";
-            if (err.type === 'unavailable-id') msg = "ID Indisponível";
-            document.getElementById('lobby-room-id').innerText = msg;
+            document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
         });
     },
 
@@ -725,10 +777,7 @@ const Net = {
         if (!targetId) { alert("Digite o ID!"); return; }
         targetId = targetId.trim().toUpperCase();
         
-        if (this.peer) {
-            this.peer.destroy();
-            this.peer = null;
-        }
+        if (this.peer) { this.peer.destroy(); this.peer = null; }
 
         this.isHost = false;
         this.isOnline = true;
@@ -737,30 +786,19 @@ const Net = {
         document.getElementById('lobby-room-id').innerText = "Conectando...";
         document.getElementById('lobby-room-id').style.color = "yellow";
 
-        const config = {
-            debug: 2,
-            config: {
-                iceServers: ICE_SERVERS
-            }
-        };
+        // Client usa config genérica (Google) pois quem define a rota crítica é o Host
+        const config = { debug: 2, config: { iceServers: SERVER_LIST[0].config.iceServers } };
 
         this.peer = new Peer(config);
 
         this.peer.on('open', id => {
-            console.log("Meu ID:", id);
             document.getElementById('lobby-room-id').innerText = "Buscando Host...";
+            this.conn = this.peer.connect(targetId, { reliable: true, serialization: 'json' });
 
-            this.conn = this.peer.connect(targetId, {
-                reliable: true,
-                serialization: 'json'
-            });
-
-            // Timeout de 15 segundos
             const timer = setTimeout(() => {
                 if (!this.conn || !this.conn.open) {
                     document.getElementById('lobby-room-id').innerText = "Falha: Timeout";
                     document.getElementById('lobby-room-id').style.color = "red";
-                    console.log("Timeout atingido. Servidores ICE falharam ou Host offline.");
                 }
             }, 15000);
 
@@ -774,11 +812,7 @@ const Net = {
                 this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
             });
 
-            this.conn.on('close', () => {
-                alert("Desconectado.");
-                location.reload();
-            });
-            
+            this.conn.on('close', () => { alert("Desconectado."); location.reload(); });
             this.conn.on('error', err => console.error("Erro conexão:", err));
         });
         
@@ -831,7 +865,12 @@ const Net = {
                 document.getElementById('upgrade-menu').classList.add('hidden');
             }
             if (data.type === 'BOSS_START') {
+                // Client recebe comando para INICIAR de verdade o boss
                 document.getElementById('boss-confirm-menu').classList.add('hidden');
+                // Restaura o botão para o futuro
+                const btn = document.getElementById('btn-start-boss');
+                btn.innerText = "COMEÇAR";
+                btn.disabled = false;
                 game.triggerConfirmedBossWave();
             }
             if (data.type === 'BOSS_CONFIRM_READY') {
@@ -969,9 +1008,6 @@ const UPGRADES_DB = {
     ]
 };
 
-/**
- * GAME ENGINE
- */
 const canvas = document.getElementById('gameCanvas');
 const ctx = canvas.getContext('2d');
 
@@ -992,11 +1028,10 @@ function updatePerkListUI() {
     const content = document.getElementById('perk-list-content');
     content.innerHTML = '';
     
-    // Mostra os perks do jogador local
     let targetPlayer = null;
     if (game) {
         if (!Net.isOnline || Net.isHost) targetPlayer = game.player;
-        else targetPlayer = game.player2; // Se for client on-line, o hud é do p2
+        else targetPlayer = game.player2; 
     }
     if (!targetPlayer) return;
 
@@ -1028,211 +1063,62 @@ function updatePerkListUI() {
 }
 
 class Game {
+    // ... [CONSTRUTOR E MÉTODOS MANTIDOS IGUAIS ATÉ pickUpgrade] ...
+    // Vou reimplementar a classe Game resumida onde não mudou e COMPLETA onde mudou (pickUpgrade)
     constructor() {
         this.state = 'MENU';
-        this.width = canvas.width;
-        this.height = canvas.height;
-        this.wave = 1;
+        this.width = canvas.width; this.height = canvas.height; this.wave = 1;
         this.souls = parseInt(localStorage.getItem('savedSouls') || 0);
-        this.luck = 1.0;
-        this.upgradeChoices = 5;
-        this.paused = false;
-        
-        this.player = null;
-        this.player2 = null; // Para Multiplayer
-        
-        this.bullets = [];
-        this.enemies = [];
-        this.particles = [];
-        this.lightningEffects = [];
-        this.floatingTexts = []; 
-        
-        this.blocks = [
-            { x: 0, y: 490, w: 100, h: 200 },     
-            { x: 100, y: 570, w: 100, h: 120 },   
-            { x: 200, y: 650, w: 1072, h: 40 },    
-            { x: 1272, y: 570, w: 100, h: 120 },  
-            { x: 1372, y: 490, w: 100, h: 200 }   
-        ];
-
-        this.enemiesToSpawn = 0;
-        this.lastSpawnTime = Date.now();
-        this.lastThunderTime = Date.now();
-        
-        this.waveClusterX = this.width / 2;
-        this.menuTimer = null; 
-        this.manaShieldPausedTime = 0; 
-        
-        this.input = { keys: {}, mouse: { x: 0, y: 0 } };
-        this.netInput = { keys: {}, mouse: { x: 0, y: 0 }, cmdLaser: false, cmdTeleport: false };
-
-        this.p1PickedPerk = null;
-        this.p2PickedPerk = null;
-
-        // NOVO: Sistema de morte assimétrica + revive
-        this.deadThisWave = { p1: false, p2: false };
-        this.reviveNextWave = { p1: false, p2: false };
-
-        this.p1BossReady = false;
-        this.p2BossReady = false;
-
-        this.cinematicBoss = null;
-        this.cinematicStartTime = 0;
-        this.cinematicExplosionDone = false;
-        this.showTeleportZonesUntil = 0;
-
-        this.initInput();
-        this.updateSoulsUI();
+        this.luck = 1.0; this.upgradeChoices = 5; this.paused = false;
+        this.player = null; this.player2 = null; 
+        this.bullets = []; this.enemies = []; this.particles = []; this.lightningEffects = []; this.floatingTexts = []; 
+        this.blocks = [{ x: 0, y: 490, w: 100, h: 200 }, { x: 100, y: 570, w: 100, h: 120 }, { x: 200, y: 650, w: 1072, h: 40 }, { x: 1272, y: 570, w: 100, h: 120 }, { x: 1372, y: 490, w: 100, h: 200 }];
+        this.enemiesToSpawn = 0; this.lastSpawnTime = Date.now(); this.lastThunderTime = Date.now();
+        this.waveClusterX = this.width / 2; this.menuTimer = null; this.manaShieldPausedTime = 0; 
+        this.input = { keys: {}, mouse: { x: 0, y: 0 } }; this.netInput = { keys: {}, mouse: { x: 0, y: 0 }, cmdLaser: false, cmdTeleport: false };
+        this.p1PickedPerk = null; this.p2PickedPerk = null;
+        this.deadThisWave = { p1: false, p2: false }; this.reviveNextWave = { p1: false, p2: false };
+        this.p1BossReady = false; this.p2BossReady = false;
+        this.cinematicBoss = null; this.cinematicStartTime = 0; this.cinematicExplosionDone = false; this.showTeleportZonesUntil = 0;
+        this.initInput(); this.updateSoulsUI();
     }
-
     initInput() {
         window.addEventListener('keydown', e => {
-            if(document.activeElement === document.getElementById('dev-input')) {
-                if(e.code === 'Enter') {
-                    this.processDevCommand(document.getElementById('dev-input').value);
-                    document.getElementById('dev-console').classList.add('hidden');
-                    canvas.focus();
-                }
-                return;
-            }
-
-            if (e.code === 'Enter') {
-                const devCon = document.getElementById('dev-console');
-                const devIn = document.getElementById('dev-input');
-                if (devCon.classList.contains('hidden')) {
-                    devCon.classList.remove('hidden');
-                    devIn.value = '';
-                    devIn.focus();
-                    this.input.keys = {}; 
-                }
-            }
-            if (e.code === 'Escape') {
-                audioManager.playWav('botton');
-                this.togglePause();
-            }
-            if (e.code === 'KeyF' && this.state === 'PLAYING') {
-                if (!Net.isOnline || Net.isHost) {
-                    if (this.player) this.player.activateLaser();
-                } else {
-                    Net.sendInputCmd('laser');
-                }
-            }
-            if (e.code === 'KeyT' && this.state === 'PLAYING') {
-                if (!Net.isOnline || Net.isHost) {
-                    if (this.player) this.player.activateTeleport();
-                } else {
-                    Net.sendInputCmd('teleport');
-                }
-            }
+            if(document.activeElement === document.getElementById('dev-input')) { if(e.code === 'Enter') { this.processDevCommand(document.getElementById('dev-input').value); document.getElementById('dev-console').classList.add('hidden'); canvas.focus(); } return; }
+            if (e.code === 'Enter') { const devCon = document.getElementById('dev-console'); const devIn = document.getElementById('dev-input'); if (devCon.classList.contains('hidden')) { devCon.classList.remove('hidden'); devIn.value = ''; devIn.focus(); this.input.keys = {}; } }
+            if (e.code === 'Escape') { audioManager.playWav('botton'); this.togglePause(); }
+            if (e.code === 'KeyF' && this.state === 'PLAYING') { if (!Net.isOnline || Net.isHost) { if (this.player) this.player.activateLaser(); } else { Net.sendInputCmd('laser'); } }
+            if (e.code === 'KeyT' && this.state === 'PLAYING') { if (!Net.isOnline || Net.isHost) { if (this.player) this.player.activateTeleport(); } else { Net.sendInputCmd('teleport'); } }
             this.input.keys[e.code] = true;
         });
         window.addEventListener('keyup', e => this.input.keys[e.code] = false);
-        canvas.addEventListener('mousemove', e => {
-            const rect = canvas.getBoundingClientRect();
-            this.input.mouse.x = e.clientX - rect.left;
-            this.input.mouse.y = e.clientY - rect.top;
-        });
-        
-        const unlockAudio = () => {
-            audioManager.init();
-            if (this.state === 'MENU' || this.state === 'GAME_OVER') audioManager.play('main');
-            document.getElementById('audio-hint').style.display = 'none';
-            window.removeEventListener('click', unlockAudio);
-        };
+        canvas.addEventListener('mousemove', e => { const rect = canvas.getBoundingClientRect(); this.input.mouse.x = e.clientX - rect.left; this.input.mouse.y = e.clientY - rect.top; });
+        const unlockAudio = () => { audioManager.init(); if (this.state === 'MENU' || this.state === 'GAME_OVER') audioManager.play('main'); document.getElementById('audio-hint').style.display = 'none'; window.removeEventListener('click', unlockAudio); };
         window.addEventListener('click', unlockAudio);
     }
-
-processDevCommand(cmd, isHostCmd = true) {
+    processDevCommand(cmd, isHostCmd = true) {
         if(!cmd || !cmd.startsWith('/')) return;
-        
-        if (Net.isOnline && !Net.isHost) {
-            Net.send({ type: 'DEV_CMD', cmd: cmd });
-            return;
-        }
-
-        let targetPlayer = isHostCmd ? this.player : this.player2;
-        const parts = cmd.trim().split(' ');
-        
-        if (parts[0] === '/wave' && parts[1]) {
-            this.wave = parseInt(parts[1]);
-            this.enemies.forEach(e => e.dead = true);
-            this.enemiesToSpawn = 0;
-            this.state = 'PLAYING';
-            this.addFloatingText(this.width/2, this.height/2, `PULANDO PARA WAVE ${this.wave}`, "yellow");
-            this.startWave();
-        } else if (parts[0] === '/perk' && parts[1]) {
-            const perkId = parts[1];
-            const allPerks = [...UPGRADES_DB.common, ...UPGRADES_DB.uncommon, ...UPGRADES_DB.epic, ...UPGRADES_DB.legendary];
-            
-            if (perkId === 'all') {
-                if (targetPlayer) {
-                    allPerks.forEach(pObj => {
-                        let currentCount = targetPlayer.perksCounts[pObj.id] || 0;
-                        let missing = pObj.max - currentCount;
-                        if (missing > 3 && pObj.max > 10) missing = 3; 
-                        for(let i=0; i < missing; i++){
-                            pObj.apply(targetPlayer);
-                            targetPlayer.perksCounts[pObj.id] = (targetPlayer.perksCounts[pObj.id] || 0) + 1;
-                        }
-                    });
-                    if (isHostCmd) targetPlayer.updateStatsUI();
-                    this.addFloatingText(targetPlayer.x, targetPlayer.y - 40, `+ALL PERKS MAXED`, "#4dff4d");
-                }
-            } else {
-                const pObj = allPerks.find(p => p.id === perkId);
-                if (pObj && targetPlayer) {
-                    pObj.apply(targetPlayer);
-                    targetPlayer.perksCounts[pObj.id] = (targetPlayer.perksCounts[pObj.id] || 0) + 1;
-                    if (isHostCmd) targetPlayer.updateStatsUI();
-                    this.addFloatingText(targetPlayer.x, targetPlayer.y - 40, `+${perkId}`, "#4dff4d");
-                }
-            }
-        }
+        if (Net.isOnline && !Net.isHost) { Net.send({ type: 'DEV_CMD', cmd: cmd }); return; }
+        let targetPlayer = isHostCmd ? this.player : this.player2; const parts = cmd.trim().split(' ');
+        if (parts[0] === '/wave' && parts[1]) { this.wave = parseInt(parts[1]); this.enemies.forEach(e => e.dead = true); this.enemiesToSpawn = 0; this.state = 'PLAYING'; this.addFloatingText(this.width/2, this.height/2, `PULANDO PARA WAVE ${this.wave}`, "yellow"); this.startWave(); } 
+        else if (parts[0] === '/perk' && parts[1]) { const perkId = parts[1]; const allPerks = [...UPGRADES_DB.common, ...UPGRADES_DB.uncommon, ...UPGRADES_DB.epic, ...UPGRADES_DB.legendary];
+            if (perkId === 'all') { if (targetPlayer) { allPerks.forEach(pObj => { let currentCount = targetPlayer.perksCounts[pObj.id] || 0; let missing = pObj.max - currentCount; if (missing > 3 && pObj.max > 10) missing = 3; for(let i=0; i < missing; i++){ pObj.apply(targetPlayer); targetPlayer.perksCounts[pObj.id] = (targetPlayer.perksCounts[pObj.id] || 0) + 1; } }); if (isHostCmd) targetPlayer.updateStatsUI(); this.addFloatingText(targetPlayer.x, targetPlayer.y - 40, `+ALL PERKS MAXED`, "#4dff4d"); } } 
+            else { const pObj = allPerks.find(p => p.id === perkId); if (pObj && targetPlayer) { pObj.apply(targetPlayer); targetPlayer.perksCounts[pObj.id] = (targetPlayer.perksCounts[pObj.id] || 0) + 1; if (isHostCmd) targetPlayer.updateStatsUI(); this.addFloatingText(targetPlayer.x, targetPlayer.y - 40, `+${perkId}`, "#4dff4d"); } } }
     }
-
     togglePause() {
         if (this.state !== 'PLAYING' && this.state !== 'PAUSED') return;
-
         let targetP = (!Net.isOnline || Net.isHost) ? this.player : this.player2;
-
-        if (this.state === 'PLAYING') {
-            this.state = 'PAUSED';
-            this.paused = true;
-            document.getElementById('pause-menu').classList.remove('hidden');
-            if (targetP && !targetP.manaShieldReady && targetP.perks.manaShield) {
-                this.manaShieldPausedTime = targetP.manaShieldCooldown - Date.now();
-            }
-        } else {
-            this.state = 'PLAYING';
-            this.paused = false;
-            document.getElementById('pause-menu').classList.add('hidden');
-            if (targetP && !targetP.manaShieldReady && targetP.perks.manaShield) {
-                targetP.manaShieldCooldown = Date.now() + this.manaShieldPausedTime;
-            }
-        }
+        if (this.state === 'PLAYING') { this.state = 'PAUSED'; this.paused = true; document.getElementById('pause-menu').classList.remove('hidden'); if (targetP && !targetP.manaShieldReady && targetP.perks.manaShield) { this.manaShieldPausedTime = targetP.manaShieldCooldown - Date.now(); } } 
+        else { this.state = 'PLAYING'; this.paused = false; document.getElementById('pause-menu').classList.add('hidden'); if (targetP && !targetP.manaShieldReady && targetP.perks.manaShield) { targetP.manaShieldCooldown = Date.now() + this.manaShieldPausedTime; } }
     }
-
     start(char1, char2) {
-        this.state = 'PLAYING';
-        this.paused = false;
-        
-        let startX = Net.isOnline ? (this.width/2 - 50) : this.width/2;
-        
-        this.player = new Player(startX, this.height - 150, char1, true); // P1 local pro Host / Fake pro Client
-        if (Net.isOnline) {
-            this.player2 = new Player(startX + 100, this.height - 150, char2, false); 
-        }
-
-        this.bullets = []; this.enemies = []; this.particles = []; this.lightningEffects = []; this.floatingTexts = [];
-        this.wave = 1;
-        document.getElementById('teleport-ui').style.display = 'none';
-        
-        if (!Net.isOnline || Net.isHost) {
-            this.startWave();
-        }
+        this.state = 'PLAYING'; this.paused = false; let startX = Net.isOnline ? (this.width/2 - 50) : this.width/2;
+        this.player = new Player(startX, this.height - 150, char1, true);
+        if (Net.isOnline) { this.player2 = new Player(startX + 100, this.height - 150, char2, false); }
+        this.bullets = []; this.enemies = []; this.particles = []; this.lightningEffects = []; this.floatingTexts = []; this.wave = 1; document.getElementById('teleport-ui').style.display = 'none';
+        if (!Net.isOnline || Net.isHost) { this.startWave(); }
     }
-
-  startWave() {
+    startWave() {
         const isBoss = (this.wave % CONFIG.bossWaveInterval === 0 || this.wave % CONFIG.miniBossInterval === 0);
         if (isBoss) {
             this.state = 'BOSS_CONFIRM';
@@ -1240,207 +1126,57 @@ processDevCommand(cmd, isHostCmd = true) {
             document.getElementById('boss-wave-title').innerText = title;
             document.getElementById('boss-wave-title').style.color = (this.wave % CONFIG.bossWaveInterval === 0) ? 'red' : '#bf00ff';
             document.getElementById('boss-confirm-menu').classList.remove('hidden');
-            // Agora aparece para os dois jogadores
         } else {
             let baseSpawns = 2 + (this.wave * 1);
             if (this.player && this.player.perks.thunderbolt === 3) baseSpawns = Math.floor(baseSpawns * 1.3);
             if (Net.isOnline) baseSpawns = Math.floor(baseSpawns * 1.5);
-
-            this.enemiesToSpawn = baseSpawns;
-            
-            this.lastSpawnTime = Date.now();
-            this.waveClusterX = 200 + Math.random() * (this.width - 400);
+            this.enemiesToSpawn = baseSpawns; this.lastSpawnTime = Date.now(); this.waveClusterX = 200 + Math.random() * (this.width - 400);
             audioManager.play('principal');
             this.showWaveText(`WAVE ${this.wave}`);
+            this.state = 'PLAYING'; // Garante o estado correto
         }
     }
-
-triggerConfirmedBossWave() {
-        this.state = 'PLAYING';
-        audioManager.play('boss');
-        this.enemiesToSpawn = 0; 
+    triggerConfirmedBossWave() {
+        this.state = 'PLAYING'; audioManager.play('boss'); this.enemiesToSpawn = 0; 
         if (!Net.isOnline || Net.isHost) this.spawnBoss(this.wave % CONFIG.bossWaveInterval === 0);
         const title = (this.wave % CONFIG.bossWaveInterval === 0) ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
         this.showWaveText(title);
-        
         if (Net.isOnline && Net.isHost) Net.send({ type: 'BOSS_START' });
     }
-
-    checkBossStart() {
-        if (this.p1BossReady && this.p2BossReady) {
-            this.p1BossReady = false;
-            this.p2BossReady = false;
-            this.triggerConfirmedBossWave();
-        }
-    }
-    
-    startBossDeathCinematic(boss) {
-        this.state = 'BOSS_DEATH_CINEMATIC';
-        this.cinematicBoss = boss;
-        this.cinematicStartTime = Date.now();
-        this.cinematicExplosionDone = false;
-        
-        if (audioManager.current) audioManager.current.pause();
-        audioManager.playWav('bossdefeat');
-    }
-
+    checkBossStart() { if (this.p1BossReady && this.p2BossReady) { this.p1BossReady = false; this.p2BossReady = false; this.triggerConfirmedBossWave(); } }
+    startBossDeathCinematic(boss) { this.state = 'BOSS_DEATH_CINEMATIC'; this.cinematicBoss = boss; this.cinematicStartTime = Date.now(); this.cinematicExplosionDone = false; if (audioManager.current) audioManager.current.pause(); audioManager.playWav('bossdefeat'); }
     startTeleport(fromLeft) {
-        this.state = 'TELEPORTING';
-        let fadeElement = document.getElementById('teleport-fade');
-        fadeElement.style.display = 'block';
-        
-        setTimeout(() => fadeElement.style.opacity = 1, 10);
-        audioManager.playSfx('teleport');
-
+        this.state = 'TELEPORTING'; let fadeElement = document.getElementById('teleport-fade'); fadeElement.style.display = 'block'; setTimeout(() => fadeElement.style.opacity = 1, 10); audioManager.playSfx('teleport');
         setTimeout(() => {
-            // Move Players
-            this.player.x = fromLeft ? this.width - 150 : 100;
-            this.player.y = 50;
-            this.player.vy = 0;
-            
-            if (this.player2) {
-                this.player2.x = fromLeft ? this.width - 250 : 200;
-                this.player2.y = 50;
-                this.player2.vy = 0;
-            }
-            
-            // Move Todos os Inimigos
-            this.enemies.forEach(e => {
-                let newX = fromLeft ? 50 + Math.random() * 150 : this.width - 200 - Math.random() * 150;
-                newX = Math.max(0, Math.min(this.width - e.width, newX));
-                e.x = newX;
-                if (e.anchorX !== undefined) e.anchorX = newX;
-            });
-
-            fadeElement.style.opacity = 0;
-            setTimeout(() => {
-                fadeElement.style.display = 'none';
-                this.state = 'PLAYING';
-            }, 700);
+            this.player.x = fromLeft ? this.width - 150 : 100; this.player.y = 50; this.player.vy = 0;
+            if (this.player2) { this.player2.x = fromLeft ? this.width - 250 : 200; this.player2.y = 50; this.player2.vy = 0; }
+            this.enemies.forEach(e => { let newX = fromLeft ? 50 + Math.random() * 150 : this.width - 200 - Math.random() * 150; newX = Math.max(0, Math.min(this.width - e.width, newX)); e.x = newX; if (e.anchorX !== undefined) e.anchorX = newX; });
+            fadeElement.style.opacity = 0; setTimeout(() => { fadeElement.style.display = 'none'; this.state = 'PLAYING'; }, 700);
         }, 700);
     }
-
-    createExplosion(x, y, color, count, baseSize, baseSpeed, duration) {
-        for(let i = 0; i < count; i++) {
-            if (this.particles.length >= 2000) break; 
-            let p = ObjectPool.getParticle(x, y, color, baseSize + Math.random() * (baseSize * 0.5), duration);
-            let angle = Math.random() * Math.PI * 2;
-            let speed = baseSpeed + Math.random() * (baseSpeed * 0.8);
-            
-            p.vx = Math.cos(angle) * speed;
-            p.vy = Math.sin(angle) * speed;
-            
-            this.particles.push(p);
-        }
-    }
-
+    createExplosion(x, y, color, count, baseSize, baseSpeed, duration) { for(let i = 0; i < count; i++) { if (this.particles.length >= 2000) break; let p = ObjectPool.getParticle(x, y, color, baseSize + Math.random() * (baseSize * 0.5), duration); let angle = Math.random() * Math.PI * 2; let speed = baseSpeed + Math.random() * (baseSpeed * 0.8); p.vx = Math.cos(angle) * speed; p.vy = Math.sin(angle) * speed; this.particles.push(p); } }
     triggerCinematicExplosions() {
-        if (!this.cinematicBoss) return;
-        this.cinematicBoss.dead = true;
-        
-        this.createExplosion(
-            this.cinematicBoss.x + this.cinematicBoss.width / 2, 
-            this.cinematicBoss.y + this.cinematicBoss.height / 2, 
-            '#bf00ff', 80, 12, 8, 2000
-        );
-        
-        this.enemies.forEach(e => {
-            if (e !== this.cinematicBoss && !e.dead) {
-                e.dead = true;
-                this.createExplosion(e.x + e.width / 2, e.y + e.height / 2, 'white', 12, 6, 5, 1500);
-            }
-        });
-
-        if (!this.cinematicBoss.isBigBoss) this.souls += 10; else this.souls += 30;
-        this.updateSoulsUI();
+        if (!this.cinematicBoss) return; this.cinematicBoss.dead = true;
+        this.createExplosion(this.cinematicBoss.x + this.cinematicBoss.width / 2, this.cinematicBoss.y + this.cinematicBoss.height / 2, '#bf00ff', 80, 12, 8, 2000);
+        this.enemies.forEach(e => { if (e !== this.cinematicBoss && !e.dead) { e.dead = true; this.createExplosion(e.x + e.width / 2, e.y + e.height / 2, 'white', 12, 6, 5, 1500); } });
+        if (!this.cinematicBoss.isBigBoss) this.souls += 10; else this.souls += 30; this.updateSoulsUI();
     }
-
     endCinematic() {
-        this.state = 'UPGRADE_MENU';
-        window.timeScale = 1.0;
-        this.enemies = []; 
-        document.getElementById('fade-overlay').style.opacity = 0;
-        audioManager.play('principal');
-        
-        let targetP = (!Net.isOnline || Net.isHost) ? this.player : this.player2;
-        if (targetP && !targetP.manaShieldReady && targetP.perks.manaShield) {
-            this.manaShieldPausedTime = targetP.manaShieldCooldown - Date.now();
-        }
-
-        if (!Net.isOnline || Net.isHost) {
-            this.p1PickedPerk = null;
-            this.p2PickedPerk = null;
-        }
-
-        this.showUpgradeMenu();
+        this.state = 'UPGRADE_MENU'; window.timeScale = 1.0; this.enemies = []; document.getElementById('fade-overlay').style.opacity = 0; audioManager.play('principal');
+        let targetP = (!Net.isOnline || Net.isHost) ? this.player : this.player2; if (targetP && !targetP.manaShieldReady && targetP.perks.manaShield) { this.manaShieldPausedTime = targetP.manaShieldCooldown - Date.now(); }
+        if (!Net.isOnline || Net.isHost) { this.p1PickedPerk = null; this.p2PickedPerk = null; } this.showUpgradeMenu();
     }
-
-    showWaveText(text) {
-        const el = document.getElementById('wave-display');
-        el.innerText = text; el.style.opacity = 1;
-        setTimeout(() => { el.style.opacity = 0; }, 3000);
-    }
-
-    updateSoulsUI() {
-        document.getElementById('souls-text').innerText = this.souls;
-        document.getElementById('final-souls').innerText = this.souls;
-        localStorage.setItem('savedSouls', this.souls);
-    }
-
-    clearAllBullets() {
-        for (let i = this.bullets.length - 1; i >= 0; i--) {
-            ObjectPool.releaseBullet(this.bullets[i]);
-        }
-        this.bullets = [];
-    }
-
-    // MULTIPLAYER SYNC
-serializeState() {
-        if (!this.player) {
-            return { st: this.state, wv: this.wave, so: this.souls || 0 };
-        }
-        const p1OrbX = this.player.orb ? this.player.orb.x : this.player.x + this.player.width / 2;
-        const p1OrbY = this.player.orb ? this.player.orb.y : this.player.y + this.player.height / 2;
-        const p2OrbX = (this.player2 && this.player2.orb) ? this.player2.orb.x : (this.player2 ? this.player2.x + this.player2.width / 2 : 0);
-        const p2OrbY = (this.player2 && this.player2.orb) ? this.player2.orb.y : (this.player2 ? this.player2.y + this.player2.height / 2 : 0);
-
+    showWaveText(text) { const el = document.getElementById('wave-display'); el.innerText = text; el.style.opacity = 1; setTimeout(() => { el.style.opacity = 0; }, 3000); }
+    updateSoulsUI() { document.getElementById('souls-text').innerText = this.souls; document.getElementById('final-souls').innerText = this.souls; localStorage.setItem('savedSouls', this.souls); }
+    clearAllBullets() { for (let i = this.bullets.length - 1; i >= 0; i--) { ObjectPool.releaseBullet(this.bullets[i]); } this.bullets = []; }
+    serializeState() {
+        if (!this.player) { return { st: this.state, wv: this.wave, so: this.souls || 0 }; }
+        const p1OrbX = this.player.orb ? this.player.orb.x : this.player.x + this.player.width / 2; const p1OrbY = this.player.orb ? this.player.orb.y : this.player.y + this.player.height / 2;
+        const p2OrbX = (this.player2 && this.player2.orb) ? this.player2.orb.x : (this.player2 ? this.player2.x + this.player2.width / 2 : 0); const p2OrbY = (this.player2 && this.player2.orb) ? this.player2.orb.y : (this.player2 ? this.player2.y + this.player2.height / 2 : 0);
         return {
-            st: this.state,
-            wv: this.wave,
-            so: this.souls,
-            tpz: this.showTeleportZonesUntil,
-            p1: { 
-                x: this.player.x, 
-                y: this.player.y, 
-                w: this.player.width,   // <- Novo: altura e largura pro Shrink não bugar
-                h: this.player.height, 
-                hp: this.player.hp, 
-                mx: this.player.maxHp, 
-                la: this.player.laserActive, 
-                fa: this.player.facing, 
-                ms: this.player.manaShieldReady, 
-                or: p1OrbX, 
-                oy: p1OrbY, 
-                iu: this.player.invulnUntil,
-                wt: this.player.walkTimer,
-                d: this.player.isDead
-            },
-            p2: this.player2 ? {
-                x: this.player2.x, 
-                y: this.player2.y, 
-                w: this.player2.width, 
-                h: this.player2.height, 
-                hp: this.player2.hp, 
-                mx: this.player2.maxHp, 
-                la: this.player2.laserActive, 
-                fa: this.player2.facing, 
-                ms: this.player2.manaShieldReady, 
-                or: p2OrbX, 
-                oy: p2OrbY, 
-                iu: this.player2.invulnUntil,
-                wt: this.player2.walkTimer,
-                d: this.player2.isDead
-            } : null,
+            st: this.state, wv: this.wave, so: this.souls, tpz: this.showTeleportZonesUntil,
+            p1: { x: this.player.x, y: this.player.y, w: this.player.width, h: this.player.height, hp: this.player.hp, mx: this.player.maxHp, la: this.player.laserActive, fa: this.player.facing, ms: this.player.manaShieldReady, or: p1OrbX, oy: p1OrbY, iu: this.player.invulnUntil, wt: this.player.walkTimer, d: this.player.isDead },
+            p2: this.player2 ? { x: this.player2.x, y: this.player2.y, w: this.player2.width, h: this.player2.height, hp: this.player2.hp, mx: this.player2.maxHp, la: this.player2.laserActive, fa: this.player2.facing, ms: this.player2.manaShieldReady, or: p2OrbX, oy: p2OrbY, iu: this.player2.invulnUntil, wt: this.player2.walkTimer, d: this.player2.isDead } : null,
             en: this.enemies.map(e => ({ x: e.x, y: e.y, hp: e.hp, mx: e.maxHp, t: e.type, s: e.shieldActive, po: e.poisonActive, w: e.width, h: e.height, lh: e.lastHitTime, isB: e.isBigBoss || false, aX: e.anchorX, cU: e.colorUntil })),
             bu: this.bullets.map(b => ({ x: b.x, y: b.y, c: b.color, r: b.radius, hi: b.history || [] })),
             pa: this.particles.map(p => ({ x: p.x, y: p.y, c: p.color, s: p.size })),
@@ -1448,258 +1184,67 @@ serializeState() {
             le: this.lightningEffects.map(l => ({ x: l.x, y: l.y, t: l.isThick, d: l.duration, st: l.spawnTime }))
         };
     }
-
-    // CORREÇÃO: Função syncState atualizada para forçar abertura do menu Boss no cliente
     syncState(s) {
         if (!s) return;
-
-        // Se o Host diz que é hora do Boss, nós FORÇAMOS o menu a aparecer
         if (s.st === 'BOSS_CONFIRM') {
             const bossMenu = document.getElementById('boss-confirm-menu');
-            
-            // Se o menu estiver escondido, mostre ele AGORA
             if (bossMenu.classList.contains('hidden')) {
                 const isBigBoss = (s.wv % CONFIG.bossWaveInterval === 0);
                 const title = isBigBoss ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
-                
                 document.getElementById('boss-wave-title').innerText = title;
                 document.getElementById('boss-wave-title').style.color = isBigBoss ? 'red' : '#bf00ff';
                 bossMenu.classList.remove('hidden');
-                
-                // Força o estado local para evitar conflitos
                 this.state = 'BOSS_CONFIRM';
             }
         }
-        
-        // Se o jogo já começou (PLAYING) mas o menu do boss ainda está na tela, esconde ele
         if (s.st === 'PLAYING' && !document.getElementById('boss-confirm-menu').classList.contains('hidden')) {
             document.getElementById('boss-confirm-menu').classList.add('hidden');
         }
-
-        // Força o Client a abrir a tela de escolha de perks
-        if (this.state !== 'UPGRADE_MENU' && s.st === 'UPGRADE_MENU') {
-            this.showUpgradeMenu();
-        }
-        if (this.state === 'UPGRADE_MENU' && s.st === 'PLAYING') {
-            document.getElementById('upgrade-menu').classList.add('hidden');
-        }
-
-        this.state = s.st || this.state;
-        this.wave = s.wv || this.wave;
-        this.souls = s.so || this.souls;
-        this.showTeleportZonesUntil = s.tpz || 0;
-
-        // Sincroniza P1 (Host)
-        if (this.player && s.p1) {
-            this.player.x = s.p1.x; this.player.y = s.p1.y;
-            if (s.p1.w) this.player.width = s.p1.w;
-            if (s.p1.h) this.player.height = s.p1.h;
-            this.player.hp = s.p1.hp; this.player.maxHp = s.p1.mx;
-            this.player.laserActive = s.p1.la; this.player.facing = s.p1.fa;
-            this.player.manaShieldReady = s.p1.ms; this.player.invulnUntil = s.p1.iu;
-            if (this.player.orb && s.p1.or !== undefined) {
-                this.player.orb.x = s.p1.or;
-                this.player.orb.y = s.p1.oy;
-            }
-        }
-
-        // Sincroniza P2 (Cliente)
-        if (this.player2 && s.p2) {
-            this.player2.x = s.p2.x; this.player2.y = s.p2.y;
-            if (s.p2.w) this.player2.width = s.p2.w;
-            if (s.p2.h) this.player2.height = s.p2.h;
-            this.player2.hp = s.p2.hp; this.player2.maxHp = s.p2.mx;
-            this.player2.laserActive = s.p2.la; this.player2.facing = s.p2.fa;
-            this.player2.manaShieldReady = s.p2.ms; this.player2.invulnUntil = s.p2.iu;
-            if (this.player2.orb && s.p2.or !== undefined) {
-                this.player2.orb.x = s.p2.or;
-                this.player2.orb.y = s.p2.oy;
-            }
-        }
-
-        if (this.player2) this.player2.updateHpUI();
-        this.updateSoulsUI();
-
-        // Sincroniza Inimigos
-        while(this.enemies.length < s.en.length) this.enemies.push(new Enemy(0,0,'redondo'));
-        while(this.enemies.length > s.en.length) this.enemies.pop();
-        for(let i=0; i<s.en.length; i++){
-             this.enemies[i].x = s.en[i].x; this.enemies[i].y = s.en[i].y;
-             this.enemies[i].hp = s.en[i].hp; this.enemies[i].maxHp = s.en[i].mx;
-             this.enemies[i].type = s.en[i].t; this.enemies[i].shieldActive = s.en[i].s;
-             this.enemies[i].poisonActive = s.en[i].po; this.enemies[i].width = s.en[i].w;
-             this.enemies[i].height = s.en[i].h; this.enemies[i].lastHitTime = s.en[i].lh;
-             this.enemies[i].isBigBoss = s.en[i].isB;
-             this.enemies[i].anchorX = s.en[i].aX; this.enemies[i].colorUntil = s.en[i].cU;
-        }
-
-        // Sincroniza Projéteis
-        while(this.bullets.length < s.bu.length) this.bullets.push(new Projectile(0,0,0,0,false));
-        while(this.bullets.length > s.bu.length) this.bullets.pop();
-        for(let i=0; i<s.bu.length; i++){
-            this.bullets[i].x = s.bu[i].x; this.bullets[i].y = s.bu[i].y;
-            this.bullets[i].radius = s.bu[i].r; this.bullets[i].color = s.bu[i].c;
-            this.bullets[i].history = s.bu[i].hi || [];
-        }
-
-        // Sincroniza Partículas e Textos
-        while(this.particles.length < s.pa.length) this.particles.push(new Particle(0,0,'white',0));
-        while(this.particles.length > s.pa.length) this.particles.pop();
-        for(let i=0; i<s.pa.length; i++){
-            this.particles[i].x = s.pa[i].x; this.particles[i].y = s.pa[i].y;
-            this.particles[i].size = s.pa[i].s; this.particles[i].color = s.pa[i].c;
-        }
-
-        while(this.floatingTexts.length < s.ft.length) this.floatingTexts.push(new FloatingText(0,0,'',''));
-        while(this.floatingTexts.length > s.ft.length) this.floatingTexts.pop();
-        for(let i=0; i<s.ft.length; i++){
-            this.floatingTexts[i].x = s.ft[i].x; this.floatingTexts[i].y = s.ft[i].y;
-            this.floatingTexts[i].text = s.ft[i].t; this.floatingTexts[i].color = s.ft[i].c;
-            this.floatingTexts[i].duration = s.ft[i].d; this.floatingTexts[i].spawnTime = s.ft[i].st;
-        }
-
-        while(this.lightningEffects.length < s.le.length) this.lightningEffects.push(new LightningBeam(0,0,false));
-        while(this.lightningEffects.length > s.le.length) this.lightningEffects.pop();
-        for(let i=0; i<s.le.length; i++){
-            this.lightningEffects[i].x = s.le[i].x; this.lightningEffects[i].y = s.le[i].y;
-            this.lightningEffects[i].isThick = s.le[i].t;
-            this.lightningEffects[i].duration = s.le[i].d; this.lightningEffects[i].spawnTime = s.le[i].st;
-        }
+        if (this.state !== 'UPGRADE_MENU' && s.st === 'UPGRADE_MENU') { this.showUpgradeMenu(); }
+        if (this.state === 'UPGRADE_MENU' && s.st === 'PLAYING') { document.getElementById('upgrade-menu').classList.add('hidden'); }
+        this.state = s.st || this.state; this.wave = s.wv || this.wave; this.souls = s.so || this.souls; this.showTeleportZonesUntil = s.tpz || 0;
+        if (this.player && s.p1) { this.player.x = s.p1.x; this.player.y = s.p1.y; if (s.p1.w) this.player.width = s.p1.w; if (s.p1.h) this.player.height = s.p1.h; this.player.hp = s.p1.hp; this.player.maxHp = s.p1.mx; this.player.laserActive = s.p1.la; this.player.facing = s.p1.fa; this.player.manaShieldReady = s.p1.ms; this.player.invulnUntil = s.p1.iu; if (this.player.orb && s.p1.or !== undefined) { this.player.orb.x = s.p1.or; this.player.orb.y = s.p1.oy; } }
+        if (this.player2 && s.p2) { this.player2.x = s.p2.x; this.player2.y = s.p2.y; if (s.p2.w) this.player2.width = s.p2.w; if (s.p2.h) this.player2.height = s.p2.h; this.player2.hp = s.p2.hp; this.player2.maxHp = s.p2.mx; this.player2.laserActive = s.p2.la; this.player2.facing = s.p2.fa; this.player2.manaShieldReady = s.p2.ms; this.player2.invulnUntil = s.p2.iu; if (this.player2.orb && s.p2.or !== undefined) { this.player2.orb.x = s.p2.or; this.player2.orb.y = s.p2.oy; } }
+        if (this.player2) this.player2.updateHpUI(); this.updateSoulsUI();
+        while(this.enemies.length < s.en.length) this.enemies.push(new Enemy(0,0,'redondo')); while(this.enemies.length > s.en.length) this.enemies.pop();
+        for(let i=0; i<s.en.length; i++){ this.enemies[i].x = s.en[i].x; this.enemies[i].y = s.en[i].y; this.enemies[i].hp = s.en[i].hp; this.enemies[i].maxHp = s.en[i].mx; this.enemies[i].type = s.en[i].t; this.enemies[i].shieldActive = s.en[i].s; this.enemies[i].poisonActive = s.en[i].po; this.enemies[i].width = s.en[i].w; this.enemies[i].height = s.en[i].h; this.enemies[i].lastHitTime = s.en[i].lh; this.enemies[i].isBigBoss = s.en[i].isB; this.enemies[i].anchorX = s.en[i].aX; this.enemies[i].colorUntil = s.en[i].cU; }
+        while(this.bullets.length < s.bu.length) this.bullets.push(new Projectile(0,0,0,0,false)); while(this.bullets.length > s.bu.length) this.bullets.pop();
+        for(let i=0; i<s.bu.length; i++){ this.bullets[i].x = s.bu[i].x; this.bullets[i].y = s.bu[i].y; this.bullets[i].radius = s.bu[i].r; this.bullets[i].color = s.bu[i].c; this.bullets[i].history = s.bu[i].hi || []; }
+        while(this.particles.length < s.pa.length) this.particles.push(new Particle(0,0,'white',0)); while(this.particles.length > s.pa.length) this.particles.pop();
+        for(let i=0; i<s.pa.length; i++){ this.particles[i].x = s.pa[i].x; this.particles[i].y = s.pa[i].y; this.particles[i].size = s.pa[i].s; this.particles[i].color = s.pa[i].c; }
+        while(this.floatingTexts.length < s.ft.length) this.floatingTexts.push(new FloatingText(0,0,'','')); while(this.floatingTexts.length > s.ft.length) this.floatingTexts.pop();
+        for(let i=0; i<s.ft.length; i++){ this.floatingTexts[i].x = s.ft[i].x; this.floatingTexts[i].y = s.ft[i].y; this.floatingTexts[i].text = s.ft[i].t; this.floatingTexts[i].color = s.ft[i].c; this.floatingTexts[i].duration = s.ft[i].d; this.floatingTexts[i].spawnTime = s.ft[i].st; }
+        while(this.lightningEffects.length < s.le.length) this.lightningEffects.push(new LightningBeam(0,0,false)); while(this.lightningEffects.length > s.le.length) this.lightningEffects.pop();
+        for(let i=0; i<s.le.length; i++){ this.lightningEffects[i].x = s.le[i].x; this.lightningEffects[i].y = s.le[i].y; this.lightningEffects[i].isThick = s.le[i].t; this.lightningEffects[i].duration = s.le[i].d; this.lightningEffects[i].spawnTime = s.le[i].st; }
     }
-
-
     loop() {
-        // Proteção: só envia STATE se o player já existe
-        // CORREÇÃO: Agora o Host envia o STATE também no UPGRADE_MENU para o Client abrir a tela
-        if (Net.isOnline && Net.isHost && this.player && 
-            (this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC' || this.state === 'UPGRADE_MENU' || this.state === 'BOSS_CONFIRM')) {
-            Net.send({ type: 'STATE', state: this.serializeState() });
-        }
-
-        if (!Net.isOnline || Net.isHost) {
-            if ((this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC') && !this.paused) {
-                this.update();
-                this.draw();
-            } else {
-                if (this.state !== 'MENU' && this.player) this.draw();
-            }
-        } else {
-            if (this.state !== 'MENU' && this.state !== 'GAME_OVER' && this.state !== 'UPGRADE_MENU' && this.state !== 'BOSS_CONFIRM') {
-                Net.send({ type: 'INPUT', input: { keys: this.input.keys, mouse: this.input.mouse } });
-            }
-            if (this.player) this.draw();
-        }
-
+        if (Net.isOnline && Net.isHost && this.player && (this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC' || this.state === 'UPGRADE_MENU' || this.state === 'BOSS_CONFIRM')) { Net.send({ type: 'STATE', state: this.serializeState() }); }
+        if (!Net.isOnline || Net.isHost) { if ((this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC') && !this.paused) { this.update(); this.draw(); } else { if (this.state !== 'MENU' && this.player) this.draw(); } } 
+        else { if (this.state !== 'MENU' && this.state !== 'GAME_OVER' && this.state !== 'UPGRADE_MENU' && this.state !== 'BOSS_CONFIRM') { Net.send({ type: 'INPUT', input: { keys: this.input.keys, mouse: this.input.mouse } }); } if (this.player) this.draw(); }
         requestAnimationFrame(() => this.loop());
     }
-
     update() {
         if (!this.player) return;
-
         if (this.state === 'BOSS_DEATH_CINEMATIC') {
-            window.timeScale = 0.2; 
-            
-            this.player.update(this.input);
-            if (this.player2) this.player2.update(this.netInput);
-            
-            this.bullets.forEach(b => b.update());
-            this.enemies.forEach(e => { if(!e.dead) e.update(this.enemies); });
-            
-            for (let i = this.particles.length - 1; i >= 0; i--) {
-                let p = this.particles[i]; p.update();
-                if (p.dead) { ObjectPool.releaseParticle(p); this.particles.splice(i, 1); }
-            }
-            for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
-                let t = this.floatingTexts[i]; t.update();
-                if (t.dead) this.floatingTexts.splice(i, 1);
-            }
-            
+            window.timeScale = 0.2; this.player.update(this.input); if (this.player2) this.player2.update(this.netInput);
+            this.bullets.forEach(b => b.update()); this.enemies.forEach(e => { if(!e.dead) e.update(this.enemies); });
+            for (let i = this.particles.length - 1; i >= 0; i--) { let p = this.particles[i]; p.update(); if (p.dead) { ObjectPool.releaseParticle(p); this.particles.splice(i, 1); } }
+            for (let i = this.floatingTexts.length - 1; i >= 0; i--) { let t = this.floatingTexts[i]; t.update(); if (t.dead) this.floatingTexts.splice(i, 1); }
             let elapsed = Date.now() - this.cinematicStartTime;
-            
-            if (elapsed >= 3000 && !this.cinematicExplosionDone) {
-                this.triggerCinematicExplosions();
-                this.cinematicExplosionDone = true;
-            }
-            
-            if (elapsed >= 3000) {
-                let fadeProgress = (elapsed - 3000) / 2000;
-                document.getElementById('fade-overlay').style.opacity = Math.min(1, fadeProgress);
-            } else {
-                document.getElementById('fade-overlay').style.opacity = 0;
-            }
-            
-            if (elapsed >= 5000) {
-                this.endCinematic();
-            }
-            
-            return; 
+            if (elapsed >= 3000 && !this.cinematicExplosionDone) { this.triggerCinematicExplosions(); this.cinematicExplosionDone = true; }
+            if (elapsed >= 3000) { let fadeProgress = (elapsed - 3000) / 2000; document.getElementById('fade-overlay').style.opacity = Math.min(1, fadeProgress); } else { document.getElementById('fade-overlay').style.opacity = 0; }
+            if (elapsed >= 5000) { this.endCinematic(); } return; 
         }
-
-        window.timeScale = 1.0;
-        document.getElementById('fade-overlay').style.opacity = 0;
-
-        this.player.update(this.input);
-        if (this.player2) this.player2.update(this.netInput);
-
-        // Processa comando TP do P2
-        if (Net.isOnline && Net.isHost && this.netInput.cmdTeleport) {
-            this.player2.activateTeleport();
-            this.netInput.cmdTeleport = false; // reset
-        }
-        if (Net.isOnline && Net.isHost && this.netInput.cmdLaser) {
-            this.player2.activateLaser();
-            this.netInput.cmdLaser = false; 
-        }
-
-        this.manageWaves();
-        this.manageThunder();
-
-        for (let i = this.bullets.length - 1; i >= 0; i--) {
-            let b = this.bullets[i];
-            b.update();
-            if (b.dead) {
-                ObjectPool.releaseBullet(b);
-                this.bullets.splice(i, 1);
-            }
-        }
-
-        for (let i = this.enemies.length - 1; i >= 0; i--) {
-            let e = this.enemies[i];
-            e.update(this.enemies);
-            if (e.dead) {
-                if (e.type !== 'boss' && e.type !== 'miniboss') ObjectPool.releaseEnemy(e);
-                this.enemies.splice(i, 1);
-                audioManager.playSfx('hit');
-                // Almas dropam pro host, client recebe sync
-                let p1Soul = Math.random() < this.player.stats.soulChance;
-                let p2Soul = this.player2 ? (Math.random() < this.player2.stats.soulChance) : false;
-                if (p1Soul || p2Soul) {
-                    this.souls += 1;
-                    this.updateSoulsUI();
-                }
-            }
-        }
-
-        for (let i = this.particles.length - 1; i >= 0; i--) {
-            let p = this.particles[i];
-            p.update();
-            if (p.dead) {
-                ObjectPool.releaseParticle(p);
-                this.particles.splice(i, 1);
-            }
-        }
-
-        for (let i = this.lightningEffects.length - 1; i >= 0; i--) {
-            let l = this.lightningEffects[i];
-            l.update();
-            if (l.dead) this.lightningEffects.splice(i, 1);
-        }
-        
-        for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
-            let t = this.floatingTexts[i];
-            t.update();
-            if (t.dead) this.floatingTexts.splice(i, 1);
-        }
+        window.timeScale = 1.0; document.getElementById('fade-overlay').style.opacity = 0;
+        this.player.update(this.input); if (this.player2) this.player2.update(this.netInput);
+        if (Net.isOnline && Net.isHost && this.netInput.cmdTeleport) { this.player2.activateTeleport(); this.netInput.cmdTeleport = false; }
+        if (Net.isOnline && Net.isHost && this.netInput.cmdLaser) { this.player2.activateLaser(); this.netInput.cmdLaser = false; }
+        this.manageWaves(); this.manageThunder();
+        for (let i = this.bullets.length - 1; i >= 0; i--) { let b = this.bullets[i]; b.update(); if (b.dead) { ObjectPool.releaseBullet(b); this.bullets.splice(i, 1); } }
+        for (let i = this.enemies.length - 1; i >= 0; i--) { let e = this.enemies[i]; e.update(this.enemies); if (e.dead) { if (e.type !== 'boss' && e.type !== 'miniboss') ObjectPool.releaseEnemy(e); this.enemies.splice(i, 1); audioManager.playSfx('hit'); let p1Soul = Math.random() < this.player.stats.soulChance; let p2Soul = this.player2 ? (Math.random() < this.player2.stats.soulChance) : false; if (p1Soul || p2Soul) { this.souls += 1; this.updateSoulsUI(); } } }
+        for (let i = this.particles.length - 1; i >= 0; i--) { let p = this.particles[i]; p.update(); if (p.dead) { ObjectPool.releaseParticle(p); this.particles.splice(i, 1); } }
+        for (let i = this.lightningEffects.length - 1; i >= 0; i--) { let l = this.lightningEffects[i]; l.update(); if (l.dead) this.lightningEffects.splice(i, 1); }
+        for (let i = this.floatingTexts.length - 1; i >= 0; i--) { let t = this.floatingTexts[i]; t.update(); if (t.dead) this.floatingTexts.splice(i, 1); }
     }
     manageThunder() {
         const checkThunder = (p) => {
@@ -1708,245 +1253,95 @@ serializeState() {
                 let intervalSeconds = (tier === 3) ? 8 : Math.max(2, 6 - (tier - 1)); 
                 if (Date.now() - p.lastThunderTime > intervalSeconds * 1000) {
                     const visibleEnemies = this.enemies.filter(e => e.y > 0 && e.y < this.height && e.x > 0 && e.x < this.width);
-                    let boltsToFire = (tier === 3) ? 2 : 1;
-                    let bossHitThisCycle = false;
-
+                    let boltsToFire = (tier === 3) ? 2 : 1; let bossHitThisCycle = false;
                     for (let k = 0; k < boltsToFire; k++) {
-                        let hit = false; let targetX, targetY; let targetEnemy = null;
-                        let hitChance = tier === 1 ? 0.4 : (tier === 2 ? 0.5 : 0.8);
-
-                        if (visibleEnemies.length > 0 && Math.random() < hitChance) {
-                            targetEnemy = visibleEnemies[Math.floor(Math.random() * visibleEnemies.length)];
-                            targetX = targetEnemy.x + targetEnemy.width/2; targetY = targetEnemy.y; hit = true;
-                        } else {
-                            targetX = 100 + Math.random() * (this.width - 200); targetY = 650; hit = false;
-                        }
-
+                        let hit = false; let targetX, targetY; let targetEnemy = null; let hitChance = tier === 1 ? 0.4 : (tier === 2 ? 0.5 : 0.8);
+                        if (visibleEnemies.length > 0 && Math.random() < hitChance) { targetEnemy = visibleEnemies[Math.floor(Math.random() * visibleEnemies.length)]; targetX = targetEnemy.x + targetEnemy.width/2; targetY = targetEnemy.y; hit = true; } 
+                        else { targetX = 100 + Math.random() * (this.width - 200); targetY = 650; hit = false; }
                         if (hit && targetEnemy) {
                             if (tier === 3) {
-                                let hitCount = 0;
-                                let nearEnemies = visibleEnemies.filter(e => Math.abs((e.x + e.width/2) - targetX) < 60 && !e.dead);
+                                let hitCount = 0; let nearEnemies = visibleEnemies.filter(e => Math.abs((e.x + e.width/2) - targetX) < 60 && !e.dead);
                                 nearEnemies.sort((a,b) => Math.abs((a.x + a.width/2) - targetX) - Math.abs((b.x + b.width/2) - targetX));
-                                
-                                for(let ne of nearEnemies) {
-                                    if(hitCount >= 2) break;
-                                    if(ne.type === 'boss' || ne.type === 'miniboss') {
-                                        if(!bossHitThisCycle) {
-                                            ne.takeDamage(ne.maxHp * 0.07);
-                                            bossHitThisCycle = true;
-                                            hitCount++;
-                                        }
-                                    } else {
-                                        ne.takeDamage(ne.hp + 10);
-                                        hitCount++;
-                                    }
-                                }
-                                targetY = game.height; 
-                            } else {
-                                let pctDmg = tier === 1 ? 0.6 : 0.8;
-                                let bossPct = tier === 1 ? 0.05 : 0.08;
-                                let mult = (targetEnemy.type === 'boss' || targetEnemy.type === 'miniboss') ? bossPct : pctDmg;
-                                targetEnemy.takeDamage(targetEnemy.hp * mult);
-                            }
+                                for(let ne of nearEnemies) { if(hitCount >= 2) break; if(ne.type === 'boss' || ne.type === 'miniboss') { if(!bossHitThisCycle) { ne.takeDamage(ne.maxHp * 0.07); bossHitThisCycle = true; hitCount++; } } else { ne.takeDamage(ne.hp + 10); hitCount++; } } targetY = game.height; 
+                            } else { let pctDmg = tier === 1 ? 0.6 : 0.8; let bossPct = tier === 1 ? 0.05 : 0.08; let mult = (targetEnemy.type === 'boss' || targetEnemy.type === 'miniboss') ? bossPct : pctDmg; targetEnemy.takeDamage(targetEnemy.hp * mult); }
                         }
-                        this.lightningEffects.push(new LightningBeam(targetX, targetY, tier === 3));
-                        audioManager.playSfx('thunder');
-                    }
-                    p.lastThunderTime = Date.now();
+                        this.lightningEffects.push(new LightningBeam(targetX, targetY, tier === 3)); audioManager.playSfx('thunder');
+                    } p.lastThunderTime = Date.now();
                 }
             }
         };
-
-        if (this.player) checkThunder(this.player);
-        if (this.player2) checkThunder(this.player2);
+        if (this.player) checkThunder(this.player); if (this.player2) checkThunder(this.player2);
     }
-// CORREÇÃO: Nova função dedicada a destravar o menu multiplayer
     checkMultiplayerPerks() {
         if (this.state === 'UPGRADE_MENU' && Net.isOnline && Net.isHost) {
             if (this.p1PickedPerk && this.p2PickedPerk) {
-                this.applyPerkToPlayer(this.player, this.p1PickedPerk);
-                if (this.player2) this.applyPerkToPlayer(this.player2, this.p2PickedPerk);
-
-                document.getElementById('upgrade-menu').classList.add('hidden');
-                if (this.menuTimer) clearInterval(this.menuTimer);
-
-                this.handleRevives();
-
-                this.player.updateStatsUI();
-                if (this.player2) this.player2.updateStatsUI();
-
-                this.p1PickedPerk = null;
-                this.p2PickedPerk = null;
-
-                this.wave++; this.state = 'PLAYING'; this.startWave();
-                Net.send({ type: 'NEXT_WAVE', wave: this.wave });
+                this.applyPerkToPlayer(this.player, this.p1PickedPerk); if (this.player2) this.applyPerkToPlayer(this.player2, this.p2PickedPerk);
+                document.getElementById('upgrade-menu').classList.add('hidden'); if (this.menuTimer) clearInterval(this.menuTimer);
+                this.handleRevives(); this.player.updateStatsUI(); if (this.player2) this.player2.updateStatsUI();
+                this.p1PickedPerk = null; this.p2PickedPerk = null;
+                this.wave++; this.state = 'PLAYING'; this.startWave(); Net.send({ type: 'NEXT_WAVE', wave: this.wave });
             }
         }
     }
-
     manageWaves() {
-        if (this.state === 'UPGRADE_MENU') {
-            return; // Lógica movida para o checkMultiplayerPerks
-        }
-
-        if (this.enemies.length === 0 && this.enemiesToSpawn <= 0) {
-            this.state = 'UPGRADE_MENU';
-            this.showUpgradeMenu(); 
-        }
-        if (this.enemiesToSpawn > 0) {
-            if (Date.now() - this.lastSpawnTime > 1000) { 
-                this.spawnEnemy(); this.enemiesToSpawn--; this.lastSpawnTime = Date.now();
-            }
-        }
+        if (this.state === 'UPGRADE_MENU') return;
+        if (this.enemies.length === 0 && this.enemiesToSpawn <= 0) { this.state = 'UPGRADE_MENU'; this.showUpgradeMenu(); }
+        if (this.enemiesToSpawn > 0) { if (Date.now() - this.lastSpawnTime > 1000) { this.spawnEnemy(); this.enemiesToSpawn--; this.lastSpawnTime = Date.now(); } }
     }
-
     applyPerkToPlayer(playerObj, perkId) {
-        if (perkId === 'fallback_heal') {
-            playerObj.hp = Math.min(playerObj.maxHp, playerObj.hp + 20);
-            if((playerObj.isPlayer1 && Net.isHost) || (!playerObj.isPlayer1 && !Net.isHost) || !Net.isOnline) playerObj.updateHpUI();
-            return;
-        }
-        const allPerks = [...UPGRADES_DB.common, ...UPGRADES_DB.uncommon, ...UPGRADES_DB.epic, ...UPGRADES_DB.legendary];
-        const pObj = allPerks.find(p => p.id === perkId);
-        if (pObj && playerObj) {
-            pObj.apply(playerObj);
-            playerObj.perksCounts[pObj.id] = (playerObj.perksCounts[pObj.id] || 0) + 1;
-        }
+        if (perkId === 'fallback_heal') { playerObj.hp = Math.min(playerObj.maxHp, playerObj.hp + 20); if((playerObj.isPlayer1 && Net.isHost) || (!playerObj.isPlayer1 && !Net.isHost) || !Net.isOnline) playerObj.updateHpUI(); return; }
+        const allPerks = [...UPGRADES_DB.common, ...UPGRADES_DB.uncommon, ...UPGRADES_DB.epic, ...UPGRADES_DB.legendary]; const pObj = allPerks.find(p => p.id === perkId); if (pObj && playerObj) { pObj.apply(playerObj); playerObj.perksCounts[pObj.id] = (playerObj.perksCounts[pObj.id] || 0) + 1; }
     }
-
     handleRevives() {
         if (!Net.isOnline) return;
-
-        if (this.reviveNextWave.p1 && this.player) {
-            this.player.hp = this.player.maxHp * 0.60;
-            this.player.updateHpUI();
-            this.player.invulnUntil = Date.now() + 3000;
-            game.addFloatingText(this.player.x + 20, this.player.y - 40, "RESSUSCITADO! (60%)", "#ffd700");
-            this.reviveNextWave.p1 = false;
-        }
-        if (this.reviveNextWave.p2 && this.player2) {
-            this.player2.hp = this.player2.maxHp * 0.60;
-            this.player2.updateHpUI();
-            this.player2.invulnUntil = Date.now() + 3000;
-            game.addFloatingText(this.player2.x + 20, this.player2.y - 40, "RESSUSCITADO! (60%)", "#ffd700");
-            this.reviveNextWave.p2 = false;
-        }
-
+        if (this.reviveNextWave.p1 && this.player) { this.player.hp = this.player.maxHp * 0.60; this.player.updateHpUI(); this.player.invulnUntil = Date.now() + 3000; game.addFloatingText(this.player.x + 20, this.player.y - 40, "RESSUSCITADO! (60%)", "#ffd700"); this.reviveNextWave.p1 = false; }
+        if (this.reviveNextWave.p2 && this.player2) { this.player2.hp = this.player2.maxHp * 0.60; this.player2.updateHpUI(); this.player2.invulnUntil = Date.now() + 3000; game.addFloatingText(this.player2.x + 20, this.player2.y - 40, "RESSUSCITADO! (60%)", "#ffd700"); this.reviveNextWave.p2 = false; }
         this.deadThisWave = { p1: false, p2: false };
     }
-
-    spawnEnemy(forcedX = null) {
-        const x = forcedX !== null ? forcedX : Math.max(0, Math.min(this.width - 50, this.waveClusterX - 120 + Math.random() * 240));
-        const y = -50;
-        
-        const types = ['triangulo', 'losango', 'redondo'];
-        let type = types[Math.floor(Math.random() * types.length)];
-        
-        this.enemies.push(ObjectPool.getEnemy(x, y, type));
-    }
-
+    spawnEnemy(forcedX = null) { const x = forcedX !== null ? forcedX : Math.max(0, Math.min(this.width - 50, this.waveClusterX - 120 + Math.random() * 240)); const y = -50; const types = ['triangulo', 'losango', 'redondo']; let type = types[Math.floor(Math.random() * types.length)]; this.enemies.push(ObjectPool.getEnemy(x, y, type)); }
     spawnBoss(isBigBoss) { this.enemies.push(new Boss(this.width/2 - 40, -100, isBigBoss)); }
-
-    createParticle(x, y, color, size, duration = 500, speedMult = 1) {
-        if (this.particles.length >= 2000) return; 
-        this.particles.push(ObjectPool.getParticle(x, y, color, size, duration, speedMult));
-    }
-    
-    addFloatingText(x, y, text, color = null) {
-        const colors = ['red', '#4da6ff', '#00ff00']; 
-        const c = color || colors[Math.floor(Math.random() * colors.length)];
-        this.floatingTexts.push(new FloatingText(x, y, text, c));
-    }
-
+    createParticle(x, y, color, size, duration = 500, speedMult = 1) { if (this.particles.length >= 2000) return; this.particles.push(ObjectPool.getParticle(x, y, color, size, duration, speedMult)); }
+    addFloatingText(x, y, text, color = null) { const colors = ['red', '#4da6ff', '#00ff00']; const c = color || colors[Math.floor(Math.random() * colors.length)]; this.floatingTexts.push(new FloatingText(x, y, text, c)); }
     showUpgradeMenu() {
         this.clearAllBullets();
-
-        const menu = document.getElementById('upgrade-menu');
-        const container = document.getElementById('upgrade-container');
-        container.innerHTML = '';
-        menu.classList.remove('hidden');
-        
-        const cpText = document.getElementById('choose-perk-text');
-        cpText.innerText = TEXTS[currentLang].choosePerk;
-
-        // Timer só roda no Host
+        const menu = document.getElementById('upgrade-menu'); const container = document.getElementById('upgrade-container'); container.innerHTML = ''; menu.classList.remove('hidden');
+        const cpText = document.getElementById('choose-perk-text'); cpText.innerText = TEXTS[currentLang].choosePerk;
         if (!Net.isOnline || Net.isHost) {
-            let secondsLeft = 20;
-            const timerText = document.getElementById('timer-text');
-            const timerBar = document.getElementById('timer-bar');
-            timerBar.style.width = '100%'; timerText.innerText = "20s";
-
+            let secondsLeft = 20; const timerText = document.getElementById('timer-text'); const timerBar = document.getElementById('timer-bar'); timerBar.style.width = '100%'; timerText.innerText = "20s";
             if (this.menuTimer) clearInterval(this.menuTimer);
-
-            this.menuTimer = setInterval(() => {
-                secondsLeft--;
-                timerText.innerText = secondsLeft + "s";
-                timerBar.style.width = (secondsLeft / 20 * 100) + "%";
-                if (secondsLeft <= 0) {
-                    clearInterval(this.menuTimer);
-                    this.autoPickPerk();
-                }
-            }, 1000);
+            this.menuTimer = setInterval(() => { secondsLeft--; timerText.innerText = secondsLeft + "s"; timerBar.style.width = (secondsLeft / 20 * 100) + "%"; if (secondsLeft <= 0) { clearInterval(this.menuTimer); this.autoPickPerk(); } }, 1000);
         }
-
         let targetP = (!Net.isOnline || Net.isHost) ? this.player : this.player2;
-        
-        let available = [];
-        const addAvailable = (pool, rarity) => {
-            pool.forEach(u => {
-                if (!maxTierCheck(targetP, u.id, u.max)) available.push({ ...u, rarity });
-            });
-        };
-        addAvailable(UPGRADES_DB.common, 'common');
-        addAvailable(UPGRADES_DB.uncommon, 'uncommon');
-        addAvailable(UPGRADES_DB.epic, 'epic');
-        addAvailable(UPGRADES_DB.legendary, 'legendary');
-
+        let available = []; const addAvailable = (pool, rarity) => { pool.forEach(u => { if (!maxTierCheck(targetP, u.id, u.max)) available.push({ ...u, rarity }); }); };
+        addAvailable(UPGRADES_DB.common, 'common'); addAvailable(UPGRADES_DB.uncommon, 'uncommon'); addAvailable(UPGRADES_DB.epic, 'epic'); addAvailable(UPGRADES_DB.legendary, 'legendary');
         let choices = [];
-        for(let i=0; i<3; i++) {
-            if (available.length === 0) break;
-            let idx = Math.floor(Math.random() * available.length);
-            choices.push(available[idx]);
-            available.splice(idx, 1);
-        }
-
-        if (choices.length === 0) {
-            choices.push({ id: 'fallback_heal', name_pt: 'Cura Leve', name_en: 'Light Heal', desc_pt: 'Cura 20 HP', desc_en: 'Heals 20 HP', rarity: 'common' });
-        }
-
+        for(let i=0; i<3; i++) { if (available.length === 0) break; let idx = Math.floor(Math.random() * available.length); choices.push(available[idx]); available.splice(idx, 1); }
+        if (choices.length === 0) { choices.push({ id: 'fallback_heal', name_pt: 'Cura Leve', name_en: 'Light Heal', desc_pt: 'Cura 20 HP', desc_en: 'Heals 20 HP', rarity: 'common' }); }
         this.currentUpgradeChoices = choices; 
-
         choices.forEach(c => {
-            let card = document.createElement('div');
-            card.className = `upgrade-card rarity-${c.rarity}`;
-            let title = currentLang === 'pt' ? (c.name_pt || c.id) : (c.name_en || c.id);
-            let desc = currentLang === 'pt' ? (c.desc_pt || '') : (c.desc_en || '');
-
-            card.innerHTML = `
-                <span class="card-tier">${c.rarity.toUpperCase()}</span>
-                <div class="card-title">${title}</div>
-                <div class="card-desc">${desc}</div>
-            `;
-            card.onclick = () => {
-                audioManager.playWav('botton');
-                this.pickUpgrade(c.id);
-                container.innerHTML = `<p style="color:#4da6ff; margin-top: 50px; font-size: 12px;">Aguardando outro jogador...</p>`;
-            };
+            let card = document.createElement('div'); card.className = `upgrade-card rarity-${c.rarity}`;
+            let title = currentLang === 'pt' ? (c.name_pt || c.id) : (c.name_en || c.id); let desc = currentLang === 'pt' ? (c.desc_pt || '') : (c.desc_en || '');
+            card.innerHTML = `<span class="card-tier">${c.rarity.toUpperCase()}</span><div class="card-title">${title}</div><div class="card-desc">${desc}</div>`;
+            card.onclick = () => { audioManager.playWav('botton'); this.pickUpgrade(c.id); container.innerHTML = `<p style="color:#4da6ff; margin-top: 50px; font-size: 12px;">Aguardando outro jogador...</p>`; };
             container.appendChild(card);
         });
     }
 
+    // CORREÇÃO 3: CORREÇÃO DO TRAVAMENTO NO SINGLEPLAYER
     pickUpgrade(perkId) {
         if (!Net.isOnline) {
             this.applyPerkToPlayer(this.player, perkId);
             document.getElementById('upgrade-menu').classList.add('hidden');
             if (this.menuTimer) clearInterval(this.menuTimer);
             this.wave++;
+            this.paused = false;
+            this.state = 'PLAYING'; // Força o estado para garantir que o loop de update rode
+            window.timeScale = 1.0; // Reseta timeScale por segurança
             this.startWave();
         } else {
             if (Net.isHost) {
                 this.p1PickedPerk = perkId;
-                this.checkMultiplayerPerks(); // CORREÇÃO: Avisa que o Host escolheu!
+                this.checkMultiplayerPerks();
             } else {
                 Net.send({ type: 'PICK_PERK', perkId: perkId });
             }
@@ -1955,71 +1350,47 @@ serializeState() {
 
     autoPickPerk() {
         if (!Net.isOnline) {
-            if (this.currentUpgradeChoices && this.currentUpgradeChoices.length > 0) {
-                this.pickUpgrade(this.currentUpgradeChoices[0].id);
-            } else {
-                this.pickUpgrade('fallback_heal');
-            }
+            if (this.currentUpgradeChoices && this.currentUpgradeChoices.length > 0) { this.pickUpgrade(this.currentUpgradeChoices[0].id); } 
+            else { this.pickUpgrade('fallback_heal'); }
         } else {
             if (Net.isHost) {
-                if (!this.p1PickedPerk) {
-                    this.p1PickedPerk = (this.currentUpgradeChoices && this.currentUpgradeChoices.length > 0) ? this.currentUpgradeChoices[0].id : 'fallback_heal';
-                }
-                if (!this.p2PickedPerk) {
-                    this.p2PickedPerk = 'fallback_heal'; 
-                }
-                this.checkMultiplayerPerks(); // CORREÇÃO: Força a passagem de wave caso esgote o tempo
+                if (!this.p1PickedPerk) { this.p1PickedPerk = (this.currentUpgradeChoices && this.currentUpgradeChoices.length > 0) ? this.currentUpgradeChoices[0].id : 'fallback_heal'; }
+                if (!this.p2PickedPerk) { this.p2PickedPerk = 'fallback_heal'; }
+                this.checkMultiplayerPerks();
             }
         }
     }
-
     draw() {
-        ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0, 0, this.width, this.height);
-        
-        ctx.save();
-        // CORREÇÃO: Previne o crash garantindo que 'cinematicBoss' exista na tela do Client
+        ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0, 0, this.width, this.height); ctx.save();
         if (this.state === 'BOSS_DEATH_CINEMATIC' && this.cinematicBoss) {
-            let elapsed = Date.now() - this.cinematicStartTime;
-            let targetX = this.cinematicBoss.x + this.cinematicBoss.width/2;
-            let targetY = this.cinematicBoss.y + this.cinematicBoss.height/2;
-            
-            let progress = Math.min(1, elapsed / 3000); 
-            
-            let shakeIntensity = elapsed < 3000 ? progress * 6 : 0;
-            let shakeX = (Math.random() - 0.5) * shakeIntensity;
-            let shakeY = (Math.random() - 0.5) * shakeIntensity;
-            
-            let zoom = 1 + (progress * 0.5); 
-            
-            let startCamX = this.width / 2;
-            let startCamY = this.height / 2;
-            let currentCamX = startCamX + (targetX - startCamX) * progress;
-            let currentCamY = startCamY + (targetY - startCamY) * progress;
-            
-            ctx.translate(this.width/2, this.height/2);
-            ctx.scale(zoom, zoom);
-            ctx.translate(-currentCamX + shakeX, -currentCamY + shakeY);
+            let elapsed = Date.now() - this.cinematicStartTime; let targetX = this.cinematicBoss.x + this.cinematicBoss.width/2; let targetY = this.cinematicBoss.y + this.cinematicBoss.height/2; let progress = Math.min(1, elapsed / 3000); let shakeIntensity = elapsed < 3000 ? progress * 6 : 0; let shakeX = (Math.random() - 0.5) * shakeIntensity; let shakeY = (Math.random() - 0.5) * shakeIntensity; let zoom = 1 + (progress * 0.5); let startCamX = this.width / 2; let startCamY = this.height / 2; let currentCamX = startCamX + (targetX - startCamX) * progress; let currentCamY = startCamY + (targetY - startCamY) * progress;
+            ctx.translate(this.width/2, this.height/2); ctx.scale(zoom, zoom); ctx.translate(-currentCamX + shakeX, -currentCamY + shakeY);
         }
-
-        // Desenhar Zona Limite do Teleporte se requisitado
         if (this.showTeleportZonesUntil && Date.now() < this.showTeleportZonesUntil) {
-            ctx.save();
-            ctx.fillStyle = 'rgba(0, 255, 255, 0.15)';
-            ctx.fillRect(0, 0, this.width / 6, this.height);
-            ctx.fillRect(this.width * 5 / 6, 0, this.width / 6, this.height);
-            
-            ctx.fillStyle = 'cyan';
-            ctx.font = '12px "Press Start 2P"';
-            ctx.textAlign = 'center';
-            if (Math.floor(Date.now() / 150) % 2 === 0) {
-                ctx.fillText("AREA VALIDA", this.width / 12, this.height / 2);
-                ctx.fillText("AREA VALIDA", this.width * 11 / 12, this.height / 2);
-            }
-            ctx.restore();
+            ctx.save(); ctx.fillStyle = 'rgba(0, 255, 255, 0.15)'; ctx.fillRect(0, 0, this.width / 6, this.height); ctx.fillRect(this.width * 5 / 6, 0, this.width / 6, this.height); ctx.fillStyle = 'cyan'; ctx.font = '12px "Press Start 2P"'; ctx.textAlign = 'center'; if (Math.floor(Date.now() / 150) % 2 === 0) { ctx.fillText("AREA VALIDA", this.width / 12, this.height / 2); ctx.fillText("AREA VALIDA", this.width * 11 / 12, this.height / 2); } ctx.restore();
         }
-
-        ctx.fillStyle = '#0a0a0a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
-        this.blocks.forEach(b => { ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h); });
+        ctx.fillStyle = '#0a0a0a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; this.blocks.forEach(b => { ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h); });
+        
+        if (this.player && !this.player.isDead && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
+            if (!Net.isOnline || Net.isHost) {
+                const centerX = this.player.x + this.player.width / 2; const centerY = this.player.y + this.player.height / 2; const angle = Math.atan2((Net.isOnline && !Net.isHost ? this.netInput.mouse.y : this.input.mouse.y) - centerY, (Net.isOnline && !Net.isHost ? this.netInput.mouse.x : this.input.mouse.x) - centerX); const endX = centerX + Math.cos(angle) * 2000; const endY = centerY + Math.sin(angle) * 2000;
+                if (this.player.laserActive) { ctx.save(); ctx.strokeStyle = 'red'; ctx.lineWidth = 25; ctx.lineCap = 'round'; ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke(); ctx.strokeStyle = 'white'; ctx.lineWidth = 8; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke(); ctx.restore(); } 
+                else { ctx.save(); ctx.strokeStyle = 'red'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke(); ctx.restore(); }
+            }
+        }
+        if (this.player2 && !this.player2.isDead && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
+            if (Net.isOnline && !Net.isHost) {
+                const cX = this.player2.x + this.player2.width / 2; const cY = this.player2.y + this.player2.height / 2; const a = Math.atan2((Net.isOnline && !Net.isHost ? this.input.mouse.y : this.netInput.mouse.y) - cY, (Net.isOnline && !Net.isHost ? this.input.mouse.x : this.netInput.mouse.x) - cX); const eX = cX + Math.cos(a) * 2000; const eY = cY + Math.sin(a) * 2000;
+                if (this.player2.laserActive) { ctx.save(); ctx.strokeStyle = 'blue'; ctx.lineWidth = 25; ctx.lineCap = 'round'; ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke(); ctx.strokeStyle = 'white'; ctx.lineWidth = 8; ctx.globalAlpha = 0.9; ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke(); ctx.restore(); } 
+                else { ctx.save(); ctx.strokeStyle = 'blue'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke(); ctx.restore(); }
+            }
+        }
+        if (this.player2) this.player2.draw(ctx); if (this.player) this.player.draw(ctx);
+        this.enemies.forEach(e => { if (!e.dead) e.draw(ctx); }); this.bullets.forEach(b => b.draw(ctx)); this.particles.forEach(p => p.draw(ctx)); this.lightningEffects.forEach(l => l.draw(ctx)); this.floatingTexts.forEach(t => t.draw(ctx));
+        ctx.restore();
+        if (this.state === 'BOSS_CONFIRM' || this.state === 'UPGRADE_MENU' || this.state === 'PAUSED') { ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, this.width, this.height); }
+    }
+}
         
 // Desenha miras e lasers
         let localInputMouse = this.input.mouse;
@@ -3191,7 +2562,6 @@ function startGame(c1, c2) {
 
 // CORREÇÃO: Função atualizada para garantir sincronia do botão "Pronto"
 function confirmBossWave() { 
-    // Muda o texto do botão para indicar que foi clicado
     const btn = document.getElementById('btn-start-boss');
     btn.innerText = "AGUARDANDO...";
     btn.disabled = true;
@@ -3199,26 +2569,27 @@ function confirmBossWave() {
     if (!Net.isOnline) {
         // Singleplayer
         document.getElementById('boss-confirm-menu').classList.add('hidden');
-        btn.innerText = "COMEÇAR"; // Reseta botão
+        btn.innerText = "COMEÇAR"; 
         btn.disabled = false;
         game.triggerConfirmedBossWave();
     } else {
         // Multiplayer
         if (Net.isHost) {
             game.p1BossReady = true;
-            console.log("[HOST] P1 pronto para o Boss.");
             game.checkBossStart();
         } else {
-            // Cliente: Esconde o menu imediatamente e avisa o host
-            document.getElementById('boss-confirm-menu').classList.add('hidden');
-            console.log("[CLIENT] Enviando pronto para o Host.");
+            // CLIENTE: NÃO ESCONDE O MENU AINDA.
+            // Envia o sinal e espera o Host mandar 'BOSS_START' para esconder.
+            // Isso previne que o cliente comece a wave sozinho.
             Net.send({ type: 'BOSS_CONFIRM_READY' });
             
-            // Reseta o botão para a próxima vez
+            // Reseta o botão visualmente caso algo falhe, mas não esconde a tela
             setTimeout(() => {
-                btn.innerText = "COMEÇAR";
-                btn.disabled = false;
-            }, 2000);
+                if(!document.getElementById('boss-confirm-menu').classList.contains('hidden')){
+                   // btn.innerText = "COMEÇAR"; // Opcional: manter travado até host iniciar
+                   // btn.disabled = false;
+                }
+            }, 5000);
         }
     }
 }
@@ -3228,6 +2599,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
