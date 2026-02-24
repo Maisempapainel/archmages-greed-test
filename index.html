@@ -121,6 +121,19 @@
             outline: none;
         }
 
+        /* Lista de Servidores */
+        .server-list {
+            background: rgba(0,0,0,0.8); border: 2px solid #555; padding: 10px; margin-bottom: 20px;
+            max-height: 140px; overflow-y: auto; text-align: left; width: 450px; border-radius: 5px;
+        }
+        .server-item {
+            display: flex; justify-content: space-between; align-items: center; padding: 8px;
+            border-bottom: 1px solid #333; font-size: 10px; cursor: pointer; transition: 0.2s;
+        }
+        .server-item:hover { background: rgba(255,255,255,0.1); }
+        .server-item input { margin-right: 10px; cursor: pointer; }
+        }
+
         /* Character Select */
         .char-select-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center;}
         .char-card {
@@ -301,13 +314,19 @@
 
     <div id="multiplayer-menu" class="menu-screen hidden">
         <h2>MULTIPLAYER</h2>
-        <button class="btn" onclick="audioManager.playWav('botton'); Net.initHost()">CRIAR SALA (HOST)</button>
-        <div style="margin: 20px 0;">
+        
+        <div class="server-list" id="server-list-container">
+            <p style="text-align:center; font-size: 10px; color: gray;">Testando latência...</p>
+        </div>
+
+        <div>
+            <button class="btn" onclick="audioManager.playWav('botton'); Net.initHost()">CRIAR SALA (HOST)</button>
+        </div>
+        <div style="margin: 20px 0; border-top: 1px solid #333; padding-top: 20px;">
             <input type="text" id="join-id-input" class="input-text" placeholder="Cole o ID da Sala">
-            <br>
             <button class="btn" onclick="audioManager.playWav('botton'); Net.initClient(document.getElementById('join-id-input').value)">ENTRAR NA SALA</button>
         </div>
-        <button class="btn" onclick="audioManager.playWav('botton'); document.getElementById('multiplayer-menu').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden');" style="border-color:gray; color:gray">VOLTAR</button>
+        <button class="btn" onclick="audioManager.playWav('botton'); closeMultiplayerMenu();" style="border-color:gray; color:gray">VOLTAR</button>
     </div>
 
     <div id="lobby-menu" class="menu-screen hidden">
@@ -563,72 +582,98 @@ const ObjectPool = {
  * Lista consolidada de servidores STUN (Google) e TURN (Cloudflare, Metered, Viagenie)
  */
 const ICE_SERVERS = [
-    // 1. Google STUNs (Sempre úteis e rápidos para conexões simples)
-    { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" },
-    { urls: "stun:stun2.l.google.com:19302" },
-    { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" },
-
-    // 2. Cloudflare TURN (Credencial do seu snippet JSON)
-    {
-        urls: [
-            "stun:stun.cloudflare.com:3478",
-            "turn:turn.cloudflare.com:3478?transport=udp",
-            "turn:turn.cloudflare.com:3478?transport=tcp",
-            "turns:turn.cloudflare.com:5349?transport=tcp"
-        ],
-        username: "g0522d79a759b2b434ef65c4aba66dff0996900c8cc0d87d4a6fbe028bee82af",
-        credential: "4dc3f21572f4e826be48117ecf2a2e53dda6df093f7a6f2a167de2f04a0e8601"
-    },
-
-    // 3. Cloudflare TURN (Credencial Alternativa da lista)
-    {
-        urls: [
-            "turn:turn.cloudflare.com:3478?transport=udp",
-            "turns:turn.cloudflare.com:5349?transport=tcp"
-        ],
-        username: "g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75",
-        credential: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3=" // Com o '=' no final
-    },
-
-    // 4. Servidores TURN Públicos/Antigos (Viagenie, Bistri, Anyfirewall)
-    {
-        urls: "turn:numb.viagenie.ca",
-        username: "webrtc@live.com",
-        credential: "muazkh"
-    },
-    {
-        urls: "turn:turn.bistri.com:80",
-        username: "homeo",
-        credential: "homeo"
-    },
-    {
-        urls: "turn:turn.anyfirewall.com:443?transport=tcp",
-        username: "webrtc",
-        credential: "webrtc"
-    },
-
-    // 5. Servidores IP Direto (OpenRelay / Metered)
-    {
-        urls: "turn:192.158.29.39:3478?transport=udp",
-        username: "28224511:1379330808",
-        credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
-    },
-    {
-        urls: "turn:192.158.29.39:3478?transport=tcp",
-        username: "28224511:1379330808",
-        credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
-    }
+    { name: "Google STUN (Padrão/Rápido)", urls: "stun:stun.l.google.com:19302" },
+    { name: "Cloudflare TURN 1", urls: ["stun:stun.cloudflare.com:3478", "turn:turn.cloudflare.com:3478?transport=udp", "turns:turn.cloudflare.com:5349?transport=tcp"], username: "g0522d79a759b2b434ef65c4aba66dff0996900c8cc0d87d4a6fbe028bee82af", credential: "4dc3f21572f4e826be48117ecf2a2e53dda6df093f7a6f2a167de2f04a0e8601" },
+    { name: "Cloudflare TURN 2", urls: ["turn:turn.cloudflare.com:3478?transport=udp", "turns:turn.cloudflare.com:5349?transport=tcp"], username: "g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75", credential: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3=" },
+    { name: "Viagenie TURN (Canadá)", urls: "turn:numb.viagenie.ca", username: "webrtc@live.com", credential: "muazkh" },
+    { name: "Bistri TURN", urls: "turn:turn.bistri.com:80", username: "homeo", credential: "homeo" },
+    { name: "Metered TURN UDP", urls: "turn:192.158.29.39:3478?transport=udp", username: "28224511:1379330808", credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=" }
 ];
 
-// Configuração usada pelo objeto Net
-const peerConfig = {
-    debug: 3, // Nível de log alto para ver qual servidor funcionou
-    config: {
-        iceServers: ICE_SERVERS,
-        iceTransportPolicy: 'all', // Permite escolher entre Relay (TURN) ou Host (STUN)
-        iceCandidatePoolSize: 10
+const ServerPinger = {
+    intervalId: null,
+    selectedServerIndex: 0,
+    latencies: [],
+
+    start() {
+        this.renderUI();
+        this.pingAll();
+        // Atualiza a cada 5 segundos para não sobrecarregar
+        this.intervalId = setInterval(() => this.pingAll(), 5000);
+    },
+
+    stop() {
+        if (this.intervalId) clearInterval(this.intervalId);
+        this.intervalId = null;
+    },
+
+    async pingAll() {
+        for (let i = 0; i < ICE_SERVERS.length; i++) {
+            if (!this.intervalId) break; 
+            this.latencies[i] = await this.ping(ICE_SERVERS[i]);
+            this.renderUI();
+        }
+    },
+
+    ping(serverConfig) {
+        return new Promise((resolve) => {
+            const start = performance.now();
+            try {
+                const cleanConfig = { ...serverConfig };
+                delete cleanConfig.name; // PeerJS/WebRTC não gosta de propriedades extras
+                
+                const pc = new RTCPeerConnection({ iceServers: [cleanConfig] });
+                const timeout = setTimeout(() => { pc.close(); resolve(999); }, 3000); // Timeout de 3s
+                
+                pc.onicecandidate = (e) => {
+                    if (e.candidate) {
+                        clearTimeout(timeout);
+                        pc.close();
+                        resolve(Math.round(performance.now() - start));
+                    }
+                };
+                pc.createDataChannel("ping");
+                pc.createOffer().then(o => pc.setLocalDescription(o)).catch(() => {
+                    clearTimeout(timeout); pc.close(); resolve(999);
+                });
+            } catch(e) {
+                resolve(999);
+            }
+        });
+    },
+
+    renderUI() {
+        const container = document.getElementById('server-list-container');
+        if (!container) return;
+        let html = '<div style="margin-bottom:10px; font-size:10px; color:#4da6ff; text-align:center;">SELECIONE O SERVIDOR:</div>';
+        
+        ICE_SERVERS.forEach((srv, i) => {
+            const lat = this.latencies[i];
+            let latText = lat === undefined ? "Testando..." : (lat >= 999 ? "Falhou" : lat + " ms");
+            let pingColor = "red";
+            if (lat !== undefined && lat < 150) pingColor = "#4dff4d";
+            else if (lat !== undefined && lat < 300) pingColor = "yellow";
+
+            const checked = i === this.selectedServerIndex ? "checked" : "";
+
+            html += `
+                <label class="server-item" onclick="ServerPinger.selectedServerIndex = ${i}; ServerPinger.renderUI();">
+                    <div style="display:flex; align-items:center;">
+                        <input type="radio" name="server-sel" value="${i}" ${checked} style="pointer-events:none;">
+                        <span style="margin-left:5px;">${srv.name}</span>
+                    </div>
+                    <span style="color:${pingColor};">${latText}</span>
+                </label>
+            `;
+        });
+        container.innerHTML = html;
+    },
+    
+    getSelectedConfig() {
+        const cleanConfig = { ...ICE_SERVERS[this.selectedServerIndex] };
+        delete cleanConfig.name;
+        // Sempre incluímos o Google STUN como backup de segurança na conexão
+        return [ cleanConfig, { urls: "stun:stun.l.google.com:19302" } ]; 
     }
 };
 
@@ -663,12 +708,13 @@ const Net = {
         document.getElementById('lobby-room-id').innerText = "Criando...";
         document.getElementById('lobby-room-id').style.color = "yellow";
 
+        ServerPinger.stop(); // Para de pingar para economizar processamento
         const config = {
-            debug: 2, // Mostra erros críticos
+            debug: 2, 
             config: {
-                iceServers: ICE_SERVERS,
+                iceServers: ServerPinger.getSelectedConfig(),
                 iceCandidatePoolSize: 10,
-                iceTransportPolicy: 'all' // Tenta tudo (UDP e TCP)
+                iceTransportPolicy: 'all' 
             }
         };
 
@@ -737,10 +783,11 @@ const Net = {
         document.getElementById('lobby-room-id').innerText = "Conectando...";
         document.getElementById('lobby-room-id').style.color = "yellow";
 
+        ServerPinger.stop(); // Para de pingar
         const config = {
             debug: 2,
             config: {
-                iceServers: ICE_SERVERS
+                iceServers: ServerPinger.getSelectedConfig()
             }
         };
 
@@ -3175,6 +3222,13 @@ function startGameLocal() {
 function showMultiplayerMenu() {
     document.getElementById('main-menu').classList.add('hidden');
     document.getElementById('multiplayer-menu').classList.remove('hidden');
+    ServerPinger.start(); // Inicia o ping em tempo real
+}
+
+function closeMultiplayerMenu() {
+    ServerPinger.stop(); // Desliga o ping
+    document.getElementById('multiplayer-menu').classList.add('hidden'); 
+    document.getElementById('main-menu').classList.remove('hidden');
 }
 
 function startGame(c1, c2) {
@@ -3228,6 +3282,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
