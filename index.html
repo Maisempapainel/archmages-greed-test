@@ -1359,7 +1359,6 @@ serializeState() {
     syncState(s) {
         if (!s) return;
 
-        // Força o Client a abrir a tela de escolha de perks
         if (this.state !== 'UPGRADE_MENU' && s.st === 'UPGRADE_MENU') {
             this.showUpgradeMenu();
         }
@@ -1396,6 +1395,7 @@ serializeState() {
 
         if (this.player2) this.player2.updateHpUI();
         this.updateSoulsUI();
+    }
 
         // Resto do sync (enemies, bullets, particles, etc.) fica igual ao que você já tinha
     }
@@ -3001,6 +3001,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
