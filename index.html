@@ -1809,7 +1809,6 @@ serializeState() {
         this.blocks.forEach(b => { ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h); });
         
 // Desenha miras e lasers
-        let localInputMouse = this.input.mouse;
         if (this.player && !this.player.isDead && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
             
             // P1
@@ -2995,6 +2994,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
