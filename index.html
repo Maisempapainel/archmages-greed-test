@@ -2,7 +2,7 @@
 <html lang="pt-br">
 <head>
     <meta charset="UTF-8">
-    <title>Archmage's Greed - Multiplayer Fixed</title>
+    <title>Archmage's Greed</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap');
@@ -219,28 +219,6 @@
         .lobby-players { display: flex; gap: 40px; margin-bottom: 20px; font-size: 12px; text-align: center; }
         .lobby-player-box { padding: 20px; border: 2px solid #555; width: 200px; }
         .ready-text { color: #4dff4d; display: none; margin-top: 10px; }
-
-        /* Nova Lista de Servidores no Lobby */
-        #server-status-container {
-            width: 350px;
-            max-height: 150px;
-            overflow-y: auto;
-            background: rgba(0, 0, 0, 0.8);
-            border: 1px solid #555;
-            margin: 10px 0;
-            padding: 5px;
-            font-size: 8px;
-            text-align: left;
-            display: none;
-        }
-        .server-row { display: flex; justify-content: space-between; padding: 3px; border-bottom: 1px solid #333; }
-        .server-row span:last-child { font-weight: bold; }
-        .ping-good { color: #4dff4d; }   
-        .ping-ok { color: #ffff00; }     
-        .ping-bad { color: #ff4d4d; }    
-        .ping-loading { color: #4da6ff; }
-        #server-status-container::-webkit-scrollbar { width: 5px; }
-        #server-status-container::-webkit-scrollbar-thumb { background: #555; }
     </style>
 </head>
 <body>
@@ -334,10 +312,8 @@
 
     <div id="lobby-menu" class="menu-screen hidden">
         <h2>SALA DE ESPERA</h2>
-        <p style="font-size: 10px; margin-bottom: 10px;">ID DA SALA: <span id="lobby-room-id" style="color:yellow;">Gerando...</span></p>
+        <p style="font-size: 10px; margin-bottom: 20px;">ID DA SALA: <span id="lobby-room-id" style="color:yellow;">Gerando...</span></p>
         
-        <div id="server-status-container"></div>
-
         <div class="lobby-players">
             <div class="lobby-player-box" id="lobby-p1-box">
                 <h3>HOST (P1)</h3>
@@ -381,14 +357,7 @@
         <h1 id="game-over-title" style="color:red">VOCÊ MORREU</h1>
         <p><span id="stats-wave">Ondas</span>: <span id="final-wave">0</span></p>
         <p><span id="stats-souls">Almas</span>: <span id="final-souls">0</span></p>
-        
-        <button class="btn" id="btn-menu-sp" onclick="audioManager.playWav('botton'); returnToMenu()">MENU PRINCIPAL</button>
-        
-        <div id="mp-gameover-controls" class="hidden" style="display:flex; gap:20px; justify-content:center;">
-            <button class="btn" id="btn-mp-restart" onclick="audioManager.playWav('botton'); Net.voteRestart()">REINICIAR (0/2)</button>
-            <button class="btn" id="btn-mp-quit" onclick="audioManager.playWav('botton'); Net.disconnectAndMenu()" style="border-color:red; color:red;">SAIR DA SALA</button>
-        </div>
-        <p id="mp-restart-status" style="font-size:10px; color:#4dff4d; margin-top:10px; min-height:15px;"></p>
+        <button class="btn" id="btn-menu" onclick="audioManager.playWav('botton'); returnToMenu()">MENU</button>
     </div>
 </div>
 
@@ -589,72 +558,79 @@ const ObjectPool = {
     releaseParticle(p) { this.particles.push(p); }
 };
 
-
 /**
  * REDE & MULTIPLAYER (WebRTC / PeerJS)
- * Configuração com teste de latência e seleção automática de servidores
+ * Lista consolidada de servidores STUN (Google) e TURN (Cloudflare, Metered, Viagenie)
  */
-const RAW_ICE_SERVERS = [
-    // Google STUNs (Rápidos)
-    { name: "Google STUN 1", urls: "stun:stun.l.google.com:19302" },
-    { name: "Google STUN 2", urls: "stun:stun1.l.google.com:19302" },
-    
-    // Cloudflare TURN (Suas credenciais)
+const ICE_SERVERS = [
+    // 1. Google STUNs (Sempre úteis e rápidos para conexões simples)
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+
+    // 2. Cloudflare TURN (Credencial do seu snippet JSON)
     {
-        name: "Cloudflare TCP (Port 5349)",
-        urls: "turns:turn.cloudflare.com:5349?transport=tcp",
+        urls: [
+            "stun:stun.cloudflare.com:3478",
+            "turn:turn.cloudflare.com:3478?transport=udp",
+            "turn:turn.cloudflare.com:3478?transport=tcp",
+            "turns:turn.cloudflare.com:5349?transport=tcp"
+        ],
+        username: "g0522d79a759b2b434ef65c4aba66dff0996900c8cc0d87d4a6fbe028bee82af",
+        credential: "4dc3f21572f4e826be48117ecf2a2e53dda6df093f7a6f2a167de2f04a0e8601"
+    },
+
+    // 3. Cloudflare TURN (Credencial Alternativa da lista)
+    {
+        urls: [
+            "turn:turn.cloudflare.com:3478?transport=udp",
+            "turns:turn.cloudflare.com:5349?transport=tcp"
+        ],
         username: "g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75",
-        credential: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3="
-    },
-    {
-        name: "Cloudflare UDP (Port 3478)",
-        urls: "turn:turn.cloudflare.com:3478?transport=udp",
-        username: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3",
-        credential: "g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75"
+        credential: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3=" // Com o '=' no final
     },
 
-    // Metered / OpenRelay
+    // 4. Servidores TURN Públicos/Antigos (Viagenie, Bistri, Anyfirewall)
     {
-        name: "OpenRelay TCP",
-        urls: "turn:openrelay.metered.ca:443?transport=tcp",
-        username: "openrelayproject",
-        credential: "openrelayproject"
-    },
-    {
-        name: "OpenRelay UDP",
-        urls: "turn:openrelay.metered.ca:80",
-        username: "openrelayproject",
-        credential: "openrelayproject"
-    },
-
-    // Metered Direto
-    {
-        name: "Metered/Coturn UDP",
-        urls: "turn:192.158.29.39:3478?transport=udp",
-        username: "28224511:1379330808",
-        credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
-    },
-    {
-        name: "Metered/Coturn TCP",
-        urls: "turn:192.158.29.39:3478?transport=tcp",
-        username: "28224511:1379330808",
-        credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
-    },
-
-    // Legado / Outros
-    {
-        name: "Numb Viagenie",
         urls: "turn:numb.viagenie.ca",
         username: "webrtc@live.com",
         credential: "muazkh"
     },
     {
-        name: "AnyFirewall TCP",
+        urls: "turn:turn.bistri.com:80",
+        username: "homeo",
+        credential: "homeo"
+    },
+    {
         urls: "turn:turn.anyfirewall.com:443?transport=tcp",
         username: "webrtc",
         credential: "webrtc"
+    },
+
+    // 5. Servidores IP Direto (OpenRelay / Metered)
+    {
+        urls: "turn:192.158.29.39:3478?transport=udp",
+        username: "28224511:1379330808",
+        credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
+    },
+    {
+        urls: "turn:192.158.29.39:3478?transport=tcp",
+        username: "28224511:1379330808",
+        credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
     }
 ];
+
+// Configuração usada pelo objeto Net
+const peerConfig = {
+    debug: 3, // Nível de log alto para ver qual servidor funcionou
+    config: {
+        iceServers: ICE_SERVERS,
+        iceTransportPolicy: 'all', // Permite escolher entre Relay (TURN) ou Host (STUN)
+        iceCandidatePoolSize: 10
+    }
+};
 
 const Net = {
     isOnline: false,
@@ -665,127 +641,34 @@ const Net = {
     // Status do Lobby
     p1Char: 1, p2Char: 1,
     p1Ready: false, p2Ready: false,
-    
-    // Controle de Votação
-    myVote: false,
-    remoteVote: false,
 
     generateId() {
         return Math.random().toString(36).substring(2, 6).toUpperCase();
     },
 
-    // --- FUNÇÃO DE PING (Mede latência WebRTC) ---
-    async measureLatency(iceConfig) {
-        return new Promise((resolve) => {
-            const start = Date.now();
-            const timeout = 2500; // 2.5s timeout máximo por servidor
-            
-            const pc = new RTCPeerConnection({ iceServers: [iceConfig], iceTransportPolicy: 'all' });
-            pc.createDataChannel("ping");
-
-            let resolved = false;
-
-            pc.onicecandidate = (e) => {
-                if (e.candidate && !resolved) {
-                    const ping = Date.now() - start;
-                    resolved = true;
-                    pc.close();
-                    resolve(ping);
-                }
-            };
-
-            pc.createOffer().then(o => pc.setLocalDescription(o));
-
-            setTimeout(() => {
-                if (!resolved) {
-                    resolved = true;
-                    pc.close();
-                    resolve(9999); // Timeout (Infinito)
-                }
-            }, timeout);
-        });
-    },
-
-    // --- ATUALIZA A UI VISUALMENTE ---
-    updateServerUI(results) {
-        const container = document.getElementById('server-status-container');
-        container.style.display = 'block';
-        container.innerHTML = '<div style="text-align:center; margin-bottom:5px; color:#fff; border-bottom:1px solid #fff;">TESTE DE CONEXÃO</div>';
-
-        results.sort((a, b) => a.ping - b.ping); // Ordena do melhor para o pior
-
-        results.forEach(res => {
-            const row = document.createElement('div');
-            row.className = 'server-row';
-            
-            let colorClass = 'ping-bad';
-            let statusText = 'OFFLINE';
-
-            if (res.ping < 9999) {
-                statusText = res.ping + 'ms';
-                if (res.ping < 150) colorClass = 'ping-good';
-                else if (res.ping < 500) colorClass = 'ping-ok';
-            }
-
-            if (res === results[0] && res.ping < 9999) {
-                statusText += ' (SELECIONADO)';
-                row.style.background = 'rgba(77, 255, 77, 0.2)';
-            }
-
-            row.innerHTML = `
-                <span style="color:#ccc">${res.name}</span>
-                <span class="${colorClass}">${statusText}</span>
-            `;
-            container.appendChild(row);
-        });
-    },
-
-    async initHost() {
-        console.log("%c[HOST] Iniciando testes de rede...", "color: cyan");
-        if (this.peer) this.peer.destroy();
+    initHost() {
+        console.log("%c[HOST] Iniciando...", "color: cyan");
+        
+        // Limpeza de segurança
+        if (this.peer) {
+            this.peer.destroy();
+            this.peer = null;
+        }
 
         this.isHost = true;
         this.isOnline = true;
+        
         document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
-        
-        const lobbyText = document.getElementById('lobby-room-id');
-        lobbyText.innerText = "Testando servidores...";
-        lobbyText.style.color = "cyan";
-
-        document.getElementById('server-status-container').style.display = 'block';
-        document.getElementById('server-status-container').innerHTML = '<p class="ping-loading" style="text-align:center">Testando latência...</p>';
-
-        // 1. Executa testes de ping em paralelo
-        const results = await Promise.all(RAW_ICE_SERVERS.map(async (server) => {
-            const ping = await this.measureLatency(server);
-            return { ...server, ping };
-        }));
-
-        // 2. Filtra servidores mortos e ordena pelos melhores
-        const bestServers = results.filter(s => s.ping < 9999).sort((a, b) => a.ping - b.ping);
-        this.updateServerUI(results);
-
-        if (bestServers.length === 0) {
-            lobbyText.innerText = "Erro: Nenhum servidor!";
-            lobbyText.style.color = "red";
-            return;
-        }
-
-        // 3. Monta configuração com os 3 melhores TURNs + Google STUNs (Backup)
-        const finalIceServers = [
-            ...bestServers.slice(0, 3), 
-            { urls: "stun:stun.l.google.com:19302" } 
-        ];
-
-        console.log("Melhores servidores escolhidos:", finalIceServers);
-        lobbyText.innerText = "Iniciando Peer...";
+        document.getElementById('lobby-room-id').innerText = "Criando...";
+        document.getElementById('lobby-room-id').style.color = "yellow";
 
         const config = {
-            debug: 2,
+            debug: 2, // Mostra erros críticos
             config: {
-                iceServers: finalIceServers,
-                iceCandidatePoolSize: 10
+                iceServers: ICE_SERVERS,
+                iceCandidatePoolSize: 10,
+                iceTransportPolicy: 'all' // Tenta tudo (UDP e TCP)
             }
         };
 
@@ -793,56 +676,16 @@ const Net = {
             this.peer = new Peer(this.generateId(), config);
         } catch (e) {
             console.error("Erro fatal PeerJS:", e);
-            lobbyText.innerText = "Erro Fatal";
+            document.getElementById('lobby-room-id').innerText = "Erro Crítico";
             return;
         }
         
         this.peer.on('open', id => {
-            console.log(`[HOST] ID Criado: ${id}`);
-            lobbyText.innerText = id;
-            lobbyText.style.color = "yellow";
+            console.log(`[HOST] Servidor pronto. ID: ${id}`);
+            document.getElementById('lobby-room-id').innerText = id;
             this.updateLobbyUI();
         });
         
-        this.setupPeerEvents();
-    },
-
-    initClient(targetId) {
-        if (!targetId) { alert("Digite o ID!"); return; }
-        
-        // Cliente usa uma lista genérica robusta, pois não faz o teste visual
-        const clientIceList = RAW_ICE_SERVERS; 
-
-        console.log("%c[CLIENT] Conectando...", "color: orange");
-        if (this.peer) this.peer.destroy();
-
-        this.isHost = false;
-        this.isOnline = true;
-        document.getElementById('multiplayer-menu').classList.add('hidden');
-        document.getElementById('lobby-menu').classList.remove('hidden');
-        document.getElementById('lobby-room-id').innerText = "Conectando...";
-        document.getElementById('server-status-container').style.display = 'none';
-
-        const config = {
-            debug: 2,
-            config: { iceServers: clientIceList }
-        };
-
-        this.peer = new Peer(config);
-
-        this.peer.on('open', id => {
-            this.conn = this.peer.connect(targetId.trim().toUpperCase(), {
-                reliable: true, serialization: 'json'
-            });
-            this.handleClientConnection(targetId);
-        });
-        
-        this.peer.on('error', err => {
-            document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
-        });
-    },
-
-    setupPeerEvents() {
         this.peer.on('connection', c => {
             if (this.conn && this.conn.open) { c.close(); return; }
             this.conn = c;
@@ -853,6 +696,8 @@ const Net = {
                 document.getElementById('lobby-room-id').style.color = "#4dff4d";
                 this.setupConn();
                 this.updateLobbyUI();
+                
+                // Delay para garantir estabilidade
                 setTimeout(() => {
                     this.send({ type: 'LOBBY', p1Char: this.p1Char, p1Ready: this.p1Ready });
                 }, 500);
@@ -862,38 +707,85 @@ const Net = {
                 document.getElementById('lobby-room-id').style.color = "red";
                 this.updateLobbyUI();
             });
+            
+             this.conn.on('error', err => console.error("Erro conexão:", err));
         });
 
         this.peer.on('error', err => {
             console.error(err);
-            document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
+            let msg = "Erro: " + err.type;
+            if (err.type === 'network') msg = "Erro de Rede (Firewall?)";
+            if (err.type === 'unavailable-id') msg = "ID Indisponível";
+            document.getElementById('lobby-room-id').innerText = msg;
         });
     },
 
-    handleClientConnection(targetId) {
-        const timer = setTimeout(() => {
-            if (!this.conn.open) {
-                document.getElementById('lobby-room-id').innerText = "Tempo Esgotado";
-                document.getElementById('lobby-room-id').style.color = "red";
+    initClient(targetId) {
+        console.log("%c[CLIENT] Iniciando...", "color: orange");
+        if (!targetId) { alert("Digite o ID!"); return; }
+        targetId = targetId.trim().toUpperCase();
+        
+        if (this.peer) {
+            this.peer.destroy();
+            this.peer = null;
+        }
+
+        this.isHost = false;
+        this.isOnline = true;
+        document.getElementById('multiplayer-menu').classList.add('hidden');
+        document.getElementById('lobby-menu').classList.remove('hidden');
+        document.getElementById('lobby-room-id').innerText = "Conectando...";
+        document.getElementById('lobby-room-id').style.color = "yellow";
+
+        const config = {
+            debug: 2,
+            config: {
+                iceServers: ICE_SERVERS
             }
-        }, 15000);
+        };
 
-        this.conn.on('open', () => {
-            clearTimeout(timer);
-            console.log("✅ Conectado!");
-            document.getElementById('lobby-room-id').innerText = "Conectado: " + targetId;
-            document.getElementById('lobby-room-id').style.color = "#4dff4d";
-            this.setupConn();
-            this.updateLobbyUI();
-            this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
-        });
+        this.peer = new Peer(config);
 
-        this.conn.on('close', () => {
-            alert("Desconectado.");
-            location.reload();
+        this.peer.on('open', id => {
+            console.log("Meu ID:", id);
+            document.getElementById('lobby-room-id').innerText = "Buscando Host...";
+
+            this.conn = this.peer.connect(targetId, {
+                reliable: true,
+                serialization: 'json'
+            });
+
+            // Timeout de 15 segundos
+            const timer = setTimeout(() => {
+                if (!this.conn || !this.conn.open) {
+                    document.getElementById('lobby-room-id').innerText = "Falha: Timeout";
+                    document.getElementById('lobby-room-id').style.color = "red";
+                    console.log("Timeout atingido. Servidores ICE falharam ou Host offline.");
+                }
+            }, 15000);
+
+            this.conn.on('open', () => {
+                clearTimeout(timer);
+                console.log("✅ Conectado!");
+                document.getElementById('lobby-room-id').innerText = "Conectado: " + targetId;
+                document.getElementById('lobby-room-id').style.color = "#4dff4d";
+                this.setupConn();
+                this.updateLobbyUI();
+                this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
+            });
+
+            this.conn.on('close', () => {
+                alert("Desconectado.");
+                location.reload();
+            });
+            
+            this.conn.on('error', err => console.error("Erro conexão:", err));
         });
         
-        this.conn.on('error', err => console.error("Erro conexão:", err));
+        this.peer.on('error', err => {
+            console.error(err);
+            document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
+        });
     },
 
     setupConn() {
@@ -930,7 +822,8 @@ const Net = {
             }
             if (data.type === 'GAME_OVER') {
                 game.state = 'GAME_OVER';
-                this.showMultiplayerGameOver();
+                document.getElementById('final-wave').innerText = game.wave;
+                document.getElementById('game-over-menu').classList.remove('hidden');
             }
             if (data.type === 'NEXT_WAVE') {
                 game.wave = data.wave;
@@ -951,15 +844,6 @@ const Net = {
                 if (this.isHost && game) {
                     game.processDevCommand(data.cmd, false);
                 }
-            }
-            // --- NOVOS EVENTOS DE RESTART ---
-            if (data.type === 'RESTART_VOTE') {
-                this.remoteVote = true;
-                this.updateRestartUI();
-                this.checkRestartCondition();
-            }
-            if (data.type === 'RESTART_GAME') {
-                game.hardReset();
             }
         });
     },
@@ -1029,67 +913,6 @@ const Net = {
                 }
             });
         }
-    },
-
-    // --- FUNÇÕES DE RESTART (UI e Lógica) ---
-    showMultiplayerGameOver() {
-        document.getElementById('final-wave').innerText = game.wave;
-        document.getElementById('final-souls').innerText = game.souls;
-        
-        const menu = document.getElementById('game-over-menu');
-        menu.classList.remove('hidden');
-        
-        document.getElementById('btn-menu-sp').classList.add('hidden');
-        document.getElementById('mp-gameover-controls').classList.remove('hidden');
-        document.getElementById('mp-gameover-controls').style.display = 'flex';
-        
-        this.myVote = false;
-        this.remoteVote = false;
-        this.updateRestartUI();
-    },
-
-    voteRestart() {
-        if (this.myVote) return; 
-        this.myVote = true;
-        
-        const btn = document.getElementById('btn-mp-restart');
-        btn.style.borderColor = 'gray';
-        btn.style.color = 'gray';
-        btn.innerText = "AGUARDANDO...";
-        
-        this.send({ type: 'RESTART_VOTE' });
-        this.updateRestartUI();
-        this.checkRestartCondition();
-    },
-
-    updateRestartUI() {
-        const votes = (this.myVote ? 1 : 0) + (this.remoteVote ? 1 : 0);
-        const btn = document.getElementById('btn-mp-restart');
-        
-        if (!this.myVote) btn.innerText = `REINICIAR (${votes}/2)`;
-        
-        const status = document.getElementById('mp-restart-status');
-        if (this.remoteVote && !this.myVote) status.innerText = "O outro jogador quer reiniciar!";
-        else if (this.myVote && !this.remoteVote) status.innerText = "Esperando o outro jogador...";
-        else if (votes === 2) status.innerText = "Reiniciando...";
-        else status.innerText = "";
-    },
-
-    checkRestartCondition() {
-        if (this.myVote && this.remoteVote) {
-            if (this.isHost) {
-                setTimeout(() => {
-                    this.send({ type: 'RESTART_GAME' });
-                    game.hardReset();
-                }, 1000);
-            }
-        }
-    },
-
-    disconnectAndMenu() {
-        if (this.conn) this.conn.close();
-        if (this.peer) this.peer.destroy();
-        location.reload();
     }
 };
 
@@ -1432,28 +1255,11 @@ processDevCommand(cmd, isHostCmd = true) {
         }
     }
 
-    triggerConfirmedBossWave() {
+triggerConfirmedBossWave() {
         this.state = 'PLAYING';
-        
-        // --- CORREÇÃO: Força o menu a sumir visualmente para o Host ---
-        const bossMenu = document.getElementById('boss-confirm-menu');
-        if (!bossMenu.classList.contains('hidden')) {
-            bossMenu.classList.add('hidden');
-        }
-        
-        // Reseta o botão para a próxima vez que aparecer (cosmético)
-        const btn = document.getElementById('btn-start-boss');
-        btn.innerText = "COMEÇAR";
-        btn.disabled = false;
-        // -------------------------------------------------------------
-
         audioManager.play('boss');
         this.enemiesToSpawn = 0; 
-        
-        if (!Net.isOnline || Net.isHost) {
-            this.spawnBoss(this.wave % CONFIG.bossWaveInterval === 0);
-        }
-        
+        if (!Net.isOnline || Net.isHost) this.spawnBoss(this.wave % CONFIG.bossWaveInterval === 0);
         const title = (this.wave % CONFIG.bossWaveInterval === 0) ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
         this.showWaveText(title);
         
@@ -1643,8 +1449,32 @@ serializeState() {
         };
     }
 
+    // CORREÇÃO: Função syncState atualizada para forçar abertura do menu Boss no cliente
     syncState(s) {
         if (!s) return;
+
+        // Se o Host diz que é hora do Boss, nós FORÇAMOS o menu a aparecer
+        if (s.st === 'BOSS_CONFIRM') {
+            const bossMenu = document.getElementById('boss-confirm-menu');
+            
+            // Se o menu estiver escondido, mostre ele AGORA
+            if (bossMenu.classList.contains('hidden')) {
+                const isBigBoss = (s.wv % CONFIG.bossWaveInterval === 0);
+                const title = isBigBoss ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
+                
+                document.getElementById('boss-wave-title').innerText = title;
+                document.getElementById('boss-wave-title').style.color = isBigBoss ? 'red' : '#bf00ff';
+                bossMenu.classList.remove('hidden');
+                
+                // Força o estado local para evitar conflitos
+                this.state = 'BOSS_CONFIRM';
+            }
+        }
+        
+        // Se o jogo já começou (PLAYING) mas o menu do boss ainda está na tela, esconde ele
+        if (s.st === 'PLAYING' && !document.getElementById('boss-confirm-menu').classList.contains('hidden')) {
+            document.getElementById('boss-confirm-menu').classList.add('hidden');
+        }
 
         // Força o Client a abrir a tela de escolha de perks
         if (this.state !== 'UPGRADE_MENU' && s.st === 'UPGRADE_MENU') {
@@ -1653,23 +1483,13 @@ serializeState() {
         if (this.state === 'UPGRADE_MENU' && s.st === 'PLAYING') {
             document.getElementById('upgrade-menu').classList.add('hidden');
         }
-        
-        // Força o Client a ver a tela de Boss caso o Host ative
-        if (this.state !== 'BOSS_CONFIRM' && s.st === 'BOSS_CONFIRM') {
-            const title = (s.wv % CONFIG.bossWaveInterval === 0) ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
-            document.getElementById('boss-wave-title').innerText = title;
-            document.getElementById('boss-wave-title').style.color = (s.wv % CONFIG.bossWaveInterval === 0) ? 'red' : '#bf00ff';
-            document.getElementById('boss-confirm-menu').classList.remove('hidden');
-        }
-        if (this.state === 'BOSS_CONFIRM' && s.st === 'PLAYING') {
-            document.getElementById('boss-confirm-menu').classList.add('hidden');
-        }
 
         this.state = s.st || this.state;
         this.wave = s.wv || this.wave;
         this.souls = s.so || this.souls;
         this.showTeleportZonesUntil = s.tpz || 0;
 
+        // Sincroniza P1 (Host)
         if (this.player && s.p1) {
             this.player.x = s.p1.x; this.player.y = s.p1.y;
             if (s.p1.w) this.player.width = s.p1.w;
@@ -1683,6 +1503,7 @@ serializeState() {
             }
         }
 
+        // Sincroniza P2 (Cliente)
         if (this.player2 && s.p2) {
             this.player2.x = s.p2.x; this.player2.y = s.p2.y;
             if (s.p2.w) this.player2.width = s.p2.w;
@@ -1699,6 +1520,7 @@ serializeState() {
         if (this.player2) this.player2.updateHpUI();
         this.updateSoulsUI();
 
+        // Sincroniza Inimigos
         while(this.enemies.length < s.en.length) this.enemies.push(new Enemy(0,0,'redondo'));
         while(this.enemies.length > s.en.length) this.enemies.pop();
         for(let i=0; i<s.en.length; i++){
@@ -1711,6 +1533,7 @@ serializeState() {
              this.enemies[i].anchorX = s.en[i].aX; this.enemies[i].colorUntil = s.en[i].cU;
         }
 
+        // Sincroniza Projéteis
         while(this.bullets.length < s.bu.length) this.bullets.push(new Projectile(0,0,0,0,false));
         while(this.bullets.length > s.bu.length) this.bullets.pop();
         for(let i=0; i<s.bu.length; i++){
@@ -1719,6 +1542,7 @@ serializeState() {
             this.bullets[i].history = s.bu[i].hi || [];
         }
 
+        // Sincroniza Partículas e Textos
         while(this.particles.length < s.pa.length) this.particles.push(new Particle(0,0,'white',0));
         while(this.particles.length > s.pa.length) this.particles.pop();
         for(let i=0; i<s.pa.length; i++){
@@ -2149,7 +1973,416 @@ serializeState() {
         }
     }
 
-    takeDamage(amount, isBossAttack = false) {
+    draw() {
+        ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0, 0, this.width, this.height);
+        
+        ctx.save();
+        // CORREÇÃO: Previne o crash garantindo que 'cinematicBoss' exista na tela do Client
+        if (this.state === 'BOSS_DEATH_CINEMATIC' && this.cinematicBoss) {
+            let elapsed = Date.now() - this.cinematicStartTime;
+            let targetX = this.cinematicBoss.x + this.cinematicBoss.width/2;
+            let targetY = this.cinematicBoss.y + this.cinematicBoss.height/2;
+            
+            let progress = Math.min(1, elapsed / 3000); 
+            
+            let shakeIntensity = elapsed < 3000 ? progress * 6 : 0;
+            let shakeX = (Math.random() - 0.5) * shakeIntensity;
+            let shakeY = (Math.random() - 0.5) * shakeIntensity;
+            
+            let zoom = 1 + (progress * 0.5); 
+            
+            let startCamX = this.width / 2;
+            let startCamY = this.height / 2;
+            let currentCamX = startCamX + (targetX - startCamX) * progress;
+            let currentCamY = startCamY + (targetY - startCamY) * progress;
+            
+            ctx.translate(this.width/2, this.height/2);
+            ctx.scale(zoom, zoom);
+            ctx.translate(-currentCamX + shakeX, -currentCamY + shakeY);
+        }
+
+        // Desenhar Zona Limite do Teleporte se requisitado
+        if (this.showTeleportZonesUntil && Date.now() < this.showTeleportZonesUntil) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(0, 255, 255, 0.15)';
+            ctx.fillRect(0, 0, this.width / 6, this.height);
+            ctx.fillRect(this.width * 5 / 6, 0, this.width / 6, this.height);
+            
+            ctx.fillStyle = 'cyan';
+            ctx.font = '12px "Press Start 2P"';
+            ctx.textAlign = 'center';
+            if (Math.floor(Date.now() / 150) % 2 === 0) {
+                ctx.fillText("AREA VALIDA", this.width / 12, this.height / 2);
+                ctx.fillText("AREA VALIDA", this.width * 11 / 12, this.height / 2);
+            }
+            ctx.restore();
+        }
+
+        ctx.fillStyle = '#0a0a0a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
+        this.blocks.forEach(b => { ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h); });
+        
+// Desenha miras e lasers
+        let localInputMouse = this.input.mouse;
+        if (this.player && !this.player.isDead && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
+            
+            // P1
+            if (!Net.isOnline || Net.isHost) {
+                const centerX = this.player.x + this.player.width / 2;
+                const centerY = this.player.y + this.player.height / 2;
+                const angle = Math.atan2((Net.isOnline && !Net.isHost ? this.netInput.mouse.y : this.input.mouse.y) - centerY, (Net.isOnline && !Net.isHost ? this.netInput.mouse.x : this.input.mouse.x) - centerX);
+                const endX = centerX + Math.cos(angle) * 2000; const endY = centerY + Math.sin(angle) * 2000;
+                
+                if (this.player.laserActive) {
+                    ctx.save();
+                    ctx.strokeStyle = 'red';
+                    ctx.lineWidth = 25;
+                    ctx.lineCap = 'round';
+                    ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
+                    ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
+                    
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 8;
+                    ctx.globalAlpha = 0.9;
+                    ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
+                    ctx.restore();
+                } else {
+                    ctx.save(); ctx.strokeStyle = 'red'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
+                    ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke(); ctx.restore();
+                }
+            }
+        }
+
+        if (this.player2 && !this.player2.isDead && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
+            if (Net.isOnline && !Net.isHost) {
+                const cX = this.player2.x + this.player2.width / 2;
+                const cY = this.player2.y + this.player2.height / 2;
+                const a = Math.atan2((Net.isOnline && !Net.isHost ? this.input.mouse.y : this.netInput.mouse.y) - cY, (Net.isOnline && !Net.isHost ? this.input.mouse.x : this.netInput.mouse.x) - cX);
+                const eX = cX + Math.cos(a) * 2000; const eY = cY + Math.sin(a) * 2000;
+
+                if (this.player2.laserActive) {
+                    ctx.save();
+                    ctx.strokeStyle = 'blue';
+                    ctx.lineWidth = 25;
+                    ctx.lineCap = 'round';
+                    ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
+                    ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke();
+                    
+                    ctx.strokeStyle = 'white';
+                    ctx.lineWidth = 8;
+                    ctx.globalAlpha = 0.9;
+                    ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke();
+                    ctx.restore();
+                } else {
+                    ctx.save(); ctx.strokeStyle = 'blue'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
+                    ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke(); ctx.restore();
+                }
+            }
+        }
+
+        if (this.player2) this.player2.draw(ctx);
+        if (this.player) this.player.draw(ctx);
+        this.enemies.forEach(e => { if (!e.dead) e.draw(ctx); });
+        this.bullets.forEach(b => b.draw(ctx));
+        this.particles.forEach(p => p.draw(ctx));
+        this.lightningEffects.forEach(l => l.draw(ctx));
+        this.floatingTexts.forEach(t => t.draw(ctx));
+
+        ctx.restore();
+
+        if (this.state === 'BOSS_CONFIRM' || this.state === 'UPGRADE_MENU' || this.state === 'PAUSED') {
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, this.width, this.height);
+        }
+    }
+}
+
+class FloatingText {
+    constructor(x, y, text, color) {
+        this.x = x; this.y = y; this.text = text; this.color = color;
+        this.vy = -1; this.spawnTime = Date.now(); this.duration = 500; this.dead = false;
+    }
+    update() {
+        this.y += this.vy;
+        if (Date.now() - this.spawnTime > this.duration) this.dead = true;
+    }
+    draw(ctx) {
+        ctx.save(); ctx.font = '12px "Press Start 2P"'; ctx.fillStyle = this.color;
+        let remaining = this.duration - (Date.now() - this.spawnTime);
+        if (remaining < 150) ctx.globalAlpha = Math.max(0, remaining / 150);
+        ctx.fillText(this.text, this.x, this.y); ctx.restore();
+    }
+}
+
+class CompanionOrb {
+    constructor(player) {
+        this.player = player; this.x = player.x; this.y = player.y; this.lastShot = Date.now();
+    }
+    update(inputObj) {
+        let tier = this.player.perks.pursuingOrb;
+        if (tier <= 0) return;
+        let targetX = this.player.x + this.player.width + 25; let targetY = this.player.y + 10;
+        this.x += (targetX - this.x) * 0.1; this.y += (targetY - this.y) * 0.1;
+
+        let now = Date.now(); let currentFireRate = this.player.stats.fireRate; 
+        if (game.state !== 'BOSS_DEATH_CINEMATIC' && now - this.lastShot > currentFireRate) {
+            let onScreenEnemies = game.enemies.filter(e => e.y > 0 && e.y < game.height && !e.dead);
+            if(onScreenEnemies.length > 0 && !this.player.laserActive) { this.shoot(tier); this.lastShot = now; }
+        }
+    }
+    shoot(tier) {
+        let nearest = null; let minDist = Infinity;
+        for (let e of game.enemies) {
+            if (e.dead) continue;
+            let dist = Math.hypot(e.x - this.x, e.y - this.y);
+            if (dist < minDist) { minDist = dist; nearest = e; }
+        }
+        if (nearest) {
+            let angle = Math.atan2((nearest.y + nearest.height/2) - this.y, (nearest.x + nearest.width/2) - this.x);
+            let dmg = this.player.stats.damage;
+            if (Math.random() < this.player.stats.critChance) dmg *= this.player.stats.critDmg;
+            if (this.player.hp < this.player.maxHp / 2) dmg *= 1.5;
+            let bulletStats = { ...this.player.stats, speed: 1.75 };
+            let finalDmg = tier === 3 ? dmg : this.player.stats.damage * 0.5;
+            if (this.player.perks.homing > 0) bulletStats.homingTier = this.player.perks.homing;
+            if (this.player.perks.chainLightning > 0) bulletStats.chainTier = this.player.perks.chainLightning;
+            if (tier === 1) { bulletStats.speed = 0.85; bulletStats.projSize = 2; bulletStats.pierce = 0; } 
+            else if (tier === 2) { bulletStats.speed = 1.75; bulletStats.projSize = 4; bulletStats.pierce = 0; } 
+            else if (tier === 3) { bulletStats.color = 'white'; }
+            if (this.player.perks.cold) bulletStats.isCold = true;
+
+            game.bullets.push(ObjectPool.getBullet(this.x, this.y, angle, finalDmg, true, bulletStats));
+            audioManager.playSfx('shoot');
+        }
+    }
+    draw(ctx) {
+        if (this.player.perks && this.player.perks.pursuingOrb <= 0) return;
+        ctx.fillStyle = '#4da6ff'; ctx.beginPath(); ctx.arc(this.x, this.y, 6, 0, Math.PI*2); ctx.fill();
+        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+    }
+}
+
+class Player {
+    constructor(x, y, charIndex, isPlayer1) {
+        this.x = x; this.y = y; this.width = 52; this.height = 69; 
+        this.vx = 0; this.vy = 0; this.grounded = false; this.charIndex = charIndex; 
+        this.walkTimer = 0; this.hp = 100; this.maxHp = 100;
+        this.isPlayer1 = isPlayer1; 
+        this.isDead = false;
+        
+        this.stats = { speed: CONFIG.playerSpeed, jumpPower: CONFIG.jumpForce, damage: 10, fireRate: 1150, critChance: 0.05, critDmg: 2.0, lifesteal: 0, soulChance: 0.01, pierce: 0, projSize: 4, jumpsMax: 1, defense: 0 };
+        this.jumpsLeft = 0; this.perksCounts = {}; 
+        this.perks = { fragmentation: false, thunderbolt: 0, cold: false, pursuingOrb: 0, homing: 0, timeWarp: 0, multishot: false, execute: false, bouncing: false, manaShield: false, phoenix: false, swift: 0, chainLightning: 0, decimator: 0, poison: 0, teleport: false };
+        this.manaShieldReady = false; this.manaShieldCooldown = 0;
+        this.lastThunderTime = Date.now();
+        this.orb = new CompanionOrb(this); this.lastShot = 0; this.facing = 1; this.invulnUntil = 0;
+        this.healingFatigueUntil = 0; 
+        this.isDead = false;
+        
+        this.laserActive = false; this.laserTimer = 0; this.laserCooldown = 0; this.laserLastTick = 0;
+        this.teleportCooldown = 0;
+
+        if ((this.isPlayer1 && Net.isHost) || (!this.isPlayer1 && !Net.isHost) || !Net.isOnline) {
+            this.updateStatsUI();
+        }
+    }
+
+    checkRect(r1, r2) {
+        return r1.x < r2.x + r2.w && r1.x + r1.width > r2.x && r1.y < r2.y + r2.h && r1.y + r1.height > r2.y;
+    }
+
+    updateHpUI() {
+        const pct = Math.max(0, Math.min(100, (this.hp / this.maxHp) * 100));
+        document.getElementById('hp-bar').style.width = `${pct}%`;
+        document.getElementById('hp-text').innerText = `${Math.ceil(this.hp)}/${this.maxHp}`;
+        this.updateStatsUI();
+    }
+
+    updateStatsUI() {
+        document.getElementById('stat-maxhp').innerText = this.maxHp;
+        document.getElementById('stat-dmg').innerText = this.stats.damage.toFixed(1);
+        let hitsPerSecond = 1000 / this.stats.fireRate;
+        document.getElementById('stat-atkspd').innerText = hitsPerSecond.toFixed(2);
+        document.getElementById('stat-critc').innerText = (this.stats.critChance * 100).toFixed(0);
+        document.getElementById('stat-critd').innerText = (this.stats.critDmg * 100).toFixed(0);
+        document.getElementById('stat-lifesteal').innerText = (this.stats.lifesteal * 100).toFixed(0);
+    }
+
+    activateTeleport() {
+        if (!this.perks.teleport || Date.now() < this.teleportCooldown || game.state !== 'PLAYING') return;
+
+        let limitZone = game.width / 6;
+        let isLeft = this.x + this.width/2 < limitZone;
+        let isRight = this.x + this.width/2 > game.width - limitZone;
+
+        if (!isLeft && !isRight) {
+            game.showTeleportZonesUntil = Date.now() + 1500;
+            audioManager.playSfx('hit'); 
+            return;
+        }
+
+        this.teleportCooldown = Date.now() + 300000; // 300s CD
+        game.startTeleport(isLeft);
+    }
+
+    activateLaser() {
+        if (this.perks.decimator > 0 && Date.now() >= this.laserCooldown && !this.laserActive && game.state === 'PLAYING') {
+            this.laserActive = true;
+            this.laserTimer = Date.now() + 4000;
+            this.laserLastTick = Date.now();
+            this.laserCooldown = Date.now() + 180000; 
+        }
+    }
+
+    fireLaserTick(inputObj) {
+        const centerX = this.x + this.width / 2;
+        const centerY = this.y + this.height / 2;
+        const angle = Math.atan2(inputObj.mouse.y - centerY, inputObj.mouse.x - centerX);
+        const endX = centerX + Math.cos(angle) * 2000;
+        const endY = centerY + Math.sin(angle) * 2000;
+
+        const p1 = { x: centerX, y: centerY };
+        const p2 = { x: endX, y: endY };
+
+        game.enemies.forEach(e => {
+            if (!e.dead && e.y > -50) {
+                const ep = { x: e.x + e.width / 2, y: e.y + e.height / 2 };
+                const dist = distToSegment(ep, p1, p2);
+                
+                if (dist < (25 / 2 + e.width / 2)) {
+                    let isBoss = (e.type === 'boss' || e.type === 'miniboss');
+                    let tier = this.perks.decimator;
+                    let pct = 0;
+                    
+                    if (tier === 1) pct = isBoss ? 0.02 : 0.05;
+                    else if (tier === 2) pct = isBoss ? 0.03 : 0.07;
+                    else if (tier >= 3) pct = isBoss ? 0.04 : 0.10;
+
+                    let dmg = e.maxHp * pct;
+                    e.takeDamage(dmg);
+                }
+            }
+        });
+        audioManager.playSfx('laser');
+    }
+
+    update(inputObj) {
+        if (this.isDead) return;
+
+        if (this.perks.manaShield && !this.manaShieldReady) {
+            if (Date.now() > this.manaShieldCooldown) {
+                this.manaShieldReady = true; 
+                if((this.isPlayer1 && Net.isHost) || (!this.isPlayer1 && !Net.isHost) || !Net.isOnline) {
+                    document.getElementById('mana-shield-indicator').style.display='block'; audioManager.playSfx('select'); 
+                }
+            }
+        }
+
+        // Lógica Visual UI para Player Local
+        if ((this.isPlayer1 && Net.isHost) || (!this.isPlayer1 && !Net.isHost) || !Net.isOnline) {
+            let laserUI = document.getElementById('laser-ui');
+            if (this.perks.decimator > 0) {
+                laserUI.style.display = 'flex';
+                if (this.laserActive || Date.now() < this.laserCooldown) {
+                    laserUI.style.opacity = 0.5;
+                    let cdRemaining = Math.ceil((this.laserCooldown - Date.now()) / 1000);
+                    if (this.laserActive) document.getElementById('laser-cd').innerText = "ATV";
+                    else document.getElementById('laser-cd').innerText = cdRemaining > 0 ? cdRemaining : "PRONTO";
+                } else {
+                    laserUI.style.opacity = 1;
+                    document.getElementById('laser-cd').innerText = 'PRONTO';
+                }
+            }
+
+            let tpUI = document.getElementById('teleport-ui');
+            if (this.perks.teleport) {
+                tpUI.style.display = 'flex';
+                if (game.state === 'TELEPORTING' || Date.now() < this.teleportCooldown) {
+                    tpUI.style.opacity = 0.5;
+                    let cdRemaining = Math.ceil((this.teleportCooldown - Date.now()) / 1000);
+                    document.getElementById('teleport-cd').innerText = cdRemaining > 0 ? cdRemaining : "PRONTO";
+                } else {
+                    tpUI.style.opacity = 1;
+                    document.getElementById('teleport-cd').innerText = 'PRONTO';
+                }
+            }
+        }
+
+        if (game.state === 'TELEPORTING') return;
+
+        let speedMult = 1.0;
+        if (this.perks.swift > 0) speedMult += (this.perks.swift * 0.1); 
+
+        if (inputObj && inputObj.keys['KeyA']) { this.vx = -this.stats.speed * speedMult; this.facing = -1; if(this.grounded) this.walkTimer += 0.2 * window.timeScale; }
+        else if (inputObj && inputObj.keys['KeyD']) { this.vx = this.stats.speed * speedMult; this.facing = 1; if(this.grounded) this.walkTimer += 0.2 * window.timeScale; }
+        else { this.vx *= CONFIG.friction; this.walkTimer = 0; }
+
+        if (inputObj && inputObj.keys['Space']) {
+            if (!this.jumpKeyHeld) { 
+                if (this.grounded) { this.vy = -this.stats.jumpPower; this.grounded = false; this.jumpsLeft = this.stats.jumpsMax - 1; } 
+                else if (this.jumpsLeft > 0) { this.vy = -this.stats.jumpPower; this.jumpsLeft--; }
+                this.jumpKeyHeld = true;
+            }
+        } else { this.jumpKeyHeld = false; }
+
+        this.x += this.vx * window.timeScale;
+        for (let b of game.blocks) {
+            if (this.checkRect(this, b)) {
+                if (this.vx > 0) this.x = b.x - this.width;
+                else if (this.vx < 0) this.x = b.x + b.w;
+                this.vx = 0;
+            }
+        }
+
+        this.vy += CONFIG.gravity * window.timeScale; 
+        this.y += this.vy * window.timeScale; 
+        this.grounded = false;
+        
+        for (let b of game.blocks) {
+            if (this.checkRect(this, b)) {
+                if (this.vy > 0) { this.y = b.y - this.height; this.vy = 0; this.grounded = true; } 
+                else if (this.vy < 0) { this.y = b.y + b.h; this.vy = 0; }
+            }
+        }
+
+        if (this.x < 0) this.x = 0;
+        if (this.x + this.width > game.width) this.x = game.width - this.width;
+
+        const now = Date.now();
+        
+        if (this.laserActive) {
+            if (now > this.laserTimer) {
+                this.laserActive = false;
+            } else if (now - this.laserLastTick >= 500) {
+                if(inputObj) this.fireLaserTick(inputObj);
+                this.laserLastTick = now;
+            }
+        } else {
+            if (game.state !== 'BOSS_DEATH_CINEMATIC' && now - this.lastShot > this.stats.fireRate) {
+                if(inputObj) this.shoot(inputObj);
+                this.lastShot = now;
+            }
+        }
+
+        this.orb.update(inputObj);
+    }
+
+    shoot(inputObj) {
+        const centerX = this.x + this.width / 2; const centerY = this.y + this.height / 2;
+        const angle = Math.atan2(inputObj.mouse.y - centerY, inputObj.mouse.x - centerX);
+        let dmg = this.stats.damage;
+        if (this.hp < this.maxHp / 2) dmg *= 1.5;
+        if (Math.random() < this.stats.critChance) dmg *= this.stats.critDmg;
+
+        let bulletStats = { ...this.stats, speed: 1.75, homingTier: this.perks.homing, isCold: this.perks.cold, execute: this.perks.execute, bouncing: this.perks.bouncing, chainTier: this.perks.chainLightning };
+        game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, dmg, true, bulletStats));
+        
+        if (this.perks.multishot && Math.random() < 0.2) {
+             let offset = (Math.random() - 0.5) * 0.5; 
+             game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle + offset, dmg, true, bulletStats));
+        }
+        audioManager.playSfx('shoot');
+    }
+
+takeDamage(amount, isBossAttack = false) {
         if (this.isDead || Date.now() < this.invulnUntil) return;
 
         if (this.manaShieldReady) {
@@ -2181,16 +2414,10 @@ serializeState() {
             this.hp = 0;
             this.isDead = true;
 
-            // SINGLEPLAYER MORTE
             if (!Net.isOnline) {
                 game.state = 'GAME_OVER';
                 document.getElementById('final-wave').innerText = game.wave;
                 document.getElementById('game-over-menu').classList.remove('hidden');
-                
-                // Garante UI de Singleplayer
-                document.getElementById('btn-menu-sp').classList.remove('hidden');
-                document.getElementById('mp-gameover-controls').classList.add('hidden');
-                
                 audioManager.play('main');
                 return;
             }
@@ -2199,73 +2426,20 @@ serializeState() {
             const isP1 = this.isPlayer1;
             game.deadThisWave[isP1 ? 'p1' : 'p2'] = true;
 
-            // Se AMBOS morreram nesta wave
             if (game.deadThisWave.p1 && game.deadThisWave.p2) {
                 game.state = 'GAME_OVER';
+                document.getElementById('final-wave').innerText = game.wave;
+                document.getElementById('game-over-menu').classList.remove('hidden');
                 audioManager.play('main');
-                
-                if (Net.isHost) {
-                    Net.send({ type: 'GAME_OVER' });
-                    Net.showMultiplayerGameOver(); // Chama UI do Host
-                } else {
-                    Net.showMultiplayerGameOver(); // Chama UI do Client localmente também se detectar
-                }
+                if (Net.isHost) Net.send({ type: 'GAME_OVER' });
                 return;
             }
 
-            // Se apenas UM morreu, avisa que vai reviver
             if ((this.isPlayer1 && Net.isHost) || (!this.isPlayer1 && !Net.isHost) || !Net.isOnline) {
                 game.addFloatingText(this.x, this.y - 40, "MORREU - RESSUSCITA NA PRÓXIMA WAVE", "#ff4444");
             }
             game.reviveNextWave[isP1 ? 'p1' : 'p2'] = true;
         }
-    }
-
-    hardReset() {
-        // Limpa UI
-        document.getElementById('game-over-menu').classList.add('hidden');
-        document.getElementById('btn-mp-restart').innerText = "REINICIAR (0/2)";
-        document.getElementById('btn-mp-restart').style.borderColor = 'white';
-        document.getElementById('btn-mp-restart').style.color = 'white';
-        document.getElementById('mp-restart-status').innerText = "";
-        
-        // Reseta Variaveis
-        this.wave = 1;
-        this.souls = 0; 
-        this.updateSoulsUI();
-        
-        this.enemies = [];
-        this.bullets = [];
-        this.particles = [];
-        this.floatingTexts = [];
-        this.deadThisWave = { p1: false, p2: false };
-        this.reviveNextWave = { p1: false, p2: false };
-        
-        if (this.menuTimer) clearInterval(this.menuTimer);
-
-        // Reseta Players
-        let startX = Net.isOnline ? (this.width/2 - 50) : this.width/2;
-        
-        // Recria P1
-        let char1 = this.player.charIndex; 
-        this.player = new Player(startX, this.height - 150, char1, true);
-        
-        // Recria P2
-        if (this.player2) {
-            let char2 = this.player2.charIndex;
-            this.player2 = new Player(startX + 100, this.height - 150, char2, false);
-        }
-        
-        // Reseta Status Net
-        Net.myVote = false;
-        Net.remoteVote = false;
-        
-        // Inicia
-        this.state = 'PLAYING';
-        this.startWave();
-        
-        // Sincroniza estado inicial imediatamente
-        if(Net.isHost) Net.send({ type: 'STATE', state: this.serializeState() });
     }
 
     draw(ctx) {
@@ -2299,68 +2473,635 @@ serializeState() {
     }
 }
 
-function returnToMenu() { location.reload(); }
-
-function startGameLocal() {
-    audioManager.playWav('botton');
-    audioManager.play('principal'); 
-    document.getElementById('hud-top-left').style.display = 'block'; 
-    document.getElementById('pause-btn-ingame').style.display = 'block'; 
-    document.getElementById('perk-list-btn').style.display = 'block'; 
-    document.getElementById('stats-btn').style.display = 'block'; 
-    document.getElementById('souls-container').style.opacity = '1';
-    document.getElementById('main-menu').classList.add('hidden'); 
-    Net.isOnline = false;
-    game.start(window.selectedChar, 1);
-}
-
-function showMultiplayerMenu() {
-    document.getElementById('main-menu').classList.add('hidden');
-    document.getElementById('multiplayer-menu').classList.remove('hidden');
-}
-
-function startGame(c1, c2) {
-    document.getElementById('lobby-menu').classList.add('hidden');
-    document.getElementById('hud-top-left').style.display = 'block'; 
-    document.getElementById('pause-btn-ingame').style.display = 'block'; 
-    document.getElementById('perk-list-btn').style.display = 'block'; 
-    document.getElementById('stats-btn').style.display = 'block'; 
-    document.getElementById('souls-container').style.opacity = '1';
+class Enemy {
+    constructor(x, y, type) { this.reset(x, y, type); }
     
-    audioManager.play('principal'); 
-    game.start(c1, c2);
-}
+    reset(x, y, type) {
+        this.x = x; this.y = y; this.width = 35; this.height = 35; this.type = type; this.dead = false;
+        
+        this.escalaVisual = 1.8; 
+        
+        let hpBaseBruto = CONFIG.baseEnemyHP;
+        let hpMult = 1 + (game.wave * 0.15) + Math.pow(game.wave / 10, 2); 
+        
+        let perkHpBonus = 0;
+        if (game) {
+            const checkP = (p) => {
+                let b = 0;
+                if (!p || !p.perks) return 0;
+                if (p.perks.pursuingOrb === 1) b += 0.10;
+                else if (p.perks.pursuingOrb === 2) b += 0.15;
+                else if (p.perks.pursuingOrb >= 3) b += 0.20;
 
-function confirmBossWave() { 
-    // CORREÇÃO: Esconde o menu localmente primeiro para evitar flickering
-    document.getElementById('boss-confirm-menu').classList.add('hidden');
+                if (p.perks.thunderbolt === 1) b += 0.10;
+                else if (p.perks.thunderbolt === 2) b += 0.15;
+                else if (p.perks.thunderbolt >= 3) b += 0.20;
+
+                if (p.perks.chainLightning === 1) b += 0.05;
+                else if (p.perks.chainLightning === 2) b += 0.10;
+                else if (p.perks.chainLightning >= 3) b += 0.15;
+
+                let resCount = p.perksCounts['resonance'] || 0;
+                let resPlusCount = p.perksCounts['resonance_plus'] || 0;
+                b += (resCount * 0.03) + (resPlusCount * 0.05);
+                return b;
+            };
+            perkHpBonus += checkP(game.player);
+            if (game.player2) perkHpBonus += checkP(game.player2);
+        }
+        let perkMultiplier = 1 + perkHpBonus;
+
+        let hpEscalonadoTotal = hpBaseBruto * hpMult * perkMultiplier;
+        
+        this.hp = hpEscalonadoTotal; 
+        this.maxHp = this.hp;
+        
+        this.targetY = 50 + Math.random() * 200; this.anchorX = x; this.speed = 0.5; this.movePhase = Math.random() * Math.PI * 2; 
+        
+        let leechPenalty = (game && game.player && game.player.stats.lifesteal > 0) ? 1.3 : 1.0;
+
+        this.damage = getEnemyBaseDamage(game.wave) * leechPenalty;
+        
+        this.lastHitTime = 0; this.coldStacks = 0; this.coldUntil = 0; this.lastHitDamage = 0;
+        this.lastShootTime = Date.now() - 2000 + Math.random() * 500;
+        
+        // Poison Status
+        this.poisonStacks = 0;
+        this.poisonActive = false;
+        this.poisonEndTime = 0;
+        this.poisonLastTick = 0;
+    }
+
+    tickDebuffs() {
+        if (this.shieldActive) return;
+
+        if (this.poisonActive) {
+            if (Date.now() > this.poisonEndTime) {
+                this.poisonActive = false;
+            } else if (Date.now() - this.poisonLastTick >= 1000) {
+                this.poisonLastTick = Date.now();
+                let pTier = game.player.perks.poison;
+                let pBase = game.player.stats.damage;
+                let dmg = 0;
+                if (pTier === 1) dmg = pBase * 0.15;
+                else if (pTier === 2) dmg = pBase * 0.20;
+                else if (pTier >= 3) dmg = (pBase * 0.25) + (this.maxHp * 0.02);
+                
+                this.hp -= dmg;
+                game.addFloatingText(this.x, this.y, Math.round(dmg), "#00ff00");
+                if (this.hp <= 0) this.die();
+            }
+        }
+    }
+
+    update(allEnemies) {
+        let timeWarpFactor = 1.0; 
+        if (game.player && game.player.perks) {
+            let twTier = Math.max(game.player.perks.timeWarp, (game.player2 ? game.player2.perks.timeWarp : 0));
+            if (twTier === 1) timeWarpFactor = 0.9; if (twTier === 2) timeWarpFactor = 0.85; if (twTier === 3) timeWarpFactor = 0.8;
+        }
+
+        if (this.y < this.targetY) this.y += 1.4 * timeWarpFactor * window.timeScale; 
+        else this.y += Math.sin(Date.now() / 500 + this.movePhase) * 0.2 * timeWarpFactor * window.timeScale;
+
+        const time = Date.now() / 1000; let desiredX = this.anchorX + Math.sin(time + this.movePhase) * 80;
+        this.x += ((desiredX - this.x) * 0.035) * timeWarpFactor * window.timeScale;
+
+        let separationX = 0; let separationY = 0; let count = 0;
+        if (allEnemies) {
+            for (let other of allEnemies) {
+                if (other === this || other.dead) continue;
+                if (Math.abs(this.x - other.x) > 50) continue; 
+                const dist = Math.hypot(this.x - other.x, this.y - other.y);
+                if (dist < 50 && dist > 0) { separationX += (this.x - other.x) / dist; separationY += (this.y - other.y) / dist; count++; }
+            }
+        }
+        if (count > 0) { this.x += separationX * 0.35 * timeWarpFactor * window.timeScale; this.y += separationY * 0.35 * timeWarpFactor * window.timeScale; }
+        
+        const limiteMetadeTela = game.height / 2;
+        let p1Dist = (game.player && !game.player.isDead) ? Math.hypot((game.player.x - this.x), (game.player.y - this.y)) : Infinity;
+        let p2Dist = (game.player2 && !game.player2.isDead) ? Math.hypot((game.player2.x - this.x), (game.player2.y - this.y)) : Infinity;
+        let minDistAoPlayer = Math.min(p1Dist, p2Dist);
+        
+        if (this.y > limiteMetadeTela) {
+            this.y -= 2.5 * timeWarpFactor * window.timeScale; 
+        } else if (minDistAoPlayer < 250) {
+            this.y -= 2.0 * timeWarpFactor * window.timeScale; 
+        }
+
+        this.x = Math.max(0, Math.min(game.width - this.width, this.x));
+
+        let fireRateMod = 1.0;
+        if (Date.now() < this.coldUntil) fireRateMod = Math.pow(0.8, this.coldStacks); else this.coldStacks = 0;
+
+        let shootInterval = 2300 / fireRateMod;
+        if (game.state !== 'BOSS_DEATH_CINEMATIC' && Date.now() - this.lastShootTime > shootInterval) { this.shoot(); this.lastShootTime = Date.now(); }
+
+        this.tickDebuffs();
+    }
+
+    shoot() {
+        let p1Dist = (game.player && !game.player.isDead) ? Math.hypot((game.player.x - this.x), (game.player.y - this.y)) : Infinity;
+        let p2Dist = (game.player2 && !game.player2.isDead) ? Math.hypot((game.player2.x - this.x), (game.player2.y - this.y)) : Infinity;
+        if (p1Dist === Infinity && p2Dist === Infinity) return;
+        let target = (p2Dist < p1Dist) ? game.player2 : game.player;
+
+        const angle = Math.atan2((target.y + 20) - this.y, (target.x + 15) - this.x);
+        const possibleColors = ['red', '#4da6ff', '#800080', '#00ff00']; const bulletColor = possibleColors[Math.floor(Math.random() * possibleColors.length)];
+        let isBossAtk = (this.type === 'boss' || this.type === 'miniboss');
+        game.bullets.push(ObjectPool.getBullet(this.x + 15, this.y + 15, angle, this.damage, false, { speed: 1.0, color: bulletColor, isBossAttack: isBossAtk }));
+    }
+
+    takeDamage(amount, sourcePlayerObj = null) {
+        if (this.shieldActive) {
+            game.addFloatingText(this.x + this.width/2, this.y - 10, TEXTS[currentLang].blocked, "#4dff4d");
+            return;
+        }
+
+        let atker = sourcePlayerObj || game.player;
+
+        if (atker && atker.perks && atker.perks.execute && (this.hp / this.maxHp) < 0.15 && this.type !== 'boss' && this.type !== 'miniboss') {
+            amount *= 2; game.createParticle(this.x, this.y, 'red', 5);
+        }
+
+        if (atker && atker.perks && atker.perks.poison > 0 && !this.poisonActive && this.poisonStacks < 2 && amount > 0) {
+            let pChance = atker.perks.poison === 1 ? 0.10 : (atker.perks.poison === 2 ? 0.15 : 0.20);
+            if (Math.random() < pChance) {
+                this.poisonActive = true;
+                this.poisonEndTime = Date.now() + 5000;
+                this.poisonLastTick = Date.now();
+                this.poisonStacks++;
+            }
+        }
+
+        this.lastHitDamage = amount; 
+        this.lastHitPlayer = atker;
+        this.hp -= amount; this.lastHitTime = Date.now();
+        game.addFloatingText(this.x, this.y, Math.round(amount));
+
+        if (this.hp <= 0) this.die();
+    }
     
-    const btn = document.getElementById('btn-start-boss');
-    btn.innerText = "AGUARDANDO...";
-    btn.disabled = true;
+    applyCold() { 
+        if (this.shieldActive) return;
+        this.coldStacks++; this.coldUntil = Date.now() + 8000; 
+    }
 
-    if (!Net.isOnline) {
-        game.triggerConfirmedBossWave();
-        // Reseta botão singleplayer
-        btn.innerText = "COMEÇAR";
-        btn.disabled = false;
-    } else {
-        if (Net.isHost) {
-            game.p1BossReady = true;
-            console.log("[HOST] P1 pronto para o Boss.");
-            game.checkBossStart();
+    die() {
+        if (this.dead) return;
+        this.dead = true;
+        for(let i=0; i<3; i++) game.createParticle(this.x + 15, this.y + 15, 'white', 5);
+
+        let atker = this.lastHitPlayer || game.player;
+
+        if (atker && atker.perks && atker.perks.fragmentation) {
+            for(let i=0; i<4; i++) {
+                let ang = Math.random() * Math.PI * 2;
+                game.bullets.push(ObjectPool.getBullet(this.x + 15, this.y + 15, ang, 0, true, { speed: 2.0, projSize: 3, isFragment: true, owner: atker }));
+            }
+        }
+
+        if (atker && atker.stats && atker.stats.lifesteal > 0) {
+            let heal = this.lastHitDamage * atker.stats.lifesteal;
+            let maxHeal = atker.maxHp * 0.02; 
+            heal = Math.min(heal, maxHeal);
+            
+            if (Date.now() < atker.healingFatigueUntil) heal *= 0.3;
+
+            atker.hp = Math.min(atker.maxHp, atker.hp + heal);
+            
+            if((atker.isPlayer1 && Net.isHost) || (!atker.isPlayer1 && !Net.isHost) || !Net.isOnline) {
+                atker.updateHpUI();
+            }
+            if(heal > 1) game.addFloatingText(this.x, this.y - 15, `+${heal.toFixed(0)}`, "#00ff00");
+        }
+    }
+
+    draw(ctx) {
+        let img = ASSETS.images[this.type];
+        
+        ctx.save();
+        if (this.poisonActive) {
+            ctx.filter = 'sepia(1) hue-rotate(80deg) saturate(4)';
+        }
+
+        if (img && img.complete && img.naturalHeight !== 0) {
+            let tamanhoVisual = this.width * this.escalaVisual;
+            let offsetCentralizado = (tamanhoVisual - this.width) / 2;
+
+            if (Date.now() - this.lastHitTime < 100) ctx.globalAlpha = 0.5;
+            
+            ctx.drawImage(img, this.x - offsetCentralizado, this.y - offsetCentralizado, tamanhoVisual, tamanhoVisual);
+            ctx.restore();
+            
+            ctx.fillStyle = 'red'; ctx.fillRect(this.x, this.y - 8, this.width, 3);
+            let hpRatio = Math.max(0, this.hp / this.maxHp);
+            ctx.fillStyle = 'green'; ctx.fillRect(this.x, this.y - 8, this.width * hpRatio, 3);
         } else {
-            console.log("[CLIENT] Enviando pronto para o Host.");
-            Net.send({ type: 'BOSS_CONFIRM_READY' });
-            // Reseta botão cosmeticamente
-            setTimeout(() => {
-                btn.innerText = "COMEÇAR";
-                btn.disabled = false;
-            }, 2000);
+            let displayColor = (Date.now() - this.lastHitTime < 100) ? 'white' : '#ccc';
+            ctx.fillStyle = displayColor;
+            ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.width, this.y); ctx.lineTo(this.x + this.width / 2, this.y + this.height); ctx.fill();
+            ctx.restore();
         }
     }
 }
 
+class Boss extends Enemy {
+    constructor(x, y, isBigBoss) {
+        super(x, y, isBigBoss ? 'boss' : 'miniboss');
+        this.width = 69; this.height = 86; this.isBigBoss = isBigBoss; 
+        
+        this.escalaVisual = 2.0; 
+        
+        let hpBase = isBigBoss ? CONFIG.baseEnemyHP * 12 : CONFIG.baseEnemyHP * 7;
+        let hpMult = 1 + (game.wave * 0.15) + Math.pow(game.wave / 10, 2); 
+        
+        let perkHpBonus = 0;
+        if (game) {
+            const checkP = (p) => {
+                let b = 0;
+                if (!p || !p.perks) return 0;
+                if (p.perks.pursuingOrb === 1) b += 0.10;
+                else if (p.perks.pursuingOrb === 2) b += 0.15;
+                else if (p.perks.pursuingOrb >= 3) b += 0.20;
+
+                if (p.perks.thunderbolt === 1) b += 0.10;
+                else if (p.perks.thunderbolt === 2) b += 0.15;
+                else if (p.perks.thunderbolt >= 3) b += 0.20;
+
+                if (p.perks.chainLightning === 1) b += 0.05;
+                else if (p.perks.chainLightning === 2) b += 0.10;
+                else if (p.perks.chainLightning >= 3) b += 0.15;
+
+                let resCount = p.perksCounts['resonance'] || 0;
+                let resPlusCount = p.perksCounts['resonance_plus'] || 0;
+                b += (resCount * 0.03) + (resPlusCount * 0.05);
+                return b;
+            };
+            perkHpBonus += checkP(game.player);
+            if (game.player2) perkHpBonus += checkP(game.player2);
+        }
+        let perkMultiplier = 1 + perkHpBonus;
+
+        let hpTotalBruto = hpBase * hpMult * perkMultiplier;
+        
+        this.hp = hpTotalBruto * 0.80;
+        this.maxHp = this.hp;
+        
+        this.lastSummonTime = Date.now(); this.colorUntil = 0; this.lastShootTime = Date.now();
+        this.anchorX = game.width / 2 - 30; this.targetY = 100; this.moveSpeedLat = 0.028;
+        
+        let leechPenalty = (game && game.player && game.player.stats.lifesteal > 0) ? 1.3 : 1.0;
+        this.damage = getEnemyBaseDamage(game.wave) * 1.5 * leechPenalty;
+
+        this.shieldActive = false;
+        this.lastShieldTime = Date.now();
+    }
+
+    update(allEnemies) {
+        let timeWarpFactor = 1.0; 
+        if (game.player && game.player.perks) {
+            let twTier = Math.max(game.player.perks.timeWarp, (game.player2 ? game.player2.perks.timeWarp : 0));
+            if (twTier === 1) timeWarpFactor = 0.9; if (twTier === 2) timeWarpFactor = 0.85; if (twTier === 3) timeWarpFactor = 0.8;
+        }
+
+        const time = Date.now() / 2000; const waveX = Math.sin(time) * 250; 
+        let desiredX = this.anchorX + waveX;
+        this.x += ((desiredX - this.x) * this.moveSpeedLat) * timeWarpFactor * window.timeScale;
+        this.y += ((this.targetY - this.y) * 0.035 + Math.sin(Date.now()/300)*0.5) * timeWarpFactor * window.timeScale;
+        
+        if (this.y > game.height / 2.5) {
+            this.y -= 1.5 * timeWarpFactor * window.timeScale;
+        }
+
+        let canShield = (this.isBigBoss && game.wave >= 20) || (!this.isBigBoss && game.wave >= 15);
+        if (canShield) {
+            let shieldDuration = this.isBigBoss ? 10000 : 5000;
+            if (this.shieldActive) {
+                if (Date.now() - this.lastShieldTime > shieldDuration) {
+                    this.shieldActive = false;
+                    this.lastShieldTime = Date.now(); 
+                }
+            } else {
+                if (Date.now() - this.lastShieldTime > 30000) { 
+                    this.shieldActive = true;
+                    this.lastShieldTime = Date.now();
+                }
+            }
+        }
+
+        if (game.state !== 'BOSS_DEATH_CINEMATIC' && Date.now() - this.lastSummonTime > 7000 / timeWarpFactor) { 
+            this.summonMinions(); 
+            this.lastSummonTime = Date.now(); 
+        }
+
+        let fireInterval = 1500 / timeWarpFactor;
+        let fireRateMod = 1.0;
+        if (Date.now() < this.coldUntil) fireRateMod = Math.pow(0.8, this.coldStacks);
+        fireInterval /= fireRateMod;
+
+        if (game.state !== 'BOSS_DEATH_CINEMATIC' && Date.now() - this.lastShootTime > fireInterval) { this.bossAttack(); this.lastShootTime = Date.now(); }
+
+        this.tickDebuffs();
+    }
+
+    bossAttack() {
+        const centerX = this.x + this.width/2; const centerY = this.y + this.height/2;
+        
+        let p1Dist = (game.player && !game.player.isDead) ? Math.hypot((game.player.x - this.x), (game.player.y - this.y)) : Infinity;
+        let p2Dist = (game.player2 && !game.player2.isDead) ? Math.hypot((game.player2.x - this.x), (game.player2.y - this.y)) : Infinity;
+        if (p1Dist === Infinity && p2Dist === Infinity) return;
+        let target = (p2Dist < p1Dist) ? game.player2 : game.player;
+
+        for(let i=0; i<4; i++) {
+             const angle = Math.atan2((target.y + 20) - centerY, (target.x + 15) - centerX) + (i-1.5)*0.2;
+             game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: 1.3, isBossAttack: true }));
+        }
+    }
+
+    summonMinions() { 
+        let minionCount = game.enemies.filter(e => e.type !== 'boss' && e.type !== 'miniboss').length;
+        if (minionCount >= 4) return; 
+
+        this.colorUntil = Date.now() + 1000; 
+        game.spawnEnemy(this.x + (Math.random() > 0.5 ? -40 : 100)); 
+    }
+
+    die() {
+        if (game.state === 'BOSS_DEATH_CINEMATIC') return; 
+        
+        let atker = this.lastHitPlayer || game.player;
+
+        if (atker && atker.stats && atker.stats.lifesteal > 0) {
+            let heal = this.lastHitDamage * atker.stats.lifesteal;
+            let maxHeal = atker.maxHp * 0.02; 
+            heal = Math.min(heal, maxHeal);
+            
+            if (Date.now() < atker.healingFatigueUntil) heal *= 0.3;
+
+            atker.hp = Math.min(atker.maxHp, atker.hp + heal);
+            
+            if((atker.isPlayer1 && Net.isHost) || (!atker.isPlayer1 && !Net.isHost) || !Net.isOnline) {
+                atker.updateHpUI();
+            }
+            if(heal > 1) game.addFloatingText(this.x, this.y - 15, `+${heal.toFixed(0)}`, "#00ff00");
+        }
+
+        game.startBossDeathCinematic(this);
+    }
+
+    draw(ctx) {
+        let img = ASSETS.images[this.type];
+        
+        ctx.save();
+        if (this.poisonActive) {
+            ctx.filter = 'sepia(1) hue-rotate(80deg) saturate(4)';
+        }
+
+        if (img && img.complete && img.naturalHeight !== 0) {
+            let tamanhoVisual = this.width * this.escalaVisual;
+            let offsetCentralizado = (tamanhoVisual - this.width) / 2;
+
+            if (Date.now() - this.lastHitTime < 100 || Date.now() < this.colorUntil) ctx.globalAlpha = 0.5;
+            
+            ctx.drawImage(img, this.x - offsetCentralizado, this.y - offsetCentralizado, tamanhoVisual, tamanhoVisual);
+            
+            if (this.shieldActive) {
+                ctx.save(); 
+                ctx.globalAlpha = 0.3; 
+                ctx.fillStyle = '#4dff4d'; 
+                ctx.beginPath(); 
+                ctx.arc(this.x + this.width/2, this.y + this.height/2, 60, 0, Math.PI * 2); 
+                ctx.fill(); 
+                ctx.restore();
+            }
+            
+            ctx.restore();
+            
+            ctx.fillStyle = 'red'; ctx.fillRect(this.x - 10, this.y - 25, this.width + 20, 8);
+            
+            // CORREÇÃO DO BUG DO BOSS NA CINEMÁTICA
+            let hpRatio = Math.max(0, this.hp / this.maxHp);
+            ctx.fillStyle = '#bf00ff'; ctx.fillRect(this.x - 10, this.y - 25, (this.width + 20) * hpRatio, 8);
+        } else {
+            ctx.fillStyle = '#444';
+            ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.width, this.y); ctx.lineTo(this.x + this.width / 2, this.y + this.height); ctx.fill();
+            ctx.restore();
+        }
+    }
+}
+
+class Projectile {
+    constructor(x, y, angle, damage, isPlayer, stats = {}) { this.reset(x, y, angle, damage, isPlayer, stats); }
+    
+    reset(x, y, angle, damage, isPlayer, stats = {}) {
+        this.x = x; this.y = y; this.isPlayer = isPlayer;
+        let speedMod = 1.0;
+        if (!isPlayer) {
+            if (game.player && game.player.perks) {
+                let twTier = Math.max(game.player.perks.timeWarp, (game.player2 ? game.player2.perks.timeWarp : 0));
+                if (twTier === 1) speedMod = 0.9; if (twTier === 2) speedMod = 0.85; if (twTier === 3) speedMod = 0.8;
+            }
+        }
+
+        let baseSpeed = isPlayer ? 1.75 : (stats.speed || 1.0);
+        this.speed = baseSpeed * speedMod;
+        this.vx = Math.cos(angle) * this.speed; this.vy = Math.sin(angle) * this.speed; this.damage = damage;
+        this.dead = false; this.radius = isPlayer ? (stats.projSize || 4) : 4; this.pierce = stats.pierce || 0; this.isFragment = stats.isFragment || false;
+        this.homingTier = stats.homingTier || 0; this.isCold = stats.isCold || false; this.canBounce = stats.bouncing || false; this.bouncesLeft = this.canBounce ? 1 : 0;
+        this.chainTier = stats.chainTier || 0; this.hasChained = false;
+        
+        this.owner = stats.owner || (isPlayer ? game.player : null);
+        this.isBossAttack = stats.isBossAttack || false; 
+
+        this.isHomingActive = false; this.target = null;
+        
+        if (this.isPlayer && this.homingTier > 0) {
+            let chance = this.homingTier === 1 ? 0.4 : (this.homingTier === 2 ? 0.65 : 1.00);
+            if (Math.random() < chance) {
+                this.isHomingActive = true;
+                let bestDist = 600; 
+                
+                game.enemies.forEach(e => {
+                    if(e.y > -50 && e.y < game.height && e.x > 0 && e.x < game.width && !e.dead) {
+                        let d = Math.hypot(e.x - this.x, e.y - this.y);
+                        let angleToEnemy = Math.atan2((e.y + e.height/2) - this.y, (e.x + e.width/2) - this.x);
+                        let angleDiff = Math.abs(angleToEnemy - angle);
+                        
+                        while(angleDiff > Math.PI) angleDiff -= Math.PI*2;
+                        while(angleDiff < -Math.PI) angleDiff += Math.PI*2;
+                        angleDiff = Math.abs(angleDiff);
+
+                        if (angleDiff < Math.PI / 3 && d < bestDist) { 
+                            bestDist = d;
+                            this.target = e;
+                        }
+                    }
+                });
+                if (!this.target) this.isHomingActive = false;
+            }
+        }
+        
+        this.color = isPlayer ? (stats.color || 'white') : (stats.color || 'red');
+        this.history = []; this.frameCount = 0; 
+    }
+
+    update() {
+        this.frameCount++;
+        if (this.frameCount % 3 === 0) {
+            this.history.push({x: this.x, y: this.y});
+            let maxHistory = this.isPlayer ? 10 : 5; 
+            if (this.history.length > maxHistory) this.history.shift(); 
+        }
+
+        if (this.isHomingActive && this.target && !this.target.dead) {
+            let angleToTarget = Math.atan2((this.target.y + this.target.height/2) - this.y, (this.target.x + this.target.width/2) - this.x);
+            let currentAngle = Math.atan2(this.vy, this.vx);
+            
+            let angleDiff = angleToTarget - currentAngle;
+            while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+            while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+            
+            let turnRate = this.homingTier * 0.08;
+            
+            if (Math.abs(angleDiff) < turnRate) {
+                currentAngle = angleToTarget;
+            } else {
+                currentAngle += Math.sign(angleDiff) * turnRate;
+            }
+
+            if (Math.abs(angleDiff) > Math.PI / 1.5) { 
+                this.isHomingActive = false;
+            } else {
+                this.vx = Math.cos(currentAngle) * this.speed;
+                this.vy = Math.sin(currentAngle) * this.speed;
+            }
+        } else {
+            this.isHomingActive = false; 
+        }
+
+        this.x += this.vx * window.timeScale; 
+        this.y += this.vy * window.timeScale;
+
+        if (this.x < 0 || this.x > game.width) {
+            if (this.isPlayer && this.bouncesLeft > 0) {
+                this.vx = -this.vx; this.bouncesLeft--; this.x = Math.max(0, Math.min(game.width, this.x)); audioManager.playSfx('shatter'); 
+            } else this.dead = true;
+        }
+        if (this.y < 0) this.dead = true;
+
+        let hitBlock = false; let blockHit = null;
+        for (let b of game.blocks) {
+            if (this.x > b.x && this.x < b.x + b.w && this.y > b.y && this.y < b.y + b.h) { hitBlock = true; blockHit = b; break; }
+        }
+        
+        if (hitBlock) {
+             if (this.isPlayer && this.bouncesLeft > 0) {
+                 let prevY = this.y - this.vy * window.timeScale;
+                 if (prevY <= blockHit.y || prevY >= blockHit.y + blockHit.h) this.vy = -this.vy; else this.vx = -this.vx;
+                 this.bouncesLeft--; audioManager.playSfx('shatter');
+             } else { this.shatter(); return; }
+        }
+        
+        if (this.y > game.height) { this.shatter(); return; }
+
+        if (this.isPlayer) {
+            game.enemies.forEach(e => {
+                if (!e.dead && e.y > -20 && this.checkCollision(e)) {
+                    if (this.isFragment) {
+                        if (e.type === 'boss' || e.type === 'miniboss') { this.dead = true; return; }
+                        e.takeDamage(e.maxHp * (0.10 + Math.random() * 0.25), this.owner); this.dead = true;
+                    } else {
+                        e.takeDamage(this.damage, this.owner); if (this.isCold) e.applyCold();
+                        if (this.chainTier > 0 && !this.hasChained) {
+                            let chainChance = this.chainTier === 1 ? 0.3 : (this.chainTier === 2 ? 0.5 : 1.0);
+                            if (Math.random() < chainChance) {
+                                let nextTarget = null; let minD = 400; 
+                                game.enemies.forEach(other => {
+                                    if (other !== e && !other.dead && other.y > 0) {
+                                        let d = Math.hypot(other.x - e.x, other.y - e.y);
+                                        if (d < minD) { minD = d; nextTarget = other; }
+                                    }
+                                });
+                                if (nextTarget) {
+                                    this.hasChained = true; this.x = e.x + e.width/2; this.y = e.y + e.height/2;
+                                    let ang = Math.atan2((nextTarget.y + nextTarget.height/2) - this.y, (nextTarget.x + nextTarget.width/2) - this.x);
+                                    this.vx = Math.cos(ang) * this.speed; this.vy = Math.sin(ang) * this.speed; 
+                                    
+                                    if (this.chainTier === 3) this.damage *= 0.5;
+                                    
+                                    return; 
+                                }
+                            }
+                        }
+                        if (this.pierce > 0) this.pierce--; else this.dead = true;
+                    }
+                }
+            });
+        } else {
+            if (this.checkCollision(game.player)) { game.player.takeDamage(this.damage, this.isBossAttack); this.dead = true; }
+            if (game.player2 && this.checkCollision(game.player2)) { game.player2.takeDamage(this.damage, this.isBossAttack); this.dead = true; }
+        }
+    }
+
+    shatter() {
+        this.dead = true;
+        for(let i=0; i<3; i++) game.createParticle(this.x, this.y, this.color, 3 + Math.random() * 3);
+        audioManager.playSfx('shatter');
+    }
+
+    checkCollision(rect) {
+        return (this.x > rect.x && this.x < rect.x + rect.width && this.y > rect.y && this.y < rect.y + rect.height);
+    }
+
+    draw(ctx) {
+        ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        if (this.history.length > 1) {
+            for (let i = 0; i < this.history.length - 1; i++) {
+                const p1 = this.history[i]; const p2 = this.history[i+1]; const alpha = (i / this.history.length);
+                let maxAlpha = this.isPlayer ? 0.7 : 0.49; ctx.globalAlpha = alpha * maxAlpha;
+                ctx.strokeStyle = this.color; ctx.lineWidth = this.radius * 1.5;
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            }
+        }
+        ctx.restore();
+        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = this.color; ctx.lineWidth = 1.5; ctx.stroke();
+    }
+}
+
+class Particle {
+    constructor(x, y, color, size, duration, speedMult = 1) { this.reset(x, y, color, size, duration, speedMult); }
+    reset(x, y, color, size, duration = 500, speedMult = 1) {
+        this.x = x; this.y = y; 
+        this.vx = (Math.random() - 0.5) * 5 * speedMult; 
+        this.vy = (Math.random() - 0.5) * 5 * speedMult;
+        this.spawnTime = Date.now(); this.duration = duration; this.size = size; this.color = color; this.dead = false;
+    }
+    update() {
+        this.x += this.vx * window.timeScale; 
+        this.y += this.vy * window.timeScale; 
+        this.size *= (1 - 0.05 * window.timeScale); 
+        if (Date.now() - this.spawnTime > this.duration) this.dead = true;
+    }
+    draw(ctx) { ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size); }
+}
+
+class LightningBeam {
+    constructor(targetX, targetY, isThick) { this.x = targetX; this.y = targetY; this.spawnTime = Date.now(); this.duration = 333; this.dead = false; this.isThick = isThick; }
+    update() { if (Date.now() - this.spawnTime > this.duration) this.dead = true; }
+    draw(ctx) {
+        let remaining = this.duration - (Date.now() - this.spawnTime); const opacity = Math.max(0, remaining / this.duration);
+        ctx.save(); ctx.globalAlpha = opacity; let width = this.isThick ? 16 : 10;
+        ctx.strokeStyle = '#ffff00'; ctx.lineWidth = width; ctx.beginPath(); ctx.moveTo(this.x, 0); ctx.lineTo(this.x, this.y); ctx.stroke();
+        ctx.strokeStyle = 'white'; ctx.lineWidth = width / 3; ctx.beginPath(); ctx.moveTo(this.x, 0); ctx.lineTo(this.x, this.y); ctx.stroke();
+        ctx.restore();
+    }
+}
+
+/**
+ * STARTUP LOGIC
+ */
 function initGame() {
     localStorage.setItem('unlockedChars', '[1]');
     setLanguage('pt'); 
@@ -2418,7 +3159,81 @@ function initGame() {
     window.selectedChar = 1; requestAnimationFrame(() => game.loop());
 }
 
+function startGameLocal() {
+    audioManager.playWav('botton');
+    audioManager.play('principal'); 
+    document.getElementById('hud-top-left').style.display = 'block'; 
+    document.getElementById('pause-btn-ingame').style.display = 'block'; 
+    document.getElementById('perk-list-btn').style.display = 'block'; 
+    document.getElementById('stats-btn').style.display = 'block'; 
+    document.getElementById('souls-container').style.opacity = '1';
+    document.getElementById('main-menu').classList.add('hidden'); 
+    Net.isOnline = false;
+    game.start(window.selectedChar, 1);
+}
+
+function showMultiplayerMenu() {
+    document.getElementById('main-menu').classList.add('hidden');
+    document.getElementById('multiplayer-menu').classList.remove('hidden');
+}
+
+function startGame(c1, c2) {
+    document.getElementById('lobby-menu').classList.add('hidden');
+    document.getElementById('hud-top-left').style.display = 'block'; 
+    document.getElementById('pause-btn-ingame').style.display = 'block'; 
+    document.getElementById('perk-list-btn').style.display = 'block'; 
+    document.getElementById('stats-btn').style.display = 'block'; 
+    document.getElementById('souls-container').style.opacity = '1';
+    
+    audioManager.play('principal'); 
+    game.start(c1, c2);
+}
+
+// CORREÇÃO: Função atualizada para garantir sincronia do botão "Pronto"
+function confirmBossWave() { 
+    // Muda o texto do botão para indicar que foi clicado
+    const btn = document.getElementById('btn-start-boss');
+    btn.innerText = "AGUARDANDO...";
+    btn.disabled = true;
+
+    if (!Net.isOnline) {
+        // Singleplayer
+        document.getElementById('boss-confirm-menu').classList.add('hidden');
+        btn.innerText = "COMEÇAR"; // Reseta botão
+        btn.disabled = false;
+        game.triggerConfirmedBossWave();
+    } else {
+        // Multiplayer
+        if (Net.isHost) {
+            game.p1BossReady = true;
+            console.log("[HOST] P1 pronto para o Boss.");
+            game.checkBossStart();
+        } else {
+            // Cliente: Esconde o menu imediatamente e avisa o host
+            document.getElementById('boss-confirm-menu').classList.add('hidden');
+            console.log("[CLIENT] Enviando pronto para o Host.");
+            Net.send({ type: 'BOSS_CONFIRM_READY' });
+            
+            // Reseta o botão para a próxima vez
+            setTimeout(() => {
+                btn.innerText = "COMEÇAR";
+                btn.disabled = false;
+            }, 2000);
+        }
+    }
+}
+function returnToMenu() { location.reload(); }
+
 window.onload = initGame;
 </script>
 </body>
 </html>
+
+
+
+
+
+
+
+
+
