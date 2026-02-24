@@ -228,9 +228,6 @@
     <div id="teleport-fade"></div>
 
     <canvas id="gameCanvas" width="1472" height="690"></canvas>
-    <div id="wave-info" style="position: absolute; bottom: 85px; left: 25px; color: #4da6ff; font-size: 15px; font-family: 'Press Start 2P', cursive; text-shadow: 2px 2px 0 #000; z-index: 100; pointer-events: none;">
-        WAVE <span id="current-wave-num" style="color:#fff;">1</span>
-    </div>
 
     <div class="ui-layer">
         <div id="hud-top-left">
@@ -304,20 +301,13 @@
 
     <div id="multiplayer-menu" class="menu-screen hidden">
         <h2>MULTIPLAYER</h2>
-        <button class="btn" onclick="audioManager.playWav('botton'); Net.showServerSelect()">CRIAR SALA (ESCOLHER SERVIDOR)</button>
+        <button class="btn" onclick="audioManager.playWav('botton'); Net.initHost()">CRIAR SALA (HOST)</button>
         <div style="margin: 20px 0;">
             <input type="text" id="join-id-input" class="input-text" placeholder="Cole o ID da Sala">
             <br>
             <button class="btn" onclick="audioManager.playWav('botton'); Net.initClient(document.getElementById('join-id-input').value)">ENTRAR NA SALA</button>
         </div>
         <button class="btn" onclick="audioManager.playWav('botton'); document.getElementById('multiplayer-menu').classList.add('hidden'); document.getElementById('main-menu').classList.remove('hidden');" style="border-color:gray; color:gray">VOLTAR</button>
-       <!-- NOVO MENU DE SELEÇÃO DE SERVIDOR -->
-    <div id="server-select-menu" class="menu-screen hidden">
-        <h2>ESCOLHA O SERVIDOR TURN/STUN</h2>
-        <p style="font-size:11px;color:#666;margin-bottom:20px;">Menor ping = melhor conexão (atualiza em tempo real)</p>
-        <div id="server-list" style="display:flex;flex-direction:column;gap:12px;max-width:560px;margin:0 auto;"></div>
-        
-        <button class="btn" onclick="audioManager.playWav('botton'); document.getElementById('server-select-menu').classList.add('hidden'); document.getElementById('multiplayer-menu').classList.remove('hidden');" style="margin-top:30px;border-color:#666;color:#999;">VOLTAR</button>
     </div>
 
     <div id="lobby-menu" class="menu-screen hidden">
@@ -572,40 +562,6 @@ const ObjectPool = {
  * REDE & MULTIPLAYER (WebRTC / PeerJS)
  * Lista consolidada de servidores STUN (Google) e TURN (Cloudflare, Metered, Viagenie)
  */
-const SERVER_LIST = [
-    {
-        name: "Google STUN (Rápido)",
-        region: "Global",
-        pingUrl: "https://www.google.com/favicon.ico",
-        config: { iceServers: ICE_SERVERS.slice(0, 5) }   // os 5 STUNs do Google
-    },
-    {
-        name: "Cloudflare TURN (Melhor Qualidade)",
-        region: "Global CDN",
-        pingUrl: "https://www.cloudflare.com/favicon.ico",
-        config: { iceServers: [ICE_SERVERS[5]] }
-    },
-    {
-        name: "Cloudflare TURN Alternativo",
-        region: "Global CDN",
-        pingUrl: "https://www.cloudflare.com/favicon.ico",
-        config: { iceServers: [ICE_SERVERS[6]] }
-    },
-    {
-        name: "Metered TURN (Backup)",
-        region: "North America",
-        pingUrl: "https://metered.ca/favicon.ico",
-        config: { iceServers: [ICE_SERVERS[8]] }
-    },
-    {
-        name: "Viagenie TURN (Free)",
-        region: "Canada",
-        pingUrl: "https://numb.viagenie.ca/favicon.ico",
-        config: { iceServers: [ICE_SERVERS[7]] }
-    }
-];
-
-// === SEU ICE_SERVERS ORIGINAL (100% mantido) ===
 const ICE_SERVERS = [
     // 1. Google STUNs (Sempre úteis e rápidos para conexões simples)
     { urls: "stun:stun.l.google.com:19302" },
@@ -633,10 +589,10 @@ const ICE_SERVERS = [
             "turns:turn.cloudflare.com:5349?transport=tcp"
         ],
         username: "g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75",
-        credential: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3="
+        credential: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3=" // Com o '=' no final
     },
 
-    // 4. Servidores TURN Públicos/Antigos
+    // 4. Servidores TURN Públicos/Antigos (Viagenie, Bistri, Anyfirewall)
     {
         urls: "turn:numb.viagenie.ca",
         username: "webrtc@live.com",
@@ -653,7 +609,7 @@ const ICE_SERVERS = [
         credential: "webrtc"
     },
 
-    // 5. Servidores IP Direto (Metered)
+    // 5. Servidores IP Direto (OpenRelay / Metered)
     {
         urls: "turn:192.158.29.39:3478?transport=udp",
         username: "28224511:1379330808",
@@ -681,9 +637,8 @@ const Net = {
     isHost: false,
     peer: null,
     conn: null,
-    selectedConfig: SERVER_LIST[0].config, // padrão Google
-    pingInterval: null,
-
+    
+    // Status do Lobby
     p1Char: 1, p2Char: 1,
     p1Ready: false, p2Ready: false,
 
@@ -691,83 +646,42 @@ const Net = {
         return Math.random().toString(36).substring(2, 6).toUpperCase();
     },
 
-    showServerSelect() {
-        document.getElementById('multiplayer-menu').classList.add('hidden');
-        document.getElementById('server-select-menu').classList.remove('hidden');
-        this.updateServerList();
-        
-        if (this.pingInterval) clearInterval(this.pingInterval);
-        this.pingInterval = setInterval(() => this.updatePings(), 1500);
-        this.updatePings();
-    },
-
-    updateServerList() {
-        const container = document.getElementById('server-list');
-        container.innerHTML = '';
-        SERVER_LIST.forEach((srv, index) => {
-            const el = document.createElement('div');
-            el.className = 'server-item';
-            el.innerHTML = `
-                <div style="flex:1">
-                    <div style="color:#4da6ff;font-weight:bold;">${srv.name}</div>
-                    <div style="font-size:10px;color:#666;">${srv.region}</div>
-                </div>
-                <div class="server-ping" id="ping-${index}">Calculando...</div>
-            `;
-            el.onclick = () => {
-                audioManager.playWav('botton');
-                this.selectedConfig = srv.config;
-                if (this.pingInterval) clearInterval(this.pingInterval);
-                this.initHost();
-            };
-            container.appendChild(el);
-        });
-    },
-
-    async updatePings() {
-        SERVER_LIST.forEach(async (srv, index) => {
-            const el = document.getElementById(`ping-${index}`);
-            if (!el) return;
-            const start = Date.now();
-            try {
-                await fetch(srv.pingUrl, { mode: 'no-cors', cache: 'no-store' });
-                const ping = Date.now() - start;
-                let cls = ping < 120 ? 'ping-good' : (ping < 250 ? 'ping-medium' : 'ping-bad');
-                el.className = `server-ping ${cls}`;
-                el.innerText = `${ping}ms`;
-            } catch(e) {
-                el.className = 'server-ping ping-bad';
-                el.innerText = '—';
-            }
-        });
-    },
-
-    // === initHost atualizado (usa o servidor selecionado) ===
     initHost() {
-        console.log("%c[HOST] Iniciando com servidor selecionado...", "color: cyan");
-        if (this.peer) { this.peer.destroy(); this.peer = null; }
+        console.log("%c[HOST] Iniciando...", "color: cyan");
+        
+        // Limpeza de segurança
+        if (this.peer) {
+            this.peer.destroy();
+            this.peer = null;
+        }
 
         this.isHost = true;
         this.isOnline = true;
         
-        document.getElementById('server-select-menu').classList.add('hidden');
+        document.getElementById('multiplayer-menu').classList.add('hidden');
         document.getElementById('lobby-menu').classList.remove('hidden');
         document.getElementById('lobby-room-id').innerText = "Criando...";
         document.getElementById('lobby-room-id').style.color = "yellow";
 
         const config = {
-            debug: 2,
+            debug: 2, // Mostra erros críticos
             config: {
-                ...this.selectedConfig,
-                iceTransportPolicy: 'all',
-                iceCandidatePoolSize: 10
+                iceServers: ICE_SERVERS,
+                iceCandidatePoolSize: 10,
+                iceTransportPolicy: 'all' // Tenta tudo (UDP e TCP)
             }
         };
 
-        this.peer = new Peer(this.generateId(), config);
+        try {
+            this.peer = new Peer(this.generateId(), config);
+        } catch (e) {
+            console.error("Erro fatal PeerJS:", e);
+            document.getElementById('lobby-room-id').innerText = "Erro Crítico";
+            return;
+        }
         
         this.peer.on('open', id => {
-            console.log(`[HOST] ID: ${id}`);
+            console.log(`[HOST] Servidor pronto. ID: ${id}`);
             document.getElementById('lobby-room-id').innerText = id;
             this.updateLobbyUI();
         });
@@ -775,29 +689,36 @@ const Net = {
         this.peer.on('connection', c => {
             if (this.conn && this.conn.open) { c.close(); return; }
             this.conn = c;
+            console.log("Cliente conectando...");
+            
             this.conn.on('open', () => {
                 console.log("✅ Conexão estabelecida!");
                 document.getElementById('lobby-room-id').style.color = "#4dff4d";
                 this.setupConn();
                 this.updateLobbyUI();
-                setTimeout(() => this.send({ type: 'LOBBY', p1Char: this.p1Char, p1Ready: this.p1Ready }), 500);
+                
+                // Delay para garantir estabilidade
+                setTimeout(() => {
+                    this.send({ type: 'LOBBY', p1Char: this.p1Char, p1Ready: this.p1Ready });
+                }, 500);
             });
+            
             this.conn.on('close', () => {
                 document.getElementById('lobby-room-id').style.color = "red";
                 this.updateLobbyUI();
             });
+            
+             this.conn.on('error', err => console.error("Erro conexão:", err));
         });
 
         this.peer.on('error', err => {
             console.error(err);
-            document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
+            let msg = "Erro: " + err.type;
+            if (err.type === 'network') msg = "Erro de Rede (Firewall?)";
+            if (err.type === 'unavailable-id') msg = "ID Indisponível";
+            document.getElementById('lobby-room-id').innerText = msg;
         });
     },
-
-    // initClient, setupConn, send, toggleReady, setChar, updateLobbyUI, hostStartGame, sendInputCmd 
-    // permanecem EXATAMENTE como estavam no seu código original (não mexi neles)
-    // ... (copie e cole o resto do seu Net original aqui)
-};
 
     initClient(targetId) {
         console.log("%c[CLIENT] Iniciando...", "color: orange");
@@ -1112,7 +1033,6 @@ class Game {
         this.width = canvas.width;
         this.height = canvas.height;
         this.wave = 1;
-        this.updateWaveUI();
         this.souls = parseInt(localStorage.getItem('savedSouls') || 0);
         this.luck = 1.0;
         this.upgradeChoices = 5;
@@ -1332,7 +1252,6 @@ processDevCommand(cmd, isHostCmd = true) {
             this.waveClusterX = 200 + Math.random() * (this.width - 400);
             audioManager.play('principal');
             this.showWaveText(`WAVE ${this.wave}`);
-            this.updateWaveUI();
         }
     }
 
@@ -1345,7 +1264,6 @@ triggerConfirmedBossWave() {
         this.showWaveText(title);
         
         if (Net.isOnline && Net.isHost) Net.send({ type: 'BOSS_START' });
-        this.updateWaveUI();
     }
 
     checkBossStart() {
@@ -1468,10 +1386,6 @@ triggerConfirmedBossWave() {
         document.getElementById('final-souls').innerText = this.souls;
         localStorage.setItem('savedSouls', this.souls);
     }
-    updateWaveUI() {
-        const el = document.getElementById('current-wave-num');
-        if (el) el.innerText = this.wave;
-    }
 
     clearAllBullets() {
         for (let i = this.bullets.length - 1; i >= 0; i--) {
@@ -1554,7 +1468,6 @@ serializeState() {
                 
                 // Força o estado local para evitar conflitos
                 this.state = 'BOSS_CONFIRM';
-                this.updateWaveUI();
             }
         }
         
@@ -2028,21 +1941,12 @@ serializeState() {
             this.applyPerkToPlayer(this.player, perkId);
             document.getElementById('upgrade-menu').classList.add('hidden');
             if (this.menuTimer) clearInterval(this.menuTimer);
-            
             this.wave++;
-            this.paused = false;
-            this.state = 'PLAYING';
-            window.timeScale = 1.0;
-            
-            setTimeout(() => {
-                this.startWave();
-                if (this.player) this.player.updateStatsUI();
-                this.updateWaveUI();
-            }, 30);
+            this.startWave();
         } else {
             if (Net.isHost) {
                 this.p1PickedPerk = perkId;
-                this.checkMultiplayerPerks();
+                this.checkMultiplayerPerks(); // CORREÇÃO: Avisa que o Host escolheu!
             } else {
                 Net.send({ type: 'PICK_PERK', perkId: perkId });
             }
@@ -3287,25 +3191,28 @@ function startGame(c1, c2) {
 
 // CORREÇÃO: Função atualizada para garantir sincronia do botão "Pronto"
 function confirmBossWave() { 
+    // Muda o texto do botão para indicar que foi clicado
     const btn = document.getElementById('btn-start-boss');
-    btn.innerText = "AGUARDANDO OUTRO JOGADOR...";
+    btn.innerText = "AGUARDANDO...";
     btn.disabled = true;
 
     if (!Net.isOnline) {
+        // Singleplayer
         document.getElementById('boss-confirm-menu').classList.add('hidden');
-        btn.innerText = "COMEÇAR"; 
+        btn.innerText = "COMEÇAR"; // Reseta botão
         btn.disabled = false;
         game.triggerConfirmedBossWave();
-        return;
-    }
-
-    if (Net.isHost) {
-        game.p1BossReady = true;
-        game.checkBossStart();
     } else {
-        Net.send({ type: 'BOSS_CONFIRM_READY' });
-    }
-}
+        // Multiplayer
+        if (Net.isHost) {
+            game.p1BossReady = true;
+            console.log("[HOST] P1 pronto para o Boss.");
+            game.checkBossStart();
+        } else {
+            // Cliente: Esconde o menu imediatamente e avisa o host
+            document.getElementById('boss-confirm-menu').classList.add('hidden');
+            console.log("[CLIENT] Enviando pronto para o Host.");
+            Net.send({ type: 'BOSS_CONFIRM_READY' });
             
             // Reseta o botão para a próxima vez
             setTimeout(() => {
@@ -3321,8 +3228,6 @@ window.onload = initGame;
 </script>
 </body>
 </html>
-
-
 
 
 
