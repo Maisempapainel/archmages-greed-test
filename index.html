@@ -718,7 +718,7 @@ const Net = {
                 }
             }
             if (data.type === 'STATE' && !this.isHost) {
-                if (game && game.state === 'PLAYING') {
+                if (game && (game.state === 'PLAYING' || game.state === 'UPGRADE_MENU' || game.state === 'BOSS_DEATH_CINEMATIC')) {
                     game.syncState(data.state);
                 }
             }
@@ -735,6 +735,8 @@ const Net = {
             if (data.type === 'NEXT_WAVE') {
                 game.wave = data.wave;
                 game.handleRevives();
+                game.state = 'PLAYING';
+                document.getElementById('upgrade-menu').classList.add('hidden');
             }
             if (data.type === 'BOSS_START') {
                 game.triggerConfirmedBossWave();
@@ -1155,7 +1157,7 @@ processDevCommand(cmd, isHostCmd = true) {
         } else {
             let baseSpawns = 2 + (this.wave * 1);
             if (this.player && this.player.perks.thunderbolt === 3) baseSpawns = Math.floor(baseSpawns * 1.3);
-            if (Net.isOnline) baseSpawns = Math.floor(baseSpawns * 1.5);
+            if (Net.isOnline) baseSpawns = Math.floor(baseSpawns * 1.7);
 
             this.enemiesToSpawn = baseSpawns;
             
@@ -1321,32 +1323,20 @@ serializeState() {
             so: this.souls,
             tpz: this.showTeleportZonesUntil,
             p1: { 
-                x: this.player.x, 
-                y: this.player.y, 
-                hp: this.player.hp, 
-                mx: this.player.maxHp, 
-                la: this.player.laserActive, 
-                fa: this.player.facing, 
-                ms: this.player.manaShieldReady, 
-                or: p1OrbX, 
-                oy: p1OrbY, 
-                iu: this.player.invulnUntil,
-                wt: this.player.walkTimer,
-                d: this.player.isDead
+                x: this.player.x, y: this.player.y, 
+                hp: this.player.hp, mx: this.player.maxHp, 
+                la: this.player.laserActive, fa: this.player.facing, 
+                ms: this.player.manaShieldReady, or: p1OrbX, oy: p1OrbY, 
+                iu: this.player.invulnUntil, wt: this.player.walkTimer, d: this.player.isDead,
+                w: this.player.width, h: this.player.height
             },
             p2: this.player2 ? {
-                x: this.player2.x, 
-                y: this.player2.y, 
-                hp: this.player2.hp, 
-                mx: this.player2.maxHp, 
-                la: this.player2.laserActive, 
-                fa: this.player2.facing, 
-                ms: this.player2.manaShieldReady, 
-                or: p2OrbX, 
-                oy: p2OrbY, 
-                iu: this.player2.invulnUntil,
-                wt: this.player2.walkTimer,
-                d: this.player2.isDead
+                x: this.player2.x, y: this.player2.y, 
+                hp: this.player2.hp, mx: this.player2.maxHp, 
+                la: this.player2.laserActive, fa: this.player2.facing, 
+                ms: this.player2.manaShieldReady, or: p2OrbX, oy: p2OrbY, 
+                iu: this.player2.invulnUntil, wt: this.player2.walkTimer, d: this.player2.isDead,
+                w: this.player2.width, h: this.player2.height
             } : null,
             en: this.enemies.map(e => ({ x: e.x, y: e.y, hp: e.hp, mx: e.maxHp, t: e.type, s: e.shieldActive, po: e.poisonActive, w: e.width, h: e.height, lh: e.lastHitTime, isB: e.isBigBoss || false, aX: e.anchorX, cU: e.colorUntil })),
             bu: this.bullets.map(b => ({ x: b.x, y: b.y, c: b.color, r: b.radius, hi: b.history || [] })),
@@ -1378,11 +1368,11 @@ syncState(s) {
 
         if (this.player && s.p1) {
             this.player.x = s.p1.x; this.player.y = s.p1.y;
-            this.player.walkTimer = s.p1.wt || 0;
-            this.player.isDead = s.p1.d || false;
             this.player.hp = s.p1.hp; this.player.maxHp = s.p1.mx;
             this.player.laserActive = s.p1.la; this.player.facing = s.p1.fa;
             this.player.manaShieldReady = s.p1.ms; this.player.invulnUntil = s.p1.iu;
+            if (s.p1.w) this.player.width = s.p1.w;
+            if (s.p1.h) this.player.height = s.p1.h;
             if (this.player.orb && s.p1.or !== undefined) {
                 this.player.orb.x = s.p1.or;
                 this.player.orb.y = s.p1.oy;
@@ -1391,11 +1381,11 @@ syncState(s) {
 
         if (this.player2 && s.p2) {
             this.player2.x = s.p2.x; this.player2.y = s.p2.y;
-            this.player2.walkTimer = s.p2.wt || 0;
-            this.player2.isDead = s.p2.d || false;
             this.player2.hp = s.p2.hp; this.player2.maxHp = s.p2.mx;
             this.player2.laserActive = s.p2.la; this.player2.facing = s.p2.fa;
             this.player2.manaShieldReady = s.p2.ms; this.player2.invulnUntil = s.p2.iu;
+            if (s.p2.w) this.player2.width = s.p2.w;
+            if (s.p2.h) this.player2.height = s.p2.h;
             if (this.player2.orb && s.p2.or !== undefined) {
                 this.player2.orb.x = s.p2.or;
                 this.player2.orb.y = s.p2.oy;
@@ -1797,14 +1787,16 @@ syncState(s) {
 
         // Timer
         this.menuTimer = setInterval(() => {
-            secondsLeft--;
-            timerText.innerText = secondsLeft + "s";
-            timerBar.style.width = (secondsLeft / 20 * 100) + "%";
-            if (secondsLeft <= 0) {
-                const randomPick = createdCards[Math.floor(Math.random() * createdCards.length)];
-                randomPick();
-            }
-        }, 1000);
+                secondsLeft--;
+                timerText.innerText = secondsLeft + "s";
+                timerBar.style.width = (secondsLeft / 20 * 100) + "%";
+                if (secondsLeft <= 0) {
+                    clearInterval(this.menuTimer);
+                    if (!this.p1PickedPerk) this.p1PickedPerk = 'growth';
+                    if (Net.isOnline && !this.p2PickedPerk) this.p2PickedPerk = 'growth';
+                    if (typeof this.autoPickPerk === 'function') this.autoPickPerk();
+                }
+            }, 1000);
 
         setTimeout(() => {
             document.querySelectorAll('.upgrade-card').forEach(c => {
@@ -1863,11 +1855,9 @@ syncState(s) {
         
 // Desenha miras e lasers
         let localInputMouse = this.input.mouse;
-        if (this.player && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
-            
-            // P1
-            if (!Net.isOnline || Net.isHost) {
-                const centerX = this.player.x + this.player.width / 2;
+        if (this.player2 && !this.player2.isDead && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
+            if (Net.isOnline && !Net.isHost) {
+                const cX = this.player2.x + this.player2.width / 2;
                 const centerY = this.player.y + this.player.height / 2;
                 const angle = Math.atan2((Net.isOnline && !Net.isHost ? this.netInput.mouse.y : this.input.mouse.y) - centerY, (Net.isOnline && !Net.isHost ? this.netInput.mouse.x : this.input.mouse.x) - centerX);
                 const endX = centerX + Math.cos(angle) * 2000; const endY = centerY + Math.sin(angle) * 2000;
@@ -3047,3 +3037,4 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
