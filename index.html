@@ -594,7 +594,11 @@ const Net = {
     },
 
     initHost() {
-        if (this.peer) this.peer.destroy();
+        console.log("👑 [HOST] Inicializando servidor...");
+        if (this.peer) {
+            console.log("👑 [HOST] Destruindo Peer anterior...");
+            this.peer.destroy();
+        }
 
         this.isHost = true;
         this.isOnline = true;
@@ -603,40 +607,58 @@ const Net = {
         document.getElementById('lobby-room-id').innerText = "Iniciando...";
         document.getElementById('lobby-room-id').style.color = "yellow";
 
-        this.peer = new Peer(this.generateId(), peerConfig);
+        const newId = this.generateId();
+        console.log(`👑 [HOST] Tentando criar Peer com ID: ${newId}`);
+        this.peer = new Peer(newId, peerConfig);
         
         this.peer.on('open', id => {
+            console.log(`✅ 👑 [HOST] Peer aberto com sucesso! Meu ID fixo: ${id}`);
             document.getElementById('lobby-room-id').innerText = id;
-            console.log("Host ID:", id);
             this.updateLobbyUI();
         });
         
         this.peer.on('connection', c => {
-            if (this.conn && this.conn.open) { c.close(); return; }
+            console.log(`👑 [HOST] Recebi tentativa de conexão do cliente: ${c.peer}`);
+            
+            if (this.conn && this.conn.open) { 
+                console.warn(`👑 [HOST] Já tenho uma conexão aberta. Rejeitando cliente: ${c.peer}`);
+                c.close(); 
+                return; 
+            }
             this.conn = c;
             
-            console.log("Cliente conectando...");
+            // Monitorando o ICE State (Crucial para descobrir bloqueios de NAT)
+            if (c.peerConnection) {
+                c.peerConnection.oniceconnectionstatechange = () => {
+                    console.log(`🧊 [ICE STATE - HOST] ${c.peerConnection.iceConnectionState}`);
+                };
+            }
             
             this.conn.on('open', () => {
-                console.log("✅ Cliente conectado!");
+                console.log("✅ 👑 [HOST] Data channel ABERTO com o cliente!");
                 document.getElementById('lobby-room-id').style.color = "#4dff4d";
                 this.setupConn();
                 this.updateLobbyUI();
                 
-                // Envia dados iniciais com um pequeno delay para garantir que o canal está pronto
                 setTimeout(() => {
+                    console.log("👑 [HOST] Enviando estado inicial do LOBBY para o cliente...");
                     this.send({ type: 'LOBBY', p1Char: this.p1Char, p1Ready: this.p1Ready });
                 }, 500);
             });
             
             this.conn.on('close', () => {
+                console.warn("⚠️ 👑 [HOST] Conexão com o cliente foi fechada.");
                 document.getElementById('lobby-room-id').style.color = "red";
                 this.updateLobbyUI();
+            });
+
+            this.conn.on('error', err => {
+                console.error("❌ 👑 [HOST] Erro no Data Channel com o cliente:", err);
             });
         });
 
         this.peer.on('error', err => {
-            console.error(err);
+            console.error("❌ 👑 [HOST] Erro crítico no Peer:", err.type, err);
             document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
         });
     },
@@ -645,7 +667,12 @@ const Net = {
         if (!targetId) { alert("Digite o ID!"); return; }
         targetId = targetId.trim().toUpperCase();
         
-        if (this.peer) this.peer.destroy();
+        console.log(`🌐 [CLIENT] Tentando conectar à sala: ${targetId}`);
+        
+        if (this.peer) {
+            console.log("🌐 [CLIENT] Destruindo Peer anterior...");
+            this.peer.destroy();
+        }
 
         this.isHost = false;
         this.isOnline = true;
@@ -657,48 +684,65 @@ const Net = {
         this.peer = new Peer(peerConfig);
 
         this.peer.on('open', id => {
-            console.log("Meu ID Cliente:", id);
+            console.log(`✅ 🌐 [CLIENT] Peer aberto! Meu ID temporário: ${id}`);
+            console.log(`🌐 [CLIENT] Iniciando conexão com o HOST (${targetId})...`);
             
-            // Tenta conectar com opção 'reliable'
             this.conn = this.peer.connect(targetId, {
                 reliable: true,
                 serialization: 'json'
             });
 
-            // Timeout manual se não conectar em 10 segundos
+            // Monitorando o ICE State
+            if (this.conn.peerConnection) {
+                this.conn.peerConnection.oniceconnectionstatechange = () => {
+                    console.log(`🧊 [ICE STATE - CLIENT] ${this.conn.peerConnection.iceConnectionState}`);
+                };
+            }
+
             const timer = setTimeout(() => {
                 if (!this.conn.open) {
+                    console.error(`⏰ 🌐 [CLIENT] TEMPO ESGOTADO! A conexão com ${targetId} travou. Possível bloqueio de firewall/NAT ou STUN falhou.`);
                     document.getElementById('lobby-room-id').innerText = "Tempo Esgotado (NAT)";
                     document.getElementById('lobby-room-id').style.color = "red";
-                    console.log("Falha ao abrir canal de dados. Possível bloqueio de firewall/NAT.");
                 }
             }, 10000);
 
             this.conn.on('open', () => {
                 clearTimeout(timer);
-                console.log("✅ Conectado ao Host!");
+                console.log("✅ 🌐 [CLIENT] Data channel ABERTO com o Host!");
                 document.getElementById('lobby-room-id').innerText = "Conectado: " + targetId;
                 document.getElementById('lobby-room-id').style.color = "#4dff4d";
                 this.setupConn();
                 this.updateLobbyUI();
+                
+                console.log("🌐 [CLIENT] Enviando meu status do LOBBY para o Host...");
                 this.send({ type: 'LOBBY', p2Char: this.p2Char, p2Ready: this.p2Ready });
             });
 
-            this.conn.on('error', err => console.error("Erro na conexão:", err));
+            this.conn.on('error', err => {
+                console.error("❌ 🌐 [CLIENT] Erro na conexão do Data Channel:", err);
+            });
             
             this.conn.on('close', () => {
+                console.warn("⚠️ 🌐 [CLIENT] Desconectado do Host.");
                 alert("Desconectado do Host.");
                 location.reload();
             });
         });
         
         this.peer.on('error', err => {
+            console.error("❌ 🌐 [CLIENT] Erro crítico no Peer:", err.type, err);
             document.getElementById('lobby-room-id').innerText = "Erro: " + err.type;
         });
     },
 
     setupConn() {
         this.conn.on('data', data => {
+            // Log apenas de coisas que não floodam o console (ignora STATE e INPUT)
+            if (data.type !== 'STATE' && data.type !== 'INPUT') {
+                console.debug(`📥 [REDE] Dado recebido:`, data);
+            }
+
             if (data.type === 'PING') { this.send({ type: 'PONG' }); return; }
 
             if (data.type === 'LOBBY') {
@@ -707,8 +751,12 @@ const Net = {
                 if (data.p1Ready !== undefined) this.p1Ready = data.p1Ready;
                 if (data.p2Ready !== undefined) this.p2Ready = data.p2Ready;
                 
-                if (data.start) startGame(this.p1Char, this.p2Char);
-                else this.updateLobbyUI();
+                if (data.start) {
+                    console.log("🚀 [LOBBY] Comando de START recebido!");
+                    startGame(this.p1Char, this.p2Char);
+                } else {
+                    this.updateLobbyUI();
+                }
             }
             if (data.type === 'INPUT' && this.isHost) {
                 if (game) {
@@ -759,18 +807,29 @@ const Net = {
 
     send(data) {
         if (this.conn && this.conn.open) {
-            try { this.conn.send(data); } catch(e) { console.error(e); }
+            try { 
+                this.conn.send(data); 
+            } catch(e) { 
+                console.error("❌ [REDE] Erro ao enviar dado:", e); 
+            }
+        } else {
+            // Isso aqui avisa se você tentar mandar algo com a conexão morta
+            if (data.type !== 'STATE' && data.type !== 'INPUT') {
+                console.warn("⚠️ [REDE] Tentou enviar dado, mas a conexão não está aberta.", data);
+            }
         }
     },
 
     toggleReady() {
         if (this.isHost) this.p1Ready = !this.p1Ready; else this.p2Ready = !this.p2Ready;
+        console.log(`[LOBBY] Alterando Ready State: P1=${this.p1Ready}, P2=${this.p2Ready}`);
         this.send({ type: 'LOBBY', p1Char: this.p1Char, p2Char: this.p2Char, p1Ready: this.p1Ready, p2Ready: this.p2Ready });
         this.updateLobbyUI();
     },
 
     setChar(charId) {
         if (this.isHost) this.p1Char = charId; else this.p2Char = charId;
+        console.log(`[LOBBY] Personagem alterado: P1=${this.p1Char}, P2=${this.p2Char}`);
         this.send({ type: 'LOBBY', p1Char: this.p1Char, p2Char: this.p2Char, p1Ready: this.p1Ready, p2Ready: this.p2Ready });
         this.updateLobbyUI();
     },
@@ -806,6 +865,7 @@ const Net = {
 
     hostStartGame() {
         if (!this.isHost) return;
+        console.log("🚀 [LOBBY] Host está iniciando o jogo!");
         this.send({ type: 'LOBBY', start: true });
         startGame(this.p1Char, this.p2Char);
     },
@@ -3100,6 +3160,7 @@ window.onload = initGame;
 </html>
     
     
+
 
 
 
