@@ -1367,7 +1367,6 @@ serializeState() {
             document.getElementById('upgrade-menu').classList.add('hidden');
         }
 
-        // Sincroniza estado geral
         this.state = s.st || this.state;
         this.wave = s.wv || this.wave;
         this.souls = s.so || this.souls;
@@ -1397,6 +1396,9 @@ serializeState() {
 
         if (this.player2) this.player2.updateHpUI();
         this.updateSoulsUI();
+
+        // Resto do sync (enemies, bullets, particles, etc.) fica igual ao que você já tinha
+    }
 
         // Resto do sync de enemies, bullets, particles, etc. mantém igual ao seu código original
     }
@@ -2999,6 +3001,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
