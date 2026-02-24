@@ -301,22 +301,6 @@
 
     <div id="multiplayer-menu" class="menu-screen hidden">
         <h2>MULTIPLAYER</h2>
-        
-        <div style="margin-bottom: 20px; border: 1px solid #555; padding: 15px; background: rgba(0,0,0,0.8); width: 350px;">
-            <label style="font-size: 10px; color: #4da6ff;">Selecione o Servidor (Host e Client devem usar o mesmo):</label><br>
-            <select id="server-select" class="input-text" style="width: 100%; margin-top: 10px; cursor: pointer;">
-                <option value="all">Auto (Tentar Todos)</option>
-                <option value="0">Google STUNs</option>
-                <option value="1">Cloudflare TURN 1</option>
-                <option value="2">Cloudflare TURN 2</option>
-                <option value="3">Viagenie / Bistri</option>
-                <option value="4">OpenRelay / Metered</option>
-            </select>
-            <br>
-            <button class="btn" onclick="audioManager.playWav('botton'); testPings()" style="padding: 5px 10px; font-size: 10px; border-color: yellow; color: yellow; margin-top: 5px; width: 100%;">Testar Pings (Latência)</button>
-            <div id="ping-results" style="font-size: 8px; color: #fff; margin-top: 10px; min-height: 10px; text-align: left; line-height: 1.8;"></div>
-        </div>
-
         <button class="btn" onclick="audioManager.playWav('botton'); Net.initHost()">CRIAR SALA (HOST)</button>
         <div style="margin: 20px 0;">
             <input type="text" id="join-id-input" class="input-text" placeholder="Cole o ID da Sala">
@@ -578,96 +562,65 @@ const ObjectPool = {
  * REDE & MULTIPLAYER (WebRTC / PeerJS)
  * Lista consolidada de servidores STUN (Google) e TURN (Cloudflare, Metered, Viagenie)
  */
-/**
- * REDE & MULTIPLAYER (WebRTC / PeerJS)
- */
-const NAMED_SERVERS = [
+const ICE_SERVERS = [
+    // 1. Google STUNs (Sempre úteis e rápidos para conexões simples)
+    { urls: "stun:stun.l.google.com:19302" },
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+
+    // 2. Cloudflare TURN (Credencial do seu snippet JSON)
     {
-        name: "Google STUNs",
-        servers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "stun:stun1.l.google.com:19302" },
-            { urls: "stun:stun2.l.google.com:19302" }
-        ]
+        urls: [
+            "stun:stun.cloudflare.com:3478",
+            "turn:turn.cloudflare.com:3478?transport=udp",
+            "turn:turn.cloudflare.com:3478?transport=tcp",
+            "turns:turn.cloudflare.com:5349?transport=tcp"
+        ],
+        username: "g0522d79a759b2b434ef65c4aba66dff0996900c8cc0d87d4a6fbe028bee82af",
+        credential: "4dc3f21572f4e826be48117ecf2a2e53dda6df093f7a6f2a167de2f04a0e8601"
+    },
+
+    // 3. Cloudflare TURN (Credencial Alternativa da lista)
+    {
+        urls: [
+            "turn:turn.cloudflare.com:3478?transport=udp",
+            "turns:turn.cloudflare.com:5349?transport=tcp"
+        ],
+        username: "g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75",
+        credential: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3=" // Com o '=' no final
+    },
+
+    // 4. Servidores TURN Públicos/Antigos (Viagenie, Bistri, Anyfirewall)
+    {
+        urls: "turn:numb.viagenie.ca",
+        username: "webrtc@live.com",
+        credential: "muazkh"
     },
     {
-        name: "Cloudflare TURN 1",
-        servers: [{
-            urls: [ "stun:stun.cloudflare.com:3478", "turn:turn.cloudflare.com:3478?transport=udp", "turn:turn.cloudflare.com:3478?transport=tcp", "turns:turn.cloudflare.com:5349?transport=tcp" ],
-            username: "g0522d79a759b2b434ef65c4aba66dff0996900c8cc0d87d4a6fbe028bee82af",
-            credential: "4dc3f21572f4e826be48117ecf2a2e53dda6df093f7a6f2a167de2f04a0e8601"
-        }]
+        urls: "turn:turn.bistri.com:80",
+        username: "homeo",
+        credential: "homeo"
     },
     {
-        name: "Cloudflare TURN 2",
-        servers: [{
-            urls: [ "turn:turn.cloudflare.com:3478?transport=udp", "turns:turn.cloudflare.com:5349?transport=tcp" ],
-            username: "g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75",
-            credential: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3="
-        }]
+        urls: "turn:turn.anyfirewall.com:443?transport=tcp",
+        username: "webrtc",
+        credential: "webrtc"
+    },
+
+    // 5. Servidores IP Direto (OpenRelay / Metered)
+    {
+        urls: "turn:192.158.29.39:3478?transport=udp",
+        username: "28224511:1379330808",
+        credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
     },
     {
-        name: "Viagenie / Bistri",
-        servers: [
-            { urls: "turn:numb.viagenie.ca", username: "webrtc@live.com", credential: "muazkh" },
-            { urls: "turn:turn.bistri.com:80", username: "homeo", credential: "homeo" }
-        ]
-    },
-    {
-        name: "OpenRelay / Metered",
-        servers: [
-            { urls: "turn:192.158.29.39:3478?transport=udp", username: "28224511:1379330808", credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=" },
-            { urls: "turn:192.158.29.39:3478?transport=tcp", username: "28224511:1379330808", credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA=" }
-        ]
+        urls: "turn:192.158.29.39:3478?transport=tcp",
+        username: "28224511:1379330808",
+        credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
     }
 ];
-
-// Lê o servidor selecionado no dropdown e monta as URLs
-function getSelectedServers() {
-    const select = document.getElementById('server-select');
-    if (!select || select.value === "all") {
-        let all = [];
-        NAMED_SERVERS.forEach(s => all = all.concat(s.servers));
-        return all;
-    }
-    return NAMED_SERVERS[parseInt(select.value)].servers;
-}
-
-// Simulador de Ping via WebRTC ICE Gathering
-async function testPings() {
-    const resultsDiv = document.getElementById('ping-results');
-    resultsDiv.innerHTML = "<span style='color:yellow'>Testando rotas... Aguarde.</span>";
-    let results = [];
-    
-    for (let i = 0; i < NAMED_SERVERS.length; i++) {
-        const group = NAMED_SERVERS[i];
-        const start = performance.now();
-        try {
-            const pc = new RTCPeerConnection({ iceServers: group.servers, iceCandidatePoolSize: 1 });
-            pc.createDataChannel("ping");
-            const offer = await pc.createOffer();
-            await pc.setLocalDescription(offer);
-            
-            await new Promise((resolve) => {
-                let resolved = false;
-                pc.onicecandidate = (e) => {
-                    if (e.candidate && !resolved) {
-                        resolved = true; resolve();
-                    }
-                };
-                setTimeout(() => { if (!resolved) { resolved = true; resolve(); } }, 3500); 
-            });
-            
-            const ping = Math.round(performance.now() - start);
-            const color = ping < 500 ? "#4dff4d" : (ping < 1500 ? "orange" : "red");
-            results.push(`<div>${group.name}: <span style="color:${color}">${ping < 3500 ? ping + 'ms' : 'Timeout'}</span></div>`);
-            pc.close();
-        } catch(e) {
-            results.push(`<div>${group.name}: <span style="color:red">Erro</span></div>`);
-        }
-    }
-    resultsDiv.innerHTML = results.join("");
-}
 
 // Configuração usada pelo objeto Net
 const peerConfig = {
@@ -713,7 +666,7 @@ const Net = {
         const config = {
             debug: 2, // Mostra erros críticos
             config: {
-                iceServers: getSelectedServers(),
+                iceServers: ICE_SERVERS,
                 iceCandidatePoolSize: 10,
                 iceTransportPolicy: 'all' // Tenta tudo (UDP e TCP)
             }
@@ -787,7 +740,7 @@ const Net = {
         const config = {
             debug: 2,
             config: {
-                iceServers: getSelectedServers()
+                iceServers: ICE_SERVERS
             }
         };
 
@@ -1988,7 +1941,6 @@ serializeState() {
             this.applyPerkToPlayer(this.player, perkId);
             document.getElementById('upgrade-menu').classList.add('hidden');
             if (this.menuTimer) clearInterval(this.menuTimer);
-            this.state = 'PLAYING'; // <- CORREÇÃO: Destrava a engine no Singleplayer!
             this.wave++;
             this.startWave();
         } else {
@@ -3239,30 +3191,34 @@ function startGame(c1, c2) {
 
 // CORREÇÃO: Função atualizada para garantir sincronia do botão "Pronto"
 function confirmBossWave() { 
+    // Muda o texto do botão para indicar que foi clicado
     const btn = document.getElementById('btn-start-boss');
     btn.innerText = "AGUARDANDO...";
     btn.disabled = true;
 
     if (!Net.isOnline) {
+        // Singleplayer
         document.getElementById('boss-confirm-menu').classList.add('hidden');
-        btn.innerText = "COMEÇAR";
+        btn.innerText = "COMEÇAR"; // Reseta botão
         btn.disabled = false;
         game.triggerConfirmedBossWave();
     } else {
+        // Multiplayer
         if (Net.isHost) {
             game.p1BossReady = true;
             console.log("[HOST] P1 pronto para o Boss.");
             game.checkBossStart();
         } else {
-            // CORREÇÃO: Cliente NÃO esconde a tela sozinho mais.
-            // Ele aguarda o Host iniciar a wave através do comando 'BOSS_START'.
+            // Cliente: Esconde o menu imediatamente e avisa o host
+            document.getElementById('boss-confirm-menu').classList.add('hidden');
             console.log("[CLIENT] Enviando pronto para o Host.");
             Net.send({ type: 'BOSS_CONFIRM_READY' });
             
+            // Reseta o botão para a próxima vez
             setTimeout(() => {
                 btn.innerText = "COMEÇAR";
                 btn.disabled = false;
-            }, 4000); // Dá um fôlego maior para evitar clicks duplos enquanto o host não começa
+            }, 2000);
         }
     }
 }
@@ -3272,3 +3228,8 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
+
+
+
+
