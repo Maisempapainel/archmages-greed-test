@@ -558,38 +558,35 @@ const ObjectPool = {
     releaseParticle(p) { this.particles.push(p); }
 };
 
-
 /**
- * CONFIGURAÇÃO DE SERVIDORES (METERED + GOOGLE)
- * Essa lista combina seus servidores pagos (fortes) com os do Google (backup).
+ * CONFIGURAÇÃO DE SERVIDORES (OPEN RELAY PROJECT + GOOGLE)
+ * Tentativa de usar a camada gratuita de 20GB do Open Relay.
  */
 const ICE_SERVERS = [
-    {
-        urls: "stun:stun.relay.metered.ca:80",
-    },
-    {
-        urls: "turn:global.relay.metered.ca:80",
-        username: "053b6003ac3891bce33f75b0",
-        credential: "4obnHpZ4zn/ghWzI",
-    },
-    {
-        urls: "turn:global.relay.metered.ca:80?transport=tcp",
-        username: "053b6003ac3891bce33f75b0",
-        credential: "4obnHpZ4zn/ghWzI",
-    },
-    {
-        urls: "turn:global.relay.metered.ca:443",
-        username: "053b6003ac3891bce33f75b0",
-        credential: "4obnHpZ4zn/ghWzI",
-    },
-    {
-        urls: "turns:global.relay.metered.ca:443?transport=tcp",
-        username: "053b6003ac3891bce33f75b0",
-        credential: "4obnHpZ4zn/ghWzI",
-    },
-    // Backup do Google (caso a cota do Metered acabe)
+    // Servidores STUN do Google (Sempre funcionam para redes simples)
     { urls: "stun:stun.l.google.com:19302" },
-    { urls: "stun:stun1.l.google.com:19302" }
+    { urls: "stun:stun1.l.google.com:19302" },
+    { urls: "stun:stun2.l.google.com:19302" },
+    { urls: "stun:stun3.l.google.com:19302" },
+    { urls: "stun:stun4.l.google.com:19302" },
+
+    // Servidores TURN do Open Relay Project (Credenciais Estáticas Públicas)
+    // Se parar de funcionar, crie uma chave nova em: https://openrelayproject.org
+    {
+        urls: "turn:openrelay.metered.ca:80",
+        username: "openrelayproject",
+        credential: "openrelayproject"
+    },
+    {
+        urls: "turn:openrelay.metered.ca:443",
+        username: "openrelayproject",
+        credential: "openrelayproject"
+    },
+    {
+        urls: "turn:openrelay.metered.ca:443?transport=tcp",
+        username: "openrelayproject",
+        credential: "openrelayproject"
+    }
 ];
 
 const Net = {
@@ -607,7 +604,7 @@ const Net = {
     },
 
     initHost() {
-        console.log("%c[HOST] Iniciando...", "color: cyan");
+        console.log("%c[HOST] Iniciando com Open Relay...", "color: cyan");
         if (this.peer) this.peer.destroy();
 
         this.isHost = true;
@@ -618,7 +615,7 @@ const Net = {
         document.getElementById('lobby-room-id').style.color = "yellow";
 
         const config = {
-            debug: 2, // 2 = Avisos e Erros, 3 = Tudo
+            debug: 2, 
             config: {
                 iceServers: ICE_SERVERS,
                 iceCandidatePoolSize: 10
@@ -863,6 +860,7 @@ const Net = {
         }
     }
 };
+
 
 /**
  * UPGRADES DATA 
@@ -1396,8 +1394,32 @@ serializeState() {
         };
     }
 
+    // CORREÇÃO: Função syncState atualizada para forçar abertura do menu Boss no cliente
     syncState(s) {
         if (!s) return;
+
+        // Se o Host diz que é hora do Boss, nós FORÇAMOS o menu a aparecer
+        if (s.st === 'BOSS_CONFIRM') {
+            const bossMenu = document.getElementById('boss-confirm-menu');
+            
+            // Se o menu estiver escondido, mostre ele AGORA
+            if (bossMenu.classList.contains('hidden')) {
+                const isBigBoss = (s.wv % CONFIG.bossWaveInterval === 0);
+                const title = isBigBoss ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
+                
+                document.getElementById('boss-wave-title').innerText = title;
+                document.getElementById('boss-wave-title').style.color = isBigBoss ? 'red' : '#bf00ff';
+                bossMenu.classList.remove('hidden');
+                
+                // Força o estado local para evitar conflitos
+                this.state = 'BOSS_CONFIRM';
+            }
+        }
+        
+        // Se o jogo já começou (PLAYING) mas o menu do boss ainda está na tela, esconde ele
+        if (s.st === 'PLAYING' && !document.getElementById('boss-confirm-menu').classList.contains('hidden')) {
+            document.getElementById('boss-confirm-menu').classList.add('hidden');
+        }
 
         // Força o Client a abrir a tela de escolha de perks
         if (this.state !== 'UPGRADE_MENU' && s.st === 'UPGRADE_MENU') {
@@ -1406,23 +1428,13 @@ serializeState() {
         if (this.state === 'UPGRADE_MENU' && s.st === 'PLAYING') {
             document.getElementById('upgrade-menu').classList.add('hidden');
         }
-        
-        // Força o Client a ver a tela de Boss caso o Host ative
-        if (this.state !== 'BOSS_CONFIRM' && s.st === 'BOSS_CONFIRM') {
-            const title = (s.wv % CONFIG.bossWaveInterval === 0) ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
-            document.getElementById('boss-wave-title').innerText = title;
-            document.getElementById('boss-wave-title').style.color = (s.wv % CONFIG.bossWaveInterval === 0) ? 'red' : '#bf00ff';
-            document.getElementById('boss-confirm-menu').classList.remove('hidden');
-        }
-        if (this.state === 'BOSS_CONFIRM' && s.st === 'PLAYING') {
-            document.getElementById('boss-confirm-menu').classList.add('hidden');
-        }
 
         this.state = s.st || this.state;
         this.wave = s.wv || this.wave;
         this.souls = s.so || this.souls;
         this.showTeleportZonesUntil = s.tpz || 0;
 
+        // Sincroniza P1 (Host)
         if (this.player && s.p1) {
             this.player.x = s.p1.x; this.player.y = s.p1.y;
             if (s.p1.w) this.player.width = s.p1.w;
@@ -1436,6 +1448,7 @@ serializeState() {
             }
         }
 
+        // Sincroniza P2 (Cliente)
         if (this.player2 && s.p2) {
             this.player2.x = s.p2.x; this.player2.y = s.p2.y;
             if (s.p2.w) this.player2.width = s.p2.w;
@@ -1452,6 +1465,7 @@ serializeState() {
         if (this.player2) this.player2.updateHpUI();
         this.updateSoulsUI();
 
+        // Sincroniza Inimigos
         while(this.enemies.length < s.en.length) this.enemies.push(new Enemy(0,0,'redondo'));
         while(this.enemies.length > s.en.length) this.enemies.pop();
         for(let i=0; i<s.en.length; i++){
@@ -1464,6 +1478,7 @@ serializeState() {
              this.enemies[i].anchorX = s.en[i].aX; this.enemies[i].colorUntil = s.en[i].cU;
         }
 
+        // Sincroniza Projéteis
         while(this.bullets.length < s.bu.length) this.bullets.push(new Projectile(0,0,0,0,false));
         while(this.bullets.length > s.bu.length) this.bullets.pop();
         for(let i=0; i<s.bu.length; i++){
@@ -1472,6 +1487,7 @@ serializeState() {
             this.bullets[i].history = s.bu[i].hi || [];
         }
 
+        // Sincroniza Partículas e Textos
         while(this.particles.length < s.pa.length) this.particles.push(new Particle(0,0,'white',0));
         while(this.particles.length > s.pa.length) this.particles.pop();
         for(let i=0; i<s.pa.length; i++){
@@ -1501,7 +1517,7 @@ serializeState() {
         // Proteção: só envia STATE se o player já existe
         // CORREÇÃO: Agora o Host envia o STATE também no UPGRADE_MENU para o Client abrir a tela
         if (Net.isOnline && Net.isHost && this.player && 
-            (this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC' || this.state === 'UPGRADE_MENU')) {
+            (this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC' || this.state === 'UPGRADE_MENU' || this.state === 'BOSS_CONFIRM')) {
             Net.send({ type: 'STATE', state: this.serializeState() });
         }
 
@@ -1513,7 +1529,7 @@ serializeState() {
                 if (this.state !== 'MENU' && this.player) this.draw();
             }
         } else {
-            if (this.state !== 'MENU' && this.state !== 'GAME_OVER' && this.state !== 'UPGRADE_MENU') {
+            if (this.state !== 'MENU' && this.state !== 'GAME_OVER' && this.state !== 'UPGRADE_MENU' && this.state !== 'BOSS_CONFIRM') {
                 Net.send({ type: 'INPUT', input: { keys: this.input.keys, mouse: this.input.mouse } });
             }
             if (this.player) this.draw();
@@ -3118,16 +3134,36 @@ function startGame(c1, c2) {
     game.start(c1, c2);
 }
 
+// CORREÇÃO: Função atualizada para garantir sincronia do botão "Pronto"
 function confirmBossWave() { 
-    document.getElementById('boss-confirm-menu').classList.add('hidden');
+    // Muda o texto do botão para indicar que foi clicado
+    const btn = document.getElementById('btn-start-boss');
+    btn.innerText = "AGUARDANDO...";
+    btn.disabled = true;
+
     if (!Net.isOnline) {
+        // Singleplayer
+        document.getElementById('boss-confirm-menu').classList.add('hidden');
+        btn.innerText = "COMEÇAR"; // Reseta botão
+        btn.disabled = false;
         game.triggerConfirmedBossWave();
     } else {
+        // Multiplayer
         if (Net.isHost) {
             game.p1BossReady = true;
+            console.log("[HOST] P1 pronto para o Boss.");
             game.checkBossStart();
         } else {
+            // Cliente: Esconde o menu imediatamente e avisa o host
+            document.getElementById('boss-confirm-menu').classList.add('hidden');
+            console.log("[CLIENT] Enviando pronto para o Host.");
             Net.send({ type: 'BOSS_CONFIRM_READY' });
+            
+            // Reseta o botão para a próxima vez
+            setTimeout(() => {
+                btn.innerText = "COMEÇAR";
+                btn.disabled = false;
+            }, 2000);
         }
     }
 }
@@ -3137,10 +3173,3 @@ window.onload = initGame;
 </script>
 </body>
 </html>
-    
-    
-
-
-
-
-
