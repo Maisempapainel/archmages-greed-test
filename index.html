@@ -725,6 +725,7 @@ const Net = {
             if (data.type === 'PICK_PERK') {
                 if (this.isHost && game) {
                     game.p2PickedPerk = data.perkId;
+                    game.checkMultiplayerPerks(); // CORREÇÃO: Força a passagem de fase imediatamente
                 }
             }
             if (data.type === 'GAME_OVER') {
@@ -1465,8 +1466,9 @@ serializeState() {
 
     loop() {
         // Proteção: só envia STATE se o player já existe
+        // CORREÇÃO: Agora o Host envia o STATE também no UPGRADE_MENU para o Client abrir a tela
         if (Net.isOnline && Net.isHost && this.player && 
-            (this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC')) {
+            (this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC' || this.state === 'UPGRADE_MENU')) {
             Net.send({ type: 'STATE', state: this.serializeState() });
         }
 
@@ -1654,30 +1656,33 @@ serializeState() {
         if (this.player) checkThunder(this.player);
         if (this.player2) checkThunder(this.player2);
     }
+// CORREÇÃO: Nova função dedicada a destravar o menu multiplayer
+    checkMultiplayerPerks() {
+        if (this.state === 'UPGRADE_MENU' && Net.isOnline && Net.isHost) {
+            if (this.p1PickedPerk && this.p2PickedPerk) {
+                this.applyPerkToPlayer(this.player, this.p1PickedPerk);
+                if (this.player2) this.applyPerkToPlayer(this.player2, this.p2PickedPerk);
 
-manageWaves() {
-        if (this.state === 'UPGRADE_MENU') {
-            if (Net.isOnline && Net.isHost) {
-                if (this.p1PickedPerk && this.p2PickedPerk) {
-                    this.applyPerkToPlayer(this.player, this.p1PickedPerk);
-                    if (this.player2) this.applyPerkToPlayer(this.player2, this.p2PickedPerk);
+                document.getElementById('upgrade-menu').classList.add('hidden');
+                if (this.menuTimer) clearInterval(this.menuTimer);
 
-                    document.getElementById('upgrade-menu').classList.add('hidden');
-                    if (this.menuTimer) clearInterval(this.menuTimer);
+                this.handleRevives();
 
-                    this.handleRevives();
+                this.player.updateStatsUI();
+                if (this.player2) this.player2.updateStatsUI();
 
-                    this.player.updateStatsUI();
-                    if (this.player2) this.player2.updateStatsUI();
+                this.p1PickedPerk = null;
+                this.p2PickedPerk = null;
 
-                    this.p1PickedPerk = null;
-                    this.p2PickedPerk = null;
-
-                    this.wave++; this.state = 'PLAYING'; this.startWave();
-                    Net.send({ type: 'NEXT_WAVE', wave: this.wave });
-                }
+                this.wave++; this.state = 'PLAYING'; this.startWave();
+                Net.send({ type: 'NEXT_WAVE', wave: this.wave });
             }
-            return;
+        }
+    }
+
+    manageWaves() {
+        if (this.state === 'UPGRADE_MENU') {
+            return; // Lógica movida para o checkMultiplayerPerks
         }
 
         if (this.enemies.length === 0 && this.enemiesToSpawn <= 0) {
@@ -1837,6 +1842,7 @@ manageWaves() {
         } else {
             if (Net.isHost) {
                 this.p1PickedPerk = perkId;
+                this.checkMultiplayerPerks(); // CORREÇÃO: Avisa que o Host escolheu!
             } else {
                 Net.send({ type: 'PICK_PERK', perkId: perkId });
             }
@@ -1858,6 +1864,7 @@ manageWaves() {
                 if (!this.p2PickedPerk) {
                     this.p2PickedPerk = 'fallback_heal'; 
                 }
+                this.checkMultiplayerPerks(); // CORREÇÃO: Força a passagem de wave caso esgote o tempo
             }
         }
     }
@@ -1866,7 +1873,8 @@ manageWaves() {
         ctx.fillStyle = CONFIG.colors.bg; ctx.fillRect(0, 0, this.width, this.height);
         
         ctx.save();
-        if (this.state === 'BOSS_DEATH_CINEMATIC') {
+        // CORREÇÃO: Previne o crash garantindo que 'cinematicBoss' exista na tela do Client
+        if (this.state === 'BOSS_DEATH_CINEMATIC' && this.cinematicBoss) {
             let elapsed = Date.now() - this.cinematicStartTime;
             let targetX = this.cinematicBoss.x + this.cinematicBoss.width/2;
             let targetY = this.cinematicBoss.y + this.cinematicBoss.height/2;
@@ -3096,4 +3104,5 @@ window.onload = initGame;
 </script>
 </body>
 </html>
-
+    
+    
