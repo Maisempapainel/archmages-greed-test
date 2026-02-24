@@ -559,50 +559,78 @@ const ObjectPool = {
 };
 
 /**
- * CONFIGURAÇÃO DE SERVIDORES OTIMIZADA (CLEAN)
- * Removemos o lixo da internet. Usamos apenas o que funciona.
+ * REDE & MULTIPLAYER (WebRTC / PeerJS)
+ * Lista consolidada de servidores STUN (Google) e TURN (Cloudflare, Metered, Viagenie)
  */
 const ICE_SERVERS = [
-    // 1. Google STUNs (Prioridade Máxima - Rapidez)
+    // 1. Google STUNs (Sempre úteis e rápidos para conexões simples)
     { urls: "stun:stun.l.google.com:19302" },
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun.cloudflare.com:3478" },
+    { urls: "stun:stun4.l.google.com:19302" },
 
-    // 2. Open Relay Project (TURN - Para furar Firewall/4G)
-    // Credenciais estáticas do projeto comunitário (20GB/mês)
+    // 2. Cloudflare TURN (Credencial do seu snippet JSON)
     {
-        urls: "turn:192.158.29.39:3478?transport=tcp",
+        urls: [
+            "stun:stun.cloudflare.com:3478",
+            "turn:turn.cloudflare.com:3478?transport=udp",
+            "turn:turn.cloudflare.com:3478?transport=tcp",
+            "turns:turn.cloudflare.com:5349?transport=tcp"
+        ],
+        username: "g0522d79a759b2b434ef65c4aba66dff0996900c8cc0d87d4a6fbe028bee82af",
+        credential: "4dc3f21572f4e826be48117ecf2a2e53dda6df093f7a6f2a167de2f04a0e8601"
+    },
+
+    // 3. Cloudflare TURN (Credencial Alternativa da lista)
+    {
+        urls: [
+            "turn:turn.cloudflare.com:3478?transport=udp",
+            "turns:turn.cloudflare.com:5349?transport=tcp"
+        ],
+        username: "g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75",
+        credential: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3=" // Com o '=' no final
+    },
+
+    // 4. Servidores TURN Públicos/Antigos (Viagenie, Bistri, Anyfirewall)
+    {
+        urls: "turn:numb.viagenie.ca",
+        username: "webrtc@live.com",
+        credential: "muazkh"
+    },
+    {
+        urls: "turn:turn.bistri.com:80",
+        username: "homeo",
+        credential: "homeo"
+    },
+    {
+        urls: "turn:turn.anyfirewall.com:443?transport=tcp",
+        username: "webrtc",
+        credential: "webrtc"
+    },
+
+    // 5. Servidores IP Direto (OpenRelay / Metered)
+    {
+        urls: "turn:192.158.29.39:3478?transport=udp",
         username: "28224511:1379330808",
         credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
     },
     {
-    url: 'turn:numb.viagenie.ca',
-    credential: 'muazkh',
-    username: 'webrtc@live.com'
-},
-{
-    url: 'turn:192.158.29.39:3478?transport=udp',
-    credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-    username: '28224511:1379330808'
-},
-{
-    url: 'turn:192.158.29.39:3478?transport=tcp',
-    credential: 'JZEOEt2V3Qb0y27GRntt2u2PAYA=',
-    username: '28224511:1379330808'
-},
-{
-    url: 'turn:turn.cloudflare.com:3478?transport=udp',
-    credential: 'g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75',
-    username: 'a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3'
- },
- {
-    url: 'turns:turn.cloudflare.com:5349?transport=tcp',
-    credential: 'g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75',
-    username: 'a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3'
-}
+        urls: "turn:192.158.29.39:3478?transport=tcp",
+        username: "28224511:1379330808",
+        credential: "JZEOEt2V3Qb0y27GRntt2u2PAYA="
+    }
 ];
+
+// Configuração usada pelo objeto Net
+const peerConfig = {
+    debug: 3, // Nível de log alto para ver qual servidor funcionou
+    config: {
+        iceServers: ICE_SERVERS,
+        iceTransportPolicy: 'all', // Permite escolher entre Relay (TURN) ou Host (STUN)
+        iceCandidatePoolSize: 10
+    }
+};
 
 const Net = {
     isOnline: false,
@@ -3200,6 +3228,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
