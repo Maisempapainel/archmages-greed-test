@@ -568,7 +568,7 @@ const ICE_SERVERS = [
     { urls: "stun:stun1.l.google.com:19302" },
     { urls: "stun:stun2.l.google.com:19302" },
     { urls: "stun:stun3.l.google.com:19302" },
-    { urls: "stun:stun4.l.google.com:19302" },
+    { urls: "stun:stun.cloudflare.com:3478" },
 
     // 2. Open Relay Project (TURN - Para furar Firewall/4G)
     // Credenciais estáticas do projeto comunitário (20GB/mês)
@@ -593,14 +593,14 @@ const ICE_SERVERS = [
     username: '28224511:1379330808'
 },
 {
-    url: 'turn:turn.bistri.com:80',
-    credential: 'homeo',
-    username: 'homeo'
+    url: 'turn:turn.cloudflare.com:3478?transport=udp',
+    credential: 'g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75',
+    username: 'a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3'
  },
  {
-    url: 'turn:turn.anyfirewall.com:443?transport=tcp',
-    credential: 'webrtc',
-    username: 'webrtc'
+    url: 'turns:turn.cloudflare.com:5349?transport=tcp',
+    credential: 'g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75',
+    username: 'a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3'
 }
 ];
 
@@ -3200,6 +3200,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
