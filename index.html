@@ -2019,6 +2019,7 @@ serializeState() {
             document.getElementById('upgrade-menu').classList.add('hidden');
             if (this.menuTimer) clearInterval(this.menuTimer);
             this.wave++;
+            this.state = 'PLAYING'; // <--- ADICIONE ESTA LINHA AQUI
             this.startWave();
         } else {
             if (Net.isHost) {
@@ -3303,6 +3304,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
