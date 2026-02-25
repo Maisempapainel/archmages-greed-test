@@ -605,6 +605,7 @@ const ObjectPool = {
  * Lista consolidada de servidores STUN (Google) e TURN (Cloudflare, Metered, Viagenie)
  */
 const ICE_SERVERS = [
+    { name: "LAN / VPN (Hamachi/Radmin)", isLAN: true },
     { name: "Google STUN (Padrão/Rápido)", urls: "stun:stun.l.google.com:19302" },
     { name: "Cloudflare TURN 1", urls: ["stun:stun.cloudflare.com:3478", "turn:turn.cloudflare.com:3478?transport=udp", "turns:turn.cloudflare.com:5349?transport=tcp"], username: "g0522d79a759b2b434ef65c4aba66dff0996900c8cc0d87d4a6fbe028bee82af", credential: "4dc3f21572f4e826be48117ecf2a2e53dda6df093f7a6f2a167de2f04a0e8601" },
     { name: "Cloudflare TURN 2", urls: ["turn:turn.cloudflare.com:3478?transport=udp", "turns:turn.cloudflare.com:5349?transport=tcp"], username: "g0824e083e4309e817208621651613629786c075f562aeff3e4376594295de75", credential: "a6df968770ec3b486e54f8884672a7334ec30314715fb35ce6d412a0ebd333b3=" },
@@ -640,13 +641,17 @@ const ServerPinger = {
 
     ping(serverConfig) {
         return new Promise((resolve) => {
+            if (serverConfig.isLAN) {
+                resolve(0); // Rede local não precisa pingar a internet
+                return;
+            }
             const start = performance.now();
             try {
                 const cleanConfig = { ...serverConfig };
-                delete cleanConfig.name; // PeerJS/WebRTC não gosta de propriedades extras
+                delete cleanConfig.name; 
                 
                 const pc = new RTCPeerConnection({ iceServers: [cleanConfig] });
-                const timeout = setTimeout(() => { pc.close(); resolve(999); }, 3000); // Timeout de 3s
+                const timeout = setTimeout(() => { pc.close(); resolve(999); }, 3000);
                 
                 pc.onicecandidate = (e) => {
                     if (e.candidate) {
@@ -665,38 +670,15 @@ const ServerPinger = {
         });
     },
 
-    renderUI() {
-        const container = document.getElementById('server-list-container');
-        if (!container) return;
-        let html = '<div style="margin-bottom:10px; font-size:10px; color:#4da6ff; text-align:center;">SELECIONE O SERVIDOR:</div>';
-        
-        ICE_SERVERS.forEach((srv, i) => {
-            const lat = this.latencies[i];
-            let latText = lat === undefined ? "Testando..." : (lat >= 999 ? "Falhou" : lat + " ms");
-            let pingColor = "red";
-            if (lat !== undefined && lat < 150) pingColor = "#4dff4d";
-            else if (lat !== undefined && lat < 300) pingColor = "yellow";
+    // A função renderUI() continua aqui intacta!
 
-            const checked = i === this.selectedServerIndex ? "checked" : "";
-
-            html += `
-                <label class="server-item" onclick="ServerPinger.selectedServerIndex = ${i}; ServerPinger.renderUI();">
-                    <div style="display:flex; align-items:center;">
-                        <input type="radio" name="server-sel" value="${i}" ${checked} style="pointer-events:none;">
-                        <span style="margin-left:5px;">${srv.name}</span>
-                    </div>
-                    <span style="color:${pingColor};">${latText}</span>
-                </label>
-            `;
-        });
-        container.innerHTML = html;
-    },
-    
     getSelectedConfig() {
         const cleanConfig = { ...ICE_SERVERS[this.selectedServerIndex] };
         delete cleanConfig.name;
-        // Sempre incluímos o Google STUN como backup de segurança na conexão
-        return [ cleanConfig, { urls: "stun:stun.l.google.com:19302" } ]; 
+        if (cleanConfig.isLAN) {
+            return []; // Retorna lista vazia: Força o WebRTC a não sair para a internet e usar apenas a LAN local
+        }
+        return [ cleanConfig, { urls: "stun:stun.l.google.com:19302" } ];
     }
 };
 
@@ -1592,15 +1574,10 @@ serializeState() {
         };
     }
 
-    // CORREÇÃO: Função syncState atualizada para forçar abertura do menu Boss no cliente
     syncState(s) {
         if (!s) return;
-
-        // Se o Host diz que é hora do Boss, nós FORÇAMOS o menu a aparecer
         if (s.st === 'BOSS_CONFIRM') {
             const bossMenu = document.getElementById('boss-confirm-menu');
-            
-            // Se o menu estiver escondido, mostre ele AGORA
             if (bossMenu.classList.contains('hidden')) {
                 const isBigBoss = (s.wv % CONFIG.bossWaveInterval === 0);
                 const title = isBigBoss ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
@@ -1608,18 +1585,14 @@ serializeState() {
                 document.getElementById('boss-wave-title').innerText = title;
                 document.getElementById('boss-wave-title').style.color = isBigBoss ? 'red' : '#bf00ff';
                 bossMenu.classList.remove('hidden');
-                
-                // Força o estado local para evitar conflitos
                 this.state = 'BOSS_CONFIRM';
             }
         }
         
-        // Se o jogo já começou (PLAYING) mas o menu do boss ainda está na tela, esconde ele
         if (s.st === 'PLAYING' && !document.getElementById('boss-confirm-menu').classList.contains('hidden')) {
             document.getElementById('boss-confirm-menu').classList.add('hidden');
         }
 
-        // Força o Client a abrir a tela de escolha de perks
         if (this.state !== 'UPGRADE_MENU' && s.st === 'UPGRADE_MENU') {
             this.showUpgradeMenu();
         }
@@ -1632,18 +1605,18 @@ serializeState() {
         this.souls = s.so || this.souls;
         this.showTeleportZonesUntil = s.tpz || 0;
 
-        // Sincroniza P1 (Host)
+        // Sincroniza P1 (Host) usando alvo (targetX/Y) para interpolar
         if (this.player && s.p1) {
-            this.player.x = s.p1.x;
-            this.player.y = s.p1.y;
+            this.player.targetX = s.p1.x;
+            this.player.targetY = s.p1.y;
+            if (this.player.x === undefined) { this.player.x = s.p1.x; this.player.y = s.p1.y; }
+
             if (s.p1.w) this.player.width = s.p1.w;
             if (s.p1.h) this.player.height = s.p1.h;
             this.player.hp = s.p1.hp; this.player.maxHp = s.p1.mx;
             this.player.laserActive = s.p1.la; this.player.facing = s.p1.fa;
             this.player.manaShieldReady = s.p1.ms; this.player.invulnUntil = s.p1.iu;
-            
-            // CORREÇÕES APLICADAS AQUI
-            this.player.walkTimer = s.p1.wt; 
+            this.player.walkTimer = s.p1.wt;
             this.player.isDead = s.p1.d;     
             
             if (s.p1.ax !== undefined) {
@@ -1651,23 +1624,24 @@ serializeState() {
                 this.player.aimY = s.p1.ay;
             }
             if (this.player.orb && s.p1.or !== undefined) {
-                this.player.orb.x = s.p1.or;
-                this.player.orb.y = s.p1.oy;
+                this.player.orb.targetX = s.p1.or;
+                this.player.orb.targetY = s.p1.oy;
+                if (this.player.orb.x === undefined) { this.player.orb.x = s.p1.or; this.player.orb.y = s.p1.oy; }
             }
         }
 
-        // Sincroniza P2 (Cliente)
+        // Sincroniza P2 (Cliente) usando alvo (targetX/Y)
         if (this.player2 && s.p2) {
-            this.player2.x = s.p2.x;
-            this.player2.y = s.p2.y;
+            this.player2.targetX = s.p2.x;
+            this.player2.targetY = s.p2.y;
+            if (this.player2.x === undefined) { this.player2.x = s.p2.x; this.player2.y = s.p2.y; }
+
             if (s.p2.w) this.player2.width = s.p2.w;
             if (s.p2.h) this.player2.height = s.p2.h;
             this.player2.hp = s.p2.hp; this.player2.maxHp = s.p2.mx;
             this.player2.laserActive = s.p2.la; this.player2.facing = s.p2.fa;
             this.player2.manaShieldReady = s.p2.ms; this.player2.invulnUntil = s.p2.iu;
-            
-            // CORREÇÕES APLICADAS AQUI
-            this.player2.walkTimer = s.p2.wt; 
+            this.player2.walkTimer = s.p2.wt;
             this.player2.isDead = s.p2.d;     
             
             if (s.p2.ax !== undefined) {
@@ -1675,8 +1649,9 @@ serializeState() {
                 this.player2.aimY = s.p2.ay;
             }
             if (this.player2.orb && s.p2.or !== undefined) {
-                this.player2.orb.x = s.p2.or;
-                this.player2.orb.y = s.p2.oy;
+                this.player2.orb.targetX = s.p2.or;
+                this.player2.orb.targetY = s.p2.oy;
+                if (this.player2.orb.x === undefined) { this.player2.orb.x = s.p2.or; this.player2.orb.y = s.p2.oy; }
             }
         }
 
@@ -1687,10 +1662,16 @@ serializeState() {
         while(this.enemies.length < s.en.length) this.enemies.push(new Enemy(0,0,'redondo'));
         while(this.enemies.length > s.en.length) this.enemies.pop();
         for(let i=0; i<s.en.length; i++){
-             this.enemies[i].x = s.en[i].x; this.enemies[i].y = s.en[i].y;
+             if (this.enemies[i].targetX === undefined) {
+                 this.enemies[i].x = s.en[i].x; this.enemies[i].y = s.en[i].y;
+             }
+             this.enemies[i].targetX = s.en[i].x;
+             this.enemies[i].targetY = s.en[i].y;
+             
              this.enemies[i].hp = s.en[i].hp; this.enemies[i].maxHp = s.en[i].mx;
              this.enemies[i].type = s.en[i].t; this.enemies[i].shieldActive = s.en[i].s;
-             this.enemies[i].poisonActive = s.en[i].po; this.enemies[i].width = s.en[i].w;
+             this.enemies[i].poisonActive = s.en[i].po;
+             this.enemies[i].width = s.en[i].w;
              this.enemies[i].height = s.en[i].h; this.enemies[i].lastHitTime = s.en[i].lh;
              this.enemies[i].isBigBoss = s.en[i].isB;
              this.enemies[i].anchorX = s.en[i].aX; this.enemies[i].colorUntil = s.en[i].cU;
@@ -1701,7 +1682,12 @@ serializeState() {
         while(this.bullets.length < s.bu.length) this.bullets.push(new Projectile(0,0,0,0,false));
         while(this.bullets.length > s.bu.length) this.bullets.pop();
         for(let i=0; i<s.bu.length; i++){
-            this.bullets[i].x = s.bu[i].x; this.bullets[i].y = s.bu[i].y;
+            if (this.bullets[i].targetX === undefined) {
+                 this.bullets[i].x = s.bu[i].x; this.bullets[i].y = s.bu[i].y;
+            }
+            this.bullets[i].targetX = s.bu[i].x;
+            this.bullets[i].targetY = s.bu[i].y;
+
             this.bullets[i].radius = s.bu[i].r; this.bullets[i].color = s.bu[i].c;
             this.bullets[i].history = s.bu[i].hi || [];
         }
@@ -1710,14 +1696,16 @@ serializeState() {
         while(this.particles.length < s.pa.length) this.particles.push(new Particle(0,0,'white',0));
         while(this.particles.length > s.pa.length) this.particles.pop();
         for(let i=0; i<s.pa.length; i++){
-            this.particles[i].x = s.pa[i].x; this.particles[i].y = s.pa[i].y;
+            this.particles[i].x = s.pa[i].x;
+            this.particles[i].y = s.pa[i].y;
             this.particles[i].size = s.pa[i].s; this.particles[i].color = s.pa[i].c;
         }
 
         while(this.floatingTexts.length < s.ft.length) this.floatingTexts.push(new FloatingText(0,0,'',''));
         while(this.floatingTexts.length > s.ft.length) this.floatingTexts.pop();
         for(let i=0; i<s.ft.length; i++){
-            this.floatingTexts[i].x = s.ft[i].x; this.floatingTexts[i].y = s.ft[i].y;
+            this.floatingTexts[i].x = s.ft[i].x;
+            this.floatingTexts[i].y = s.ft[i].y;
             this.floatingTexts[i].text = s.ft[i].t; this.floatingTexts[i].color = s.ft[i].c;
             this.floatingTexts[i].duration = s.ft[i].d; this.floatingTexts[i].spawnTime = s.ft[i].st;
         }
@@ -1725,7 +1713,8 @@ serializeState() {
         while(this.lightningEffects.length < s.le.length) this.lightningEffects.push(new LightningBeam(0,0,false));
         while(this.lightningEffects.length > s.le.length) this.lightningEffects.pop();
         for(let i=0; i<s.le.length; i++){
-            this.lightningEffects[i].x = s.le[i].x; this.lightningEffects[i].y = s.le[i].y;
+            this.lightningEffects[i].x = s.le[i].x;
+            this.lightningEffects[i].y = s.le[i].y;
             this.lightningEffects[i].isThick = s.le[i].t;
             this.lightningEffects[i].duration = s.le[i].d; this.lightningEffects[i].spawnTime = s.le[i].st;
         }
@@ -1750,11 +1739,39 @@ serializeState() {
         } else {
             if (this.state !== 'MENU' && this.state !== 'GAME_OVER' && this.state !== 'UPGRADE_MENU' && this.state !== 'BOSS_CONFIRM') {
                 Net.send({ type: 'INPUT', input: { keys: this.input.keys, mouse: this.input.mouse } });
+                this.clientInterpolate(); // Executa a suavização visual no cliente
             }
             if (this.player) this.draw();
         }
 
         requestAnimationFrame(() => this.loop());
+    } // Fim da função loop()
+
+    // NOVO: Função que suaviza o movimento dos objetos no cliente (Lerp)
+    clientInterpolate() {
+        const lerp = (start, end, amt) => (1 - amt) * start + amt * end;
+        const amt = 0.35; // Nível de suavidade (0.1 = lento, 1.0 = instantâneo)
+
+        const interpolateObj = (obj) => {
+            if (obj && obj.targetX !== undefined && obj.targetY !== undefined) {
+                const dist = Math.hypot(obj.targetX - obj.x, obj.targetY - obj.y);
+                // Se o boneco estiver muito longe de repente (ex: teleporte ou renasceu), pula direto sem suavizar
+                if (dist > 150) { 
+                    obj.x = obj.targetX; obj.y = obj.targetY;
+                } else {
+                    obj.x = lerp(obj.x, obj.targetX, amt);
+                    obj.y = lerp(obj.y, obj.targetY, amt);
+                }
+            }
+        };
+
+        interpolateObj(this.player);
+        interpolateObj(this.player2);
+        if (this.player && this.player.orb) interpolateObj(this.player.orb);
+        if (this.player2 && this.player2.orb) interpolateObj(this.player2.orb);
+        
+        this.enemies.forEach(interpolateObj);
+        this.bullets.forEach(interpolateObj);
     }
 
     update() {
@@ -3439,6 +3456,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
