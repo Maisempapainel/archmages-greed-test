@@ -2686,13 +2686,22 @@ class Enemy {
             } else if (Date.now() - this.poisonLastTick >= 1000) {
                 this.poisonLastTick = Date.now();
                 let pTier = game.player.perks.poison;
-                let pBase = game.player.stats.damage;
-                let dmg = 0;
-                if (pTier === 1) dmg = pBase * 0.15;
-                else if (pTier === 2) dmg = pBase * 0.20;
-                else if (pTier >= 3) dmg = (pBase * 0.25) + (this.maxHp * 0.02);
-                
-                this.hp -= dmg;
+                        let isBoss = (this.type === 'boss' || this.type === 'miniboss');
+                        let dmg = 0;
+                        
+                        if (isBoss) {
+                            // Dano Boss (Max HP): T1 = 0.5%, T2 = 1%, T3 = 1.5%
+                            if (pTier === 1) dmg = this.maxHp * 0.005;
+                            else if (pTier === 2) dmg = this.maxHp * 0.01;
+                            else if (pTier >= 3) dmg = this.maxHp * 0.015;
+                        } else {
+                            // Dano Normal (Max HP): T1 = 1%, T2 = 2%, T3 = 3%
+                            if (pTier === 1) dmg = this.maxHp * 0.01;
+                            else if (pTier === 2) dmg = this.maxHp * 0.02;
+                            else if (pTier >= 3) dmg = this.maxHp * 0.03;
+                        }
+                        
+                        this.hp -= dmg;
                 game.addFloatingText(this.x, this.y, Math.round(dmg), "#00ff00");
                 if (this.hp <= 0) this.die();
             }
@@ -2784,13 +2793,17 @@ class Enemy {
             amount *= 2; game.createParticle(this.x, this.y, 'red', 5);
         }
 
-        if (atker && atker.perks && atker.perks.poison > 0 && !this.poisonActive && this.poisonStacks < 2 && amount > 0) {
-            let pChance = atker.perks.poison === 1 ? 0.10 : (atker.perks.poison === 2 ? 0.15 : 0.20);
+        if (atker && atker.perks && atker.perks.poison > 0 && amount > 0) {
+            // Chance de ativação: T1: 5%, T2: 7%, T3: 9%
+            let pChance = atker.perks.poison === 1 ? 0.05 : (atker.perks.poison === 2 ? 0.07 : 0.09);
+            
             if (Math.random() < pChance) {
                 this.poisonActive = true;
                 this.poisonEndTime = Date.now() + 5000;
-                this.poisonLastTick = Date.now();
-                this.poisonStacks++;
+                // Apenas inicia o timer de dano se o veneno acabou de ser aplicado, evitando bugar os ticks
+                if (!this.poisonLastTick || Date.now() - this.poisonLastTick >= 1000) {
+                    this.poisonLastTick = Date.now();
+                }
             }
         }
 
@@ -2804,7 +2817,9 @@ class Enemy {
     
     applyCold() { 
         if (this.shieldActive) return;
-        this.coldStacks++; this.coldUntil = Date.now() + 8000; 
+        // Limita o Gelo a no máximo 5 stacks (evita que o inimigo quebre ou pare no tempo)
+        if (this.coldStacks < 5) this.coldStacks++; 
+        this.coldUntil = Date.now() + 8000; 
     }
 
     die() {
@@ -3395,6 +3410,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
