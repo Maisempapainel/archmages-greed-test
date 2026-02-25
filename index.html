@@ -135,7 +135,7 @@
         }
 
         /* Character Select */
-        .char-select-container { display: flex; gap: 20px; margin-bottom: 20px; flex-wrap: wrap; justify-content: center;}
+        .char-select-container { display: flex; flex-direction: row; gap: 30px; margin-bottom: 30px; flex-wrap: nowrap; justify-content: center; align-items: center; width: 100%;}
         .char-card {
             border: 1px solid #555; padding: 10px; cursor: pointer; text-align: center; width: 120px;
         }
@@ -305,10 +305,12 @@
             <button class="flag-btn" id="lang-en" onclick="audioManager.playWav('botton'); setLanguage('en')">🇺🇸 EN-US</button>
         </div>
         <h1>Archmage's Greed</h1>
-        <h2 id="skin-title" style="font-size: 14px; margin-bottom: 15px; color: #fff;">Selecione Sua Skin</h2>
-        <div class="char-select-container" id="char-selection" style="flex-direction: row; flex-wrap: nowrap; gap: 30px;"></div>
-        <button class="btn" id="btn-play" onclick="audioManager.playWav('botton'); startGameLocal()">SINGLEPLAYER</button>
-        <button class="btn" id="btn-multiplayer" onclick="audioManager.playWav('botton'); showMultiplayerMenu()">MULTIPLAYER</button>
+        <h2 id="skin-title" style="font-size: 14px; margin-bottom: 20px; color: #fff;">Selecione Sua Skin</h2>
+        <div class="char-select-container" id="char-selection"></div>
+        <div style="display: flex; gap: 10px; margin-top: 10px;">
+            <button class="btn" id="btn-play" onclick="audioManager.playWav('botton'); startGameLocal()">SINGLEPLAYER</button>
+            <button class="btn" id="btn-multiplayer" onclick="audioManager.playWav('botton'); showMultiplayerMenu()">MULTIPLAYER</button>
+        </div>
         <p id="controls-hint" style="font-size: 10px; color: #888; margin-top:20px;">Use A/D para Mover, Espaço p/ Pular, Mouse p/ Mirar, F p/ Habilidade</p>
         <div id="audio-hint">Clique para ativar o som</div>
     </div>
@@ -398,10 +400,22 @@ function distToSegment(p, v, w) { return Math.sqrt(distToSegmentSquared(p, v, w)
 
 // Função para Escalonamento de Dano Dinâmico dos Inimigos
 function getEnemyBaseDamage(wave) {
-    if (wave < 15) return 5 + (wave * (5/15)); // Começa em 5, vai pra 10 na wave 15
-    if (wave <= 20) return 10 + ((wave - 15) * (4/5)); // Vai pra 14 na wave 20
-    if (wave <= 25) return 14 + ((wave - 20) * (6/5)); // Vai pra ~20 na wave 25
-    return 20 + ((wave - 25) * 2.5); // Escala mais rápido após a wave 25
+    if (wave < 15) return 5 + (wave * (5/15)); 
+    if (wave <= 20) return 10 + ((wave - 15) * (4/5)); 
+    if (wave <= 25) return 14 + ((wave - 20) * (6/5)); 
+    return 20 + ((wave - 25) * 2.5); 
+}
+
+// Nova Função para Escalonamento de Velocidade Late Game (Wave 30+)
+function getLateGameScaling(wave) {
+    if (wave < 30) return { fireRateMult: 1.0, moveSpeedMult: 1.0, projSpeedMult: 1.0 };
+    // A cada 5 waves a partir da 25 cria um novo tier (Wave 30-34 = tier 1, Wave 35-39 = tier 2...)
+    let tiers = Math.floor((wave - 25) / 5); 
+    return {
+        fireRateMult: 1.0 + (tiers * 0.05), // +5% de cadência de tiro por tier
+        moveSpeedMult: 1.0 + (tiers * 0.10), // +10% de velocidade de movimento lateral por tier
+        projSpeedMult: 1.0 + (tiers * 0.10)  // +10% de velocidade do projétil por tier
+    };
 }
 
 /**
@@ -2692,19 +2706,24 @@ class Enemy {
         if (this.y < this.targetY) this.y += 1.4 * timeWarpFactor * window.timeScale; 
         else this.y += Math.sin(Date.now() / 500 + this.movePhase) * 0.2 * timeWarpFactor * window.timeScale;
 
-        const time = Date.now() / 1000; let desiredX = this.anchorX + Math.sin(time + this.movePhase) * 80;
-        this.x += ((desiredX - this.x) * 0.035) * timeWarpFactor * window.timeScale;
+        let lateScaling = getLateGameScaling(game.wave);
+        const time = Date.now() / 1000;
+        let desiredX = this.anchorX + Math.sin(time + this.movePhase) * 80;
+        this.x += ((desiredX - this.x) * 0.035 * lateScaling.moveSpeedMult) * timeWarpFactor * window.timeScale;
 
-        let separationX = 0; let separationY = 0; let count = 0;
+        let separationX = 0; let separationY = 0;
+        let count = 0;
         if (allEnemies) {
             for (let other of allEnemies) {
                 if (other === this || other.dead) continue;
                 if (Math.abs(this.x - other.x) > 50) continue; 
                 const dist = Math.hypot(this.x - other.x, this.y - other.y);
-                if (dist < 50 && dist > 0) { separationX += (this.x - other.x) / dist; separationY += (this.y - other.y) / dist; count++; }
+                if (dist < 50 && dist > 0) { separationX += (this.x - other.x) / dist;
+                separationY += (this.y - other.y) / dist; count++; }
             }
         }
-        if (count > 0) { this.x += separationX * 0.35 * timeWarpFactor * window.timeScale; this.y += separationY * 0.35 * timeWarpFactor * window.timeScale; }
+        if (count > 0) { this.x += (separationX * 0.35 * lateScaling.moveSpeedMult) * timeWarpFactor * window.timeScale;
+        this.y += separationY * 0.35 * timeWarpFactor * window.timeScale; }
         
         const limiteMetadeTela = game.height / 2;
         let p1Dist = (game.player && !game.player.isDead) ? Math.hypot((game.player.x - this.x), (game.player.y - this.y)) : Infinity;
@@ -2721,9 +2740,12 @@ class Enemy {
 
         let fireRateMod = 1.0;
         if (Date.now() < this.coldUntil) fireRateMod = Math.pow(0.8, this.coldStacks); else this.coldStacks = 0;
+        let lateScaling = getLateGameScaling(game.wave);
 
-        let shootInterval = 2300 / fireRateMod;
-        if (game.state !== 'BOSS_DEATH_CINEMATIC' && Date.now() - this.lastShootTime > shootInterval) { this.shoot(); this.lastShootTime = Date.now(); }
+        // Intervalo de tiro é reduzido pelo multiplicador Late Game
+        let shootInterval = (2300 / fireRateMod) / lateScaling.fireRateMult;
+        if (game.state !== 'BOSS_DEATH_CINEMATIC' && Date.now() - this.lastShootTime > shootInterval) { this.shoot(); this.lastShootTime = Date.now();
+        }
 
         this.tickDebuffs();
     }
@@ -2735,9 +2757,11 @@ class Enemy {
         let target = (p2Dist < p1Dist) ? game.player2 : game.player;
 
         const angle = Math.atan2((target.y + 20) - this.y, (target.x + 15) - this.x);
-        const possibleColors = ['red', '#4da6ff', '#800080', '#00ff00']; const bulletColor = possibleColors[Math.floor(Math.random() * possibleColors.length)];
+        const possibleColors = ['red', '#4da6ff', '#800080', '#00ff00'];
+        const bulletColor = possibleColors[Math.floor(Math.random() * possibleColors.length)];
         let isBossAtk = (this.type === 'boss' || this.type === 'miniboss');
-        game.bullets.push(ObjectPool.getBullet(this.x + 15, this.y + 15, angle, this.damage, false, { speed: 1.0, color: bulletColor, isBossAttack: isBossAtk }));
+        let lateScaling = getLateGameScaling(game.wave);
+        game.bullets.push(ObjectPool.getBullet(this.x + 15, this.y + 15, angle, this.damage, false, { speed: 1.0 * lateScaling.projSpeedMult, color: bulletColor, isBossAttack: isBossAtk }));
     }
 
     takeDamage(amount, sourcePlayerObj = null) {
@@ -2893,11 +2917,12 @@ class Boss extends Enemy {
             if (twTier === 1) timeWarpFactor = 0.9; if (twTier === 2) timeWarpFactor = 0.85; if (twTier === 3) timeWarpFactor = 0.8;
         }
 
-        const time = Date.now() / 2000; const waveX = Math.sin(time) * 250; 
+        let lateScaling = getLateGameScaling(game.wave);
+        const time = Date.now() / 2000;
+        const waveX = Math.sin(time) * 250; 
         let desiredX = this.anchorX + waveX;
-        this.x += ((desiredX - this.x) * this.moveSpeedLat) * timeWarpFactor * window.timeScale;
+        this.x += ((desiredX - this.x) * this.moveSpeedLat * lateScaling.moveSpeedMult) * timeWarpFactor * window.timeScale;
         this.y += ((this.targetY - this.y) * 0.035 + Math.sin(Date.now()/300)*0.5) * timeWarpFactor * window.timeScale;
-        
         if (this.y > game.height / 2.5) {
             this.y -= 1.5 * timeWarpFactor * window.timeScale;
         }
@@ -2923,12 +2948,14 @@ class Boss extends Enemy {
             this.lastSummonTime = Date.now(); 
         }
 
-        let fireInterval = 1500 / timeWarpFactor;
         let fireRateMod = 1.0;
         if (Date.now() < this.coldUntil) fireRateMod = Math.pow(0.8, this.coldStacks);
-        fireInterval /= fireRateMod;
+        
+        let fireInterval = (1500 / timeWarpFactor) / fireRateMod;
+        fireInterval /= lateScaling.fireRateMult; // Aplica o bônus de cadência do Late Game
 
-        if (game.state !== 'BOSS_DEATH_CINEMATIC' && Date.now() - this.lastShootTime > fireInterval) { this.bossAttack(); this.lastShootTime = Date.now(); }
+        if (game.state !== 'BOSS_DEATH_CINEMATIC' && Date.now() - this.lastShootTime > fireInterval) { this.bossAttack(); this.lastShootTime = Date.now();
+        }
 
         this.tickDebuffs();
     }
@@ -2941,9 +2968,10 @@ class Boss extends Enemy {
         if (p1Dist === Infinity && p2Dist === Infinity) return;
         let target = (p2Dist < p1Dist) ? game.player2 : game.player;
 
+        let lateScaling = getLateGameScaling(game.wave);
         for(let i=0; i<4; i++) {
              const angle = Math.atan2((target.y + 20) - centerY, (target.x + 15) - centerX) + (i-1.5)*0.2;
-             game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: 1.3, isBossAttack: true }));
+        game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: 1.3 * lateScaling.projSpeedMult, isBossAttack: true }));
         }
     }
 
@@ -3354,6 +3382,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
