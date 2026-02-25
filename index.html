@@ -1311,7 +1311,18 @@ processDevCommand(cmd, isHostCmd = true) {
 triggerConfirmedBossWave() {
         this.state = 'PLAYING';
         audioManager.play('boss');
-        this.enemiesToSpawn = 0; 
+        this.enemiesToSpawn = 0;
+        
+        // Garante que o menu suma para o Host, Client e Singleplayer na hora certa
+        document.getElementById('boss-confirm-menu').classList.add('hidden');
+        
+        // Reseta o botão de forma universal para a próxima Boss Wave
+        const btn = document.getElementById('btn-start-boss');
+        if (btn) {
+            btn.innerText = TEXTS[currentLang].start;
+            btn.disabled = false;
+        }
+
         if (!Net.isOnline || Net.isHost) this.spawnBoss(this.wave % CONFIG.bossWaveInterval === 0);
         const title = (this.wave % CONFIG.bossWaveInterval === 0) ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
         this.showWaveText(title);
@@ -3263,17 +3274,14 @@ function startGame(c1, c2) {
 }
 
 // CORREÇÃO: Função atualizada para garantir sincronia do botão "Pronto"
+// CORREÇÃO: Função atualizada para garantir sincronia do botão "Pronto"
 function confirmBossWave() { 
-    // Muda o texto do botão para indicar que foi clicado
     const btn = document.getElementById('btn-start-boss');
     btn.innerText = "AGUARDANDO...";
     btn.disabled = true;
 
     if (!Net.isOnline) {
         // Singleplayer
-        document.getElementById('boss-confirm-menu').classList.add('hidden');
-        btn.innerText = "COMEÇAR"; // Reseta botão
-        btn.disabled = false;
         game.triggerConfirmedBossWave();
     } else {
         // Multiplayer
@@ -3282,18 +3290,12 @@ function confirmBossWave() {
             console.log("[HOST] P1 pronto para o Boss.");
             game.checkBossStart();
         } else {
-            // Cliente: Esconde o menu imediatamente e avisa o host
-            document.getElementById('boss-confirm-menu').classList.add('hidden');
+            // Cliente: Apenas avisa o host. A tela aguarda a confirmação final.
             console.log("[CLIENT] Enviando pronto para o Host.");
             Net.send({ type: 'BOSS_CONFIRM_READY' });
-            
-            // Reseta o botão para a próxima vez
-            setTimeout(() => {
-                btn.innerText = "COMEÇAR";
-                btn.disabled = false;
-            }, 2000);
         }
     }
+}
 }
 function returnToMenu() { location.reload(); }
 
@@ -3301,6 +3303,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
