@@ -1538,12 +1538,18 @@ serializeState() {
 
         // Sincroniza P1 (Host)
         if (this.player && s.p1) {
-            this.player.x = s.p1.x; this.player.y = s.p1.y;
+            this.player.x = s.p1.x;
+            this.player.y = s.p1.y;
             if (s.p1.w) this.player.width = s.p1.w;
             if (s.p1.h) this.player.height = s.p1.h;
             this.player.hp = s.p1.hp; this.player.maxHp = s.p1.mx;
             this.player.laserActive = s.p1.la; this.player.facing = s.p1.fa;
             this.player.manaShieldReady = s.p1.ms; this.player.invulnUntil = s.p1.iu;
+            
+            // CORREÇÕES APLICADAS AQUI
+            this.player.walkTimer = s.p1.wt; 
+            this.player.isDead = s.p1.d;     
+            
             if (this.player.orb && s.p1.or !== undefined) {
                 this.player.orb.x = s.p1.or;
                 this.player.orb.y = s.p1.oy;
@@ -1552,12 +1558,18 @@ serializeState() {
 
         // Sincroniza P2 (Cliente)
         if (this.player2 && s.p2) {
-            this.player2.x = s.p2.x; this.player2.y = s.p2.y;
+            this.player2.x = s.p2.x;
+            this.player2.y = s.p2.y;
             if (s.p2.w) this.player2.width = s.p2.w;
             if (s.p2.h) this.player2.height = s.p2.h;
             this.player2.hp = s.p2.hp; this.player2.maxHp = s.p2.mx;
             this.player2.laserActive = s.p2.la; this.player2.facing = s.p2.fa;
             this.player2.manaShieldReady = s.p2.ms; this.player2.invulnUntil = s.p2.iu;
+            
+            // CORREÇÕES APLICADAS AQUI
+            this.player2.walkTimer = s.p2.wt; 
+            this.player2.isDead = s.p2.d;     
+            
             if (this.player2.orb && s.p2.or !== undefined) {
                 this.player2.orb.x = s.p2.or;
                 this.player2.orb.y = s.p2.oy;
@@ -3282,6 +3294,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
