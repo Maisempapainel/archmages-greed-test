@@ -167,7 +167,7 @@
         #hp-bar { background: white; }
         
         #audio-hint {
-            position: absolute; bottom: 50px; width: 100%; text-align: center; font-size: 10px; color: #666; animation: pulse 2s infinite;
+            margin-top: 25px; text-align: center; font-size: 12px; color: #ffcc00; text-shadow: 1px 1px 2px black; animation: pulse 2s infinite; cursor: pointer;
         }
         @keyframes pulse { 0% { opacity: 0.5; } 50% { opacity: 1; } 100% { opacity: 0.5; } }
 
@@ -205,7 +205,7 @@
         #stats-panel div { display: flex; justify-content: space-between; }
 
         /* Language Flags */
-        .lang-select { display: flex; gap: 15px; margin-bottom: 20px; }
+        .lang-select { position: absolute; top: 20px; right: 20px; display: flex; gap: 15px; z-index: 1000; }
         .flag-btn { font-size: 16px; cursor: pointer; opacity: 0.5; transition: 0.2s; background: #222; border: 2px solid #555; color: white; padding: 10px 15px; font-family: inherit; }
         .flag-btn.active { opacity: 1; transform: scale(1.1); border-color: white;}
         .flag-btn:hover { opacity: 0.8; }
@@ -305,7 +305,8 @@
             <button class="flag-btn" id="lang-en" onclick="audioManager.playWav('botton'); setLanguage('en')">🇺🇸 EN-US</button>
         </div>
         <h1>Archmage's Greed</h1>
-        <div class="char-select-container" id="char-selection"></div>
+        <h2 id="skin-title" style="font-size: 14px; margin-bottom: 15px; color: #fff;">Selecione Sua Skin</h2>
+        <div class="char-select-container" id="char-selection" style="flex-direction: row; flex-wrap: nowrap; gap: 30px;"></div>
         <button class="btn" id="btn-play" onclick="audioManager.playWav('botton'); startGameLocal()">SINGLEPLAYER</button>
         <button class="btn" id="btn-multiplayer" onclick="audioManager.playWav('botton'); showMultiplayerMenu()">MULTIPLAYER</button>
         <p id="controls-hint" style="font-size: 10px; color: #888; margin-top:20px;">Use A/D para Mover, Espaço p/ Pular, Mouse p/ Mirar, F p/ Habilidade</p>
@@ -412,13 +413,15 @@ const TEXTS = {
         play: "JOGAR", controls: "Use A/D p/ Mover, Espaço p/ Pular, Mouse p/ Mirar, F p/ Habilidade", waveComplete: "ONDA CONCLUÍDA!", choosePerk: "Escolha um perk para avançar",
         bossWave: "CHEFE", miniBoss: "MINI CHEFE", ready: "Você está pronto?", start: "COMEÇAR", paused: "PAUSADO", resume: "CONTINUAR", giveUp: "DESISTIR",
         gameOver: "FIM DE JOGO", waves: "Ondas", souls: "Almas", menu: "MENU", perksTitle: "PERKS COLETADOS", close: "FECHAR", blocked: "BLOQUEADO",
-        revived: "RENASCEU!", perks: "PERKS", shield: "[ESCUDO]", phoenix: "[FENIX]", acquired: "Adquirido", tier: "Nível"
+        revived: "RENASCEU!", perks: "PERKS", 
+shield: "[ESCUDO]", phoenix: "[FENIX]", acquired: "Adquirido", tier: "Nível", skinSelect: "Selecione Sua Skin", audioHint: "Clique para ativar o som"
     },
     en: {
         play: "PLAY", controls: "Use A/D to Move, Space to Jump, Mouse to Aim, F for Skill", waveComplete: "WAVE COMPLETE!", choosePerk: "Choose a perk to advance",
         bossWave: "BOSS WAVE", miniBoss: "MINI BOSS", ready: "Are you sure?", start: "START", paused: "PAUSED", resume: "RESUME", giveUp: "GIVE UP",
-        gameOver: "GAME OVER", waves: "Waves Survived", souls: "Souls Earned", menu: "MAIN MENU", perksTitle: "COLLECTED PERKS", close: "CLOSE", blocked: "BLOCKED",
-        revived: "REVIVED!", perks: "PERKS", shield: "[SHIELD]", phoenix: "[PHOENIX]", acquired: "Acquired", tier: "Tier"
+        gameOver: "GAME OVER", waves: "Waves Survived", souls: "Souls Earned", menu: "MAIN MENU", perksTitle: "COLLECTED PERKS", close: "CLOSE", blocked: 
+"BLOCKED",
+        revived: "REVIVED!", perks: "PERKS", shield: "[SHIELD]", phoenix: "[PHOENIX]", acquired: "Acquired", tier: "Tier", skinSelect: "Select Your Skin", audioHint: "Click to enable sound"
     }
 };
 
@@ -447,6 +450,9 @@ function setLanguage(lang) {
     document.getElementById('mana-shield-indicator').innerText = t.shield;
     document.getElementById('phoenix-indicator').innerText = t.phoenix;
     document.getElementById('souls-label').innerText = t.souls;
+    
+    if (document.getElementById('skin-title')) document.getElementById('skin-title').innerText = t.skinSelect;
+    if (document.getElementById('audio-hint')) document.getElementById('audio-hint').innerText = t.audioHint;
 }
 
 /**
@@ -3294,6 +3300,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
