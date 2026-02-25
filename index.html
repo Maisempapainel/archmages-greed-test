@@ -2740,7 +2740,6 @@ class Enemy {
 
         let fireRateMod = 1.0;
         if (Date.now() < this.coldUntil) fireRateMod = Math.pow(0.8, this.coldStacks); else this.coldStacks = 0;
-        let lateScaling = getLateGameScaling(game.wave);
 
         // Intervalo de tiro é reduzido pelo multiplicador Late Game
         let shootInterval = (2300 / fireRateMod) / lateScaling.fireRateMult;
@@ -3382,6 +3381,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
