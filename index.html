@@ -701,9 +701,10 @@ const ServerPinger = {
         const fallbackStun = { urls: "stun:stun.l.google.com:19302" };
         
         if (configSelected.isLAN) {
-            // Ao retornar um array vazio, forçamos o PeerJS a usar apenas o host local/VPN.
-            // Isso impede que o navegador tente "sair para a internet" e se perca do Radmin.
-            return [];
+            // O WebRTC precisa de pelo menos um STUN para não travar na coleta de dados (ICE gathering),
+            // especialmente porque o Radmin sofre com bloqueios de mDNS do navegador.
+            // O tráfego continuará sendo local (P2P) se a rota do Radmin for a mais viável.
+            return [fallbackStun];
         }
 
         const cleanConfig = { ...configSelected };
@@ -3487,6 +3488,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
