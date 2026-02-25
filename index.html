@@ -701,13 +701,13 @@ const ServerPinger = {
         const fallbackStun = { urls: "stun:stun.l.google.com:19302" };
         
         if (configSelected.isLAN) {
-            // Mesmo no Radmin, repassamos um STUN para quebrar a segurança de IP (mDNS) dos navegadores.
-            return [fallbackStun];
+            // Ao retornar um array vazio, forçamos o PeerJS a usar apenas o host local/VPN.
+            // Isso impede que o navegador tente "sair para a internet" e se perca do Radmin.
+            return [];
         }
 
         const cleanConfig = { ...configSelected };
         delete cleanConfig.name;
-        
         return [cleanConfig, fallbackStun];
     }
 };
@@ -822,7 +822,9 @@ const Net = {
         const config = {
             debug: 2,
             config: {
-                iceServers: ServerPinger.getSelectedConfig()
+                iceServers: ServerPinger.getSelectedConfig(),
+                iceCandidatePoolSize: 10,
+                iceTransportPolicy: 'all'
             }
         };
 
@@ -3485,6 +3487,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
