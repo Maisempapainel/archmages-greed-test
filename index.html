@@ -1881,9 +1881,9 @@ serializeState() {
 
     handleRevives() {
         if (!Net.isOnline) return;
-
         if (this.reviveNextWave.p1 && this.player) {
             this.player.hp = this.player.maxHp * 0.60;
+            this.player.isDead = false; // <-- CORREÇÃO: Avisa a engine que o P1 não está mais morto
             this.player.updateHpUI();
             this.player.invulnUntil = Date.now() + 3000;
             game.addFloatingText(this.player.x + 20, this.player.y - 40, "RESSUSCITADO! (60%)", "#ffd700");
@@ -1891,6 +1891,7 @@ serializeState() {
         }
         if (this.reviveNextWave.p2 && this.player2) {
             this.player2.hp = this.player2.maxHp * 0.60;
+            this.player2.isDead = false; // <-- CORREÇÃO: Avisa a engine que o P2 não está mais morto
             this.player2.updateHpUI();
             this.player2.invulnUntil = Date.now() + 3000;
             game.addFloatingText(this.player2.x + 20, this.player2.y - 40, "RESSUSCITADO! (60%)", "#ffd700");
@@ -3300,6 +3301,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
