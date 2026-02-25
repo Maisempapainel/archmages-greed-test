@@ -633,7 +633,7 @@ const ServerPinger = {
 
     async pingAll() {
         for (let i = 0; i < ICE_SERVERS.length; i++) {
-            if (!this.intervalId) break; 
+            if (!this.intervalId) break;
             this.latencies[i] = await this.ping(ICE_SERVERS[i]);
             this.renderUI();
         }
@@ -642,17 +642,18 @@ const ServerPinger = {
     ping(serverConfig) {
         return new Promise((resolve) => {
             if (serverConfig.isLAN) {
-                resolve(0); // Rede local não precisa pingar a internet
+                resolve(0); // Rede local não precisa pingar a internet, setamos ping 0
                 return;
             }
+        
             const start = performance.now();
             try {
                 const cleanConfig = { ...serverConfig };
-        delete cleanConfig.name; 
-        delete cleanConfig.ping;  // CORREÇÃO: Isso travava todos os servidores!
-        delete cleanConfig.isLAN; // CORREÇÃO: O Chrome odeia propriedades extras
-        
-        const pc = new RTCPeerConnection({ iceServers: [cleanConfig] });
+                delete cleanConfig.name; 
+                delete cleanConfig.ping;  
+                delete cleanConfig.isLAN; 
+                
+                const pc = new RTCPeerConnection({ iceServers: [cleanConfig] });
                 const timeout = setTimeout(() => { pc.close(); resolve(999); }, 3000);
                 
                 pc.onicecandidate = (e) => {
@@ -672,13 +673,39 @@ const ServerPinger = {
         });
     },
 
-    // A função renderUI() continua aqui intacta!
+    // CORREÇÃO: Função restaurada! É ela que desenha o menu e parou o jogo de travar.
+    renderUI() {
+        const container = document.getElementById('server-list-container');
+        if (!container) return;
+        let html = '<div style="margin-bottom:10px; font-size:10px; color:#4da6ff; text-align:center;">SELECIONE O SERVIDOR:</div>';
+        
+        ICE_SERVERS.forEach((srv, i) => {
+            const lat = this.latencies[i];
+            let latText = lat === undefined ? "Testando..." : (lat >= 999 ? "Falhou" : lat + " ms");
+            let pingColor = "red";
+            if (lat !== undefined && lat < 150) pingColor = "#4dff4d";
+            else if (lat !== undefined && lat < 300) pingColor = "yellow";
+
+            const checked = i === this.selectedServerIndex ? "checked" : "";
+
+            html += `
+                <label class="server-item" onclick="ServerPinger.selectedServerIndex = ${i}; ServerPinger.renderUI();">
+                    <div style="display:flex; align-items:center;">
+                        <input type="radio" name="server-sel" value="${i}" ${checked} style="pointer-events:none;">
+                        <span style="margin-left:5px;">${srv.name}</span>
+                    </div>
+                    <span style="color:${pingColor};">${latText}</span>
+                </label>
+            `;
+        });
+        container.innerHTML = html;
+    },
 
     getSelectedConfig() {
         const cleanConfig = { ...ICE_SERVERS[this.selectedServerIndex] };
         delete cleanConfig.name;
         if (cleanConfig.isLAN) {
-            return []; // Retorna lista vazia: Força o WebRTC a não sair para a internet e usar apenas a LAN local
+            return []; // Retorna lista vazia: Força o WebRTC a não sair para a internet e usar apenas a LAN local (Hamachi/Radmin)
         }
         return [ cleanConfig, { urls: "stun:stun.l.google.com:19302" } ];
     }
@@ -3457,6 +3484,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
