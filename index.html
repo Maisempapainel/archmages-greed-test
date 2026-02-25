@@ -896,6 +896,27 @@ const Net = {
             if (data.type === 'DEV_CMD') {
                 if (this.isHost && game) {
                     game.processDevCommand(data.cmd, false);
+            // NOVO: Recebe o pedido de pause do Client
+            if (data.type === 'TOGGLE_PAUSE' && this.isHost) {
+                if (game) game.togglePause();
+            }
+            
+            // NOVO: Recebe a ordem do Host para mostrar/esconder o menu de pause
+            if (data.type === 'SYNC_PAUSE' && !this.isHost) {
+                if (game) {
+                    if (data.paused && game.state === 'PLAYING') {
+                        game.state = 'PAUSED';
+                        game.paused = true;
+                        document.getElementById('pause-menu').classList.remove('hidden');
+                    } else if (!data.paused && game.state === 'PAUSED') {
+                        game.state = 'PLAYING';
+                        game.paused = false;
+                        document.getElementById('pause-menu').classList.add('hidden');
+            // NOVO: Dispara a cinemática no lado do Client
+            if (data.type === 'START_CINEMATIC' && !this.isHost) {
+                if (game && game.enemies[data.bossIdx]) {
+                    game.startBossDeathCinematic(game.enemies[data.bossIdx]);
+                    }
                 }
             }
         });
@@ -1246,8 +1267,14 @@ processDevCommand(cmd, isHostCmd = true) {
     togglePause() {
         if (this.state !== 'PLAYING' && this.state !== 'PAUSED') return;
 
-        let targetP = (!Net.isOnline || Net.isHost) ? this.player : this.player2;
+        // NOVO: Se for client, pede pro host pausar e ignora a lógica local
+        if (Net.isOnline && !Net.isHost) {
+            Net.send({ type: 'TOGGLE_PAUSE' });
+            return;
+        }
 
+        let targetP = (!Net.isOnline || Net.isHost) ? this.player : this.player2;
+        
         if (this.state === 'PLAYING') {
             this.state = 'PAUSED';
             this.paused = true;
@@ -1262,6 +1289,11 @@ processDevCommand(cmd, isHostCmd = true) {
             if (targetP && !targetP.manaShieldReady && targetP.perks.manaShield) {
                 targetP.manaShieldCooldown = Date.now() + this.manaShieldPausedTime;
             }
+        }
+
+        // NOVO: Se for Host, avisa o client para sincronizar a tela de pause
+        if (Net.isOnline && Net.isHost) {
+            Net.send({ type: 'SYNC_PAUSE', paused: this.paused });
         }
     }
 
@@ -1346,6 +1378,12 @@ triggerConfirmedBossWave() {
         
         if (audioManager.current) audioManager.current.pause();
         audioManager.playWav('bossdefeat');
+
+        // NOVO: Envia evento para o client iniciar a cinemática no inimigo exato
+        if (Net.isOnline && Net.isHost) {
+            let bossIdx = this.enemies.indexOf(boss);
+            Net.send({ type: 'START_CINEMATIC', bossIdx: bossIdx });
+        }
     }
 
     startTeleport(fromLeft) {
@@ -1937,6 +1975,7 @@ serializeState() {
 
     showUpgradeMenu() {
         this.clearAllBullets();
+        document.getElementById('fade-overlay').style.opacity = 0;
 
         const menu = document.getElementById('upgrade-menu');
         const container = document.getElementById('upgrade-container');
@@ -2061,22 +2100,27 @@ serializeState() {
             let targetX = this.cinematicBoss.x + this.cinematicBoss.width/2;
             let targetY = this.cinematicBoss.y + this.cinematicBoss.height/2;
             
-            let progress = Math.min(1, elapsed / 3000); 
-            
+            let progress = Math.min(1, elapsed / 3000);
             let shakeIntensity = elapsed < 3000 ? progress * 6 : 0;
             let shakeX = (Math.random() - 0.5) * shakeIntensity;
             let shakeY = (Math.random() - 0.5) * shakeIntensity;
             
-            let zoom = 1 + (progress * 0.5); 
-            
+            let zoom = 1 + (progress * 0.5);
             let startCamX = this.width / 2;
             let startCamY = this.height / 2;
             let currentCamX = startCamX + (targetX - startCamX) * progress;
             let currentCamY = startCamY + (targetY - startCamY) * progress;
-            
             ctx.translate(this.width/2, this.height/2);
             ctx.scale(zoom, zoom);
             ctx.translate(-currentCamX + shakeX, -currentCamY + shakeY);
+
+            // NOVO: Garante o efeito de escurecimento (fade) rodando na renderização do Client
+            if (elapsed >= 3000) {
+                let fadeProgress = (elapsed - 3000) / 2000;
+                document.getElementById('fade-overlay').style.opacity = Math.min(1, fadeProgress);
+            } else {
+                document.getElementById('fade-overlay').style.opacity = 0;
+            }
         }
 
         // Desenhar Zona Limite do Teleporte se requisitado
@@ -3304,6 +3348,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
