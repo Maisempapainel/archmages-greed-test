@@ -2986,6 +2986,7 @@ class Boss extends Enemy {
                 game.bullets.push(b);
             }
         }
+    }
 
     summonMinions() { 
         let minionCount = game.enemies.filter(e => e.type !== 'boss' && e.type !== 'miniboss').length;
@@ -3394,6 +3395,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
