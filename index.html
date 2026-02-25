@@ -2193,7 +2193,7 @@ serializeState() {
         ctx.fillStyle = '#0a0a0a'; ctx.strokeStyle = '#fff'; ctx.lineWidth = 2;
         this.blocks.forEach(b => { ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h); });
         
-// Desenha miras e lasers
+// 1. Desenha miras e lasers (A lógica de quem vê o quê agora está separada)
         if (this.player && !this.player.isDead && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
             const centerX = this.player.x + this.player.width / 2;
             const centerY = this.player.y + this.player.height / 2;
@@ -2204,20 +2204,14 @@ serializeState() {
             if (this.player.laserActive) {
                 // Laser ativo: TODO MUNDO VÊ
                 ctx.save();
-                ctx.strokeStyle = 'red';
-                ctx.lineWidth = 25;
-                ctx.lineCap = 'round';
+                ctx.strokeStyle = 'red'; ctx.lineWidth = 25; ctx.lineCap = 'round';
                 ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
-                ctx.beginPath();
-                ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
-                
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 8;
-                ctx.globalAlpha = 0.9;
+                ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 8; ctx.globalAlpha = 0.9;
                 ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
                 ctx.restore();
             } else if (!Net.isOnline || Net.isHost) {
-                // Mira fina: APENAS O HOST (OU SINGLEPLAYER) VÊ
+                // Mira fina: APENAS O DONO (P1/HOST) VÊ
                 ctx.save();
                 ctx.strokeStyle = 'red'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
                 ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke(); ctx.restore();
@@ -2234,42 +2228,41 @@ serializeState() {
             if (this.player2.laserActive) {
                 // Laser ativo: TODO MUNDO VÊ
                 ctx.save();
-                ctx.strokeStyle = 'blue';
-                ctx.lineWidth = 25;
-                ctx.lineCap = 'round';
+                ctx.strokeStyle = 'blue'; ctx.lineWidth = 25; ctx.lineCap = 'round';
                 ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
-                ctx.beginPath();
-                ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke();
-                
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 8;
-                ctx.globalAlpha = 0.9;
+                ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke();
+                ctx.strokeStyle = 'white'; ctx.lineWidth = 8; ctx.globalAlpha = 0.9;
                 ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke();
                 ctx.restore();
             } else if (Net.isOnline && !Net.isHost) {
-                // Mira fina: APENAS O CLIENTE VÊ
+                // Mira fina: APENAS O DONO (P2/CLIENTE) VÊ
                 ctx.save();
                 ctx.strokeStyle = 'blue'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
                 ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke(); ctx.restore();
             }
         }
-    }
 
+        // 2. Desenha os elementos do jogo (DENTRO da função draw)
         if (this.player2) this.player2.draw(ctx);
         if (this.player) this.player.draw(ctx);
-        this.enemies.forEach(e => { if (!e.dead) e.draw(ctx); });
+        
+        this.enemies.forEach(e => { 
+            if (!e.dead) e.draw(ctx); 
+        });
+        
         this.bullets.forEach(b => b.draw(ctx));
         this.particles.forEach(p => p.draw(ctx));
         this.lightningEffects.forEach(l => l.draw(ctx));
         this.floatingTexts.forEach(t => t.draw(ctx));
 
+        // 3. Finaliza a câmera e desenha overlays de menu
         ctx.restore();
 
         if (this.state === 'BOSS_CONFIRM' || this.state === 'UPGRADE_MENU' || this.state === 'PAUSED') {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, this.width, this.height);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; 
+            ctx.fillRect(0, 0, this.width, this.height);
         }
-    }
-}
+    } // Aqui termina a função draw() corretamente.
 
 class FloatingText {
     constructor(x, y, text, color) {
@@ -3445,6 +3438,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
