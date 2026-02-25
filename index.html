@@ -938,9 +938,21 @@ const Net = {
             
             // NOVO: Dispara a cinemática no lado do Client
             if (data.type === 'START_CINEMATIC' && !this.isHost) {
-                if (game && game.enemies[data.bossIdx]) {
+                 if (game && game.enemies[data.bossIdx]) {
                     game.startBossDeathCinematic(game.enemies[data.bossIdx]);
-                }
+                 }
+            }
+            
+            // NOVO: Dispara o Fade de Teleporte no Client
+            if (data.type === 'TELEPORT_FADE' && !this.isHost) {
+                let fadeElement = document.getElementById('teleport-fade');
+                fadeElement.style.display = 'block';
+                setTimeout(() => fadeElement.style.opacity = 1, 10);
+                audioManager.playSfx('teleport');
+                setTimeout(() => {
+                    fadeElement.style.opacity = 0;
+                    setTimeout(() => fadeElement.style.display = 'none', 700);
+                }, 700);
             }
         });
     },
@@ -1411,6 +1423,7 @@ triggerConfirmedBossWave() {
 
     startTeleport(fromLeft) {
         this.state = 'TELEPORTING';
+        if (Net.isOnline && Net.isHost) Net.send({ type: 'TELEPORT_FADE' });
         let fadeElement = document.getElementById('teleport-fade');
         fadeElement.style.display = 'block';
         
@@ -1548,9 +1561,12 @@ serializeState() {
                 oy: p1OrbY, 
                 iu: this.player.invulnUntil,
                 wt: this.player.walkTimer,
-                d: this.player.isDead
+                d: this.player.isDead,
+                ax: this.player.aimX,
+                ay: this.player.aimY
             },
-            p2: this.player2 ? {
+            p2: this.player2 ?
+            {
                 x: this.player2.x, 
                 y: this.player2.y, 
                 w: this.player2.width, 
@@ -1564,9 +1580,11 @@ serializeState() {
                 oy: p2OrbY, 
                 iu: this.player2.invulnUntil,
                 wt: this.player2.walkTimer,
-                d: this.player2.isDead
+                d: this.player2.isDead,
+                ax: this.player2.aimX,
+                ay: this.player2.aimY
             } : null,
-            en: this.enemies.map(e => ({ x: e.x, y: e.y, hp: e.hp, mx: e.maxHp, t: e.type, s: e.shieldActive, po: e.poisonActive, w: e.width, h: e.height, lh: e.lastHitTime, isB: e.isBigBoss || false, aX: e.anchorX, cU: e.colorUntil })),
+            en: this.enemies.map(e => ({ x: e.x, y: e.y, hp: e.hp, mx: e.maxHp, t: e.type, s: e.shieldActive, po: e.poisonActive, w: e.width, h: e.height, lh: e.lastHitTime, isB: e.isBigBoss || false, aX: e.anchorX, cU: e.colorUntil, d: e.dead })),
             bu: this.bullets.map(b => ({ x: b.x, y: b.y, c: b.color, r: b.radius, hi: b.history || [] })),
             pa: this.particles.map(p => ({ x: p.x, y: p.y, c: p.color, s: p.size })),
             ft: this.floatingTexts.map(f => ({ x: f.x, y: f.y, t: f.text, c: f.color, d: f.duration, st: f.spawnTime })),
@@ -1628,6 +1646,10 @@ serializeState() {
             this.player.walkTimer = s.p1.wt; 
             this.player.isDead = s.p1.d;     
             
+            if (s.p1.ax !== undefined) {
+                this.player.aimX = s.p1.ax;
+                this.player.aimY = s.p1.ay;
+            }
             if (this.player.orb && s.p1.or !== undefined) {
                 this.player.orb.x = s.p1.or;
                 this.player.orb.y = s.p1.oy;
@@ -1648,6 +1670,10 @@ serializeState() {
             this.player2.walkTimer = s.p2.wt; 
             this.player2.isDead = s.p2.d;     
             
+            if (s.p2.ax !== undefined) {
+                this.player2.aimX = s.p2.ax;
+                this.player2.aimY = s.p2.ay;
+            }
             if (this.player2.orb && s.p2.or !== undefined) {
                 this.player2.orb.x = s.p2.or;
                 this.player2.orb.y = s.p2.oy;
@@ -1668,6 +1694,7 @@ serializeState() {
              this.enemies[i].height = s.en[i].h; this.enemies[i].lastHitTime = s.en[i].lh;
              this.enemies[i].isBigBoss = s.en[i].isB;
              this.enemies[i].anchorX = s.en[i].aX; this.enemies[i].colorUntil = s.en[i].cU;
+             this.enemies[i].dead = s.en[i].d;
         }
 
         // Sincroniza Projéteis
@@ -2167,62 +2194,66 @@ serializeState() {
         this.blocks.forEach(b => { ctx.fillRect(b.x, b.y, b.w, b.h); ctx.strokeRect(b.x, b.y, b.w, b.h); });
         
 // Desenha miras e lasers
-        let localInputMouse = this.input.mouse;
         if (this.player && !this.player.isDead && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
+            const centerX = this.player.x + this.player.width / 2;
+            const centerY = this.player.y + this.player.height / 2;
+            const angle = Math.atan2((this.player.aimY || 0) - centerY, (this.player.aimX || 0) - centerX);
+            const endX = centerX + Math.cos(angle) * 2000; 
+            const endY = centerY + Math.sin(angle) * 2000;
             
-            // P1
-            if (!Net.isOnline || Net.isHost) {
-                const centerX = this.player.x + this.player.width / 2;
-                const centerY = this.player.y + this.player.height / 2;
-                const angle = Math.atan2((Net.isOnline && !Net.isHost ? this.netInput.mouse.y : this.input.mouse.y) - centerY, (Net.isOnline && !Net.isHost ? this.netInput.mouse.x : this.input.mouse.x) - centerX);
-                const endX = centerX + Math.cos(angle) * 2000; const endY = centerY + Math.sin(angle) * 2000;
+            if (this.player.laserActive) {
+                // Laser ativo: TODO MUNDO VÊ
+                ctx.save();
+                ctx.strokeStyle = 'red';
+                ctx.lineWidth = 25;
+                ctx.lineCap = 'round';
+                ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
                 
-                if (this.player.laserActive) {
-                    ctx.save();
-                    ctx.strokeStyle = 'red';
-                    ctx.lineWidth = 25;
-                    ctx.lineCap = 'round';
-                    ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
-                    ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
-                    
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 8;
-                    ctx.globalAlpha = 0.9;
-                    ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
-                    ctx.restore();
-                } else {
-                    ctx.save(); ctx.strokeStyle = 'red'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
-                    ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke(); ctx.restore();
-                }
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 8;
+                ctx.globalAlpha = 0.9;
+                ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
+                ctx.restore();
+            } else if (!Net.isOnline || Net.isHost) {
+                // Mira fina: APENAS O HOST (OU SINGLEPLAYER) VÊ
+                ctx.save();
+                ctx.strokeStyle = 'red'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
+                ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke(); ctx.restore();
             }
         }
 
         if (this.player2 && !this.player2.isDead && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
-            if (Net.isOnline && !Net.isHost) {
-                const cX = this.player2.x + this.player2.width / 2;
-                const cY = this.player2.y + this.player2.height / 2;
-                const a = Math.atan2((Net.isOnline && !Net.isHost ? this.input.mouse.y : this.netInput.mouse.y) - cY, (Net.isOnline && !Net.isHost ? this.input.mouse.x : this.netInput.mouse.x) - cX);
-                const eX = cX + Math.cos(a) * 2000; const eY = cY + Math.sin(a) * 2000;
-
-                if (this.player2.laserActive) {
-                    ctx.save();
-                    ctx.strokeStyle = 'blue';
-                    ctx.lineWidth = 25;
-                    ctx.lineCap = 'round';
-                    ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
-                    ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke();
-                    
-                    ctx.strokeStyle = 'white';
-                    ctx.lineWidth = 8;
-                    ctx.globalAlpha = 0.9;
-                    ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke();
-                    ctx.restore();
-                } else {
-                    ctx.save(); ctx.strokeStyle = 'blue'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
-                    ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke(); ctx.restore();
-                }
+            const cX = this.player2.x + this.player2.width / 2;
+            const cY = this.player2.y + this.player2.height / 2;
+            const a = Math.atan2((this.player2.aimY || 0) - cY, (this.player2.aimX || 0) - cX);
+            const eX = cX + Math.cos(a) * 2000; 
+            const eY = cY + Math.sin(a) * 2000;
+            
+            if (this.player2.laserActive) {
+                // Laser ativo: TODO MUNDO VÊ
+                ctx.save();
+                ctx.strokeStyle = 'blue';
+                ctx.lineWidth = 25;
+                ctx.lineCap = 'round';
+                ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
+                ctx.beginPath();
+                ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke();
+                
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 8;
+                ctx.globalAlpha = 0.9;
+                ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke();
+                ctx.restore();
+            } else if (Net.isOnline && !Net.isHost) {
+                // Mira fina: APENAS O CLIENTE VÊ
+                ctx.save();
+                ctx.strokeStyle = 'blue'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
+                ctx.beginPath(); ctx.moveTo(cX, cY); ctx.lineTo(eX, eY); ctx.stroke(); ctx.restore();
             }
         }
+    }
 
         if (this.player2) this.player2.draw(ctx);
         if (this.player) this.player.draw(ctx);
@@ -2321,8 +2352,9 @@ class Player {
         this.orb = new CompanionOrb(this); this.lastShot = 0; this.facing = 1; this.invulnUntil = 0;
         this.healingFatigueUntil = 0; 
         this.isDead = false;
+        this.aimX = 0; this.aimY = 0;
         
-        this.laserActive = false; this.laserTimer = 0; this.laserCooldown = 0; this.laserLastTick = 0;
+        this.laserActive = false; this.laserTimer = 0; this.laserCooldown = 0;
         this.teleportCooldown = 0;
 
         if ((this.isPlayer1 && Net.isHost) || (!this.isPlayer1 && !Net.isHost) || !Net.isOnline) {
@@ -2411,7 +2443,10 @@ class Player {
 
     update(inputObj) {
         if (this.isDead) return;
-
+        if (inputObj) {
+            this.aimX = inputObj.mouse.x;
+            this.aimY = inputObj.mouse.y;
+        }
         if (this.perks.manaShield && !this.manaShieldReady) {
             if (Date.now() > this.manaShieldCooldown) {
                 this.manaShieldReady = true; 
@@ -3410,6 +3445,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
