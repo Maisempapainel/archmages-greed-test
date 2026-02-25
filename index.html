@@ -648,9 +648,11 @@ const ServerPinger = {
             const start = performance.now();
             try {
                 const cleanConfig = { ...serverConfig };
-                delete cleanConfig.name; 
-                
-                const pc = new RTCPeerConnection({ iceServers: [cleanConfig] });
+        delete cleanConfig.name; 
+        delete cleanConfig.ping;  // CORREÇÃO: Isso travava todos os servidores!
+        delete cleanConfig.isLAN; // CORREÇÃO: O Chrome odeia propriedades extras
+        
+        const pc = new RTCPeerConnection({ iceServers: [cleanConfig] });
                 const timeout = setTimeout(() => { pc.close(); resolve(999); }, 3000);
                 
                 pc.onicecandidate = (e) => {
@@ -1747,15 +1749,14 @@ serializeState() {
         requestAnimationFrame(() => this.loop());
     } // Fim da função loop()
 
-    // NOVO: Função que suaviza o movimento dos objetos no cliente (Lerp)
+    // Cole esta função fora do loop(), mas ainda dentro da class Game
     clientInterpolate() {
         const lerp = (start, end, amt) => (1 - amt) * start + amt * end;
-        const amt = 0.35; // Nível de suavidade (0.1 = lento, 1.0 = instantâneo)
+        const amt = 0.35; 
 
         const interpolateObj = (obj) => {
             if (obj && obj.targetX !== undefined && obj.targetY !== undefined) {
                 const dist = Math.hypot(obj.targetX - obj.x, obj.targetY - obj.y);
-                // Se o boneco estiver muito longe de repente (ex: teleporte ou renasceu), pula direto sem suavizar
                 if (dist > 150) { 
                     obj.x = obj.targetX; obj.y = obj.targetY;
                 } else {
@@ -3456,6 +3457,7 @@ window.onload = initGame;
 </script>
 </body>
 </html>
+
 
 
 
