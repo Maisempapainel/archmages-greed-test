@@ -20,6 +20,8 @@
             position: relative;
             width: 100vw;
             height: 100vh;
+            height: 100dvh;
+            overscroll-behavior: none;
             display: flex;
             justify-content: center;
             align-items: center;
@@ -204,23 +206,36 @@
         }
 		/* Controles Mobile */
         #mobile-controls { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 90; touch-action: none; }
-        #joy-base, #aim-base {
-            position: absolute; width: 120px; height: 120px; border-radius: 50%;
-            background: rgba(255,255,255,0.07); border: 2px solid rgba(255,255,255,0.35);
-            pointer-events: auto; touch-action: none;
+        #joy-base, #aim-base, #jump-btn {
+            position: absolute; pointer-events: auto; touch-action: none;
+            user-select: none; -webkit-user-select: none; border-radius: 50%;
         }
-        #joy-base { left: 20px; bottom: 85px; }
-        #aim-base { right: 20px; bottom: 210px; }
+        #joy-base, #aim-base { background: rgba(255,255,255,0.07); border: 2px solid rgba(255,255,255,0.35); }
         #joy-knob, #aim-knob {
-            position: absolute; top: 50%; left: 50%; width: 52px; height: 52px; margin: -26px 0 0 -26px;
-            border-radius: 50%; background: rgba(255,255,255,0.3); border: 2px solid rgba(255,255,255,0.55);
+            position: absolute; top: 50%; left: 50%; width: 45%; height: 45%; margin: -22.5% 0 0 -22.5%;
+            border-radius: 50%; background: rgba(255,255,255,0.3); border: 2px solid rgba(255,255,255,0.55); pointer-events: none;
         }
         #jump-btn {
-            position: absolute; right: 45px; bottom: 75px; width: 92px; height: 92px; border-radius: 50%;
             background: rgba(77,166,255,0.25); border: 2px solid #4da6ff; color: #fff;
-            font-family: inherit; font-size: 11px; display: flex; align-items: center; justify-content: center;
-            pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none;
+            font-family: inherit; display: flex; align-items: center; justify-content: center;
         }
+        #jump-btn:active { background: rgba(77,166,255,0.5); }
+        .control-selected { outline: 3px solid #ffd700; outline-offset: 3px; }
+        #controls-editor { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 2000; }
+        #ce-toolbar {
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
+            background: rgba(0,0,0,0.9); border: 2px solid #fff; padding: 10px 15px; text-align: center;
+            pointer-events: auto; max-width: 90vw; border-radius: 5px;
+        }
+        #ce-toolbar p { font-size: 8px; color: #ccc; margin: 0 0 8px 0; line-height: 1.6; }
+        #ce-buttons { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; }
+        #ce-buttons .btn { padding: 8px 14px; font-size: 11px; margin: 0; }
+        #mobile-options { display: flex; flex-direction: column; align-items: center; gap: 12px; margin: 10px 0; }
+        #aim-toggle-row { font-size: 10px; color: #ccc; cursor: pointer; display: flex; align-items: center; gap: 8px; }
+        #aim-toggle-row input { width: 16px; height: 16px; cursor: pointer; accent-color: #4da6ff; }
+        .flag-img { width: 26px; height: auto; display: block; margin: 0 auto 6px auto; border: 1px solid #555; }
+        .flag-btn { display: flex; flex-direction: column; align-items: center; font-size: 10px; }
+		}
     </style>
 </head>
 <body>
@@ -232,6 +247,18 @@
         <div id="joy-base"><div id="joy-knob"></div></div>
         <div id="aim-base"><div id="aim-knob"></div></div>
         <div id="jump-btn">PULAR</div>
+    </div>
+    <div id="controls-editor" class="hidden">
+        <div id="ce-toolbar">
+            <p>ARRASTE os controles para mover. Toque num controle para selecionar e use − / + para mudar o tamanho.</p>
+            <div id="ce-buttons">
+                <button class="btn" id="ce-minus">−</button>
+                <button class="btn" id="ce-plus">+</button>
+                <button class="btn" id="ce-reset">RESET</button>
+                <button class="btn" id="ce-cancel">VOLTAR</button>
+                <button class="btn" id="ce-save">SALVAR</button>
+            </div>
+        </div>
     </div>
 
     <canvas id="gameCanvas" width="1472" height="690"></canvas>
@@ -295,12 +322,16 @@
 
     <div id="main-menu" class="menu-screen">
         <div class="lang-select">
-            <button class="flag-btn active" id="lang-pt" onclick="audioManager.playWav('botton'); setLanguage('pt')">🇧🇷 PT-BR</button>
-            <button class="flag-btn" id="lang-en" onclick="audioManager.playWav('botton'); setLanguage('en')">🇺🇸 EN-US</button>
+            <button class="flag-btn active" id="lang-pt" onclick="audioManager.playWav('botton'); setLanguage('pt')"><img src="https://flagcdn.com/w40/br.png" alt="BR" class="flag-img">PT-BR</button>
+            <button class="flag-btn" id="lang-en" onclick="audioManager.playWav('botton'); setLanguage('en')"><img src="https://flagcdn.com/w40/us.png" alt="US" class="flag-img">EN-US</button>
         </div>
         <h1>Archmage's Greed</h1>
         <div class="char-select-container" id="char-selection"></div>
         <button class="btn" id="btn-play" onclick="audioManager.playWav('botton'); startGame()">JOGAR</button>
+		<div id="mobile-options" class="hidden">
+            <label id="aim-toggle-row"><input type="checkbox" id="aim-toggle"> Joystick de Mira (mira manual)</label>
+            <button class="btn" id="btn-edit-controls" onclick="audioManager.playWav('botton'); openControlsEditor()">EDITAR CONTROLES</button>
+        </div>
         <p id="controls-hint" style="font-size: 10px; color: #888;">Use A/D para Mover, Espaço p/ Pular, Mouse p/ Mirar, F p/ Habilidade</p>
         <div id="audio-hint">Clique para ativar o som</div>
     </div>
@@ -1005,6 +1036,12 @@ buildTerrainCanvas() {
     }
 
     loop() {
+        const now = performance.now();
+        if (this.lastFrameTime === undefined) this.lastFrameTime = now;
+        const delta = now - this.lastFrameTime;
+        this.lastFrameTime = now;
+        this.frameDelta = Math.max(0, Math.min(50, delta));
+
         if ((this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC') && !this.paused) {
             this.update();
             this.draw();
@@ -1018,7 +1055,7 @@ buildTerrainCanvas() {
         if (!this.player) return;
 
         if (this.state === 'BOSS_DEATH_CINEMATIC') {
-            window.timeScale = 0.2; 
+            window.timeScale = 0.2 * (this.frameDelta / 16.667);
             
             this.player.update();
             this.bullets.forEach(b => b.update());
@@ -1054,7 +1091,7 @@ buildTerrainCanvas() {
             return; 
         }
 
-        window.timeScale = 1.0;
+        window.timeScale = Math.min(2.5, this.frameDelta / 16.667);
         document.getElementById('fade-overlay').style.opacity = 0;
 
         this.player.update();
@@ -1453,7 +1490,7 @@ class FloatingText {
         this.vy = -1; this.spawnTime = Date.now(); this.duration = 500; this.dead = false;
     }
     update() {
-        this.y += this.vy;
+        this.y += this.vy * window.timeScale;
         if (Date.now() - this.spawnTime > this.duration) this.dead = true;
     }
     draw(ctx) {
@@ -1472,7 +1509,7 @@ class CompanionOrb {
         let tier = this.player.perks.pursuingOrb;
         if (tier <= 0) return;
         let targetX = this.player.x + this.player.width + 25; let targetY = this.player.y + 10;
-        this.x += (targetX - this.x) * 0.1; this.y += (targetY - this.y) * 0.1;
+        this.x += (targetX - this.x) * 0.1 * window.timeScale; this.y += (targetY - this.y) * 0.1 * window.timeScale;
 
         let now = Date.now(); let currentFireRate = this.player.stats.fireRate; 
         if (game.state !== 'BOSS_DEATH_CINEMATIC' && now - this.lastShot > currentFireRate) {
@@ -1653,7 +1690,7 @@ class Player {
         let mobMove = window.mobileControls ? window.mobileControls.moveX : 0;
         if (game.input.keys['KeyA'] || mobMove < -0.25) { this.vx = -this.stats.speed * speedMult; this.facing = -1; if(this.grounded) this.walkTimer += 0.2 * window.timeScale; }
         else if (game.input.keys['KeyD'] || mobMove > 0.25) { this.vx = this.stats.speed * speedMult; this.facing = 1; if(this.grounded) this.walkTimer += 0.2 * window.timeScale; }
-        else { this.vx *= CONFIG.friction; this.walkTimer = 0; }
+        else { this.vx *= Math.pow(CONFIG.friction, window.timeScale); this.walkTimer = 0; }
 
         if (game.input.keys['Space']) {
             if (!this.jumpKeyHeld) { 
@@ -1995,9 +2032,6 @@ class Enemy {
         let img = ASSETS.images[this.type];
         
         ctx.save();
-        if (this.poisonActive) {
-            ctx.filter = 'sepia(1) hue-rotate(80deg) saturate(4)';
-        }
 
         if (img && img.complete && img.naturalHeight !== 0) {
             let tamanhoVisual = this.width * this.escalaVisual;
@@ -2006,6 +2040,13 @@ class Enemy {
             if (Date.now() - this.lastHitTime < 100) ctx.globalAlpha = 0.5;
             
             ctx.drawImage(img, this.x - offsetCentralizado, this.y - offsetCentralizado, tamanhoVisual, tamanhoVisual);
+            if (this.poisonActive) {
+                ctx.globalAlpha = 0.30;
+                ctx.fillStyle = '#00cc00';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, tamanhoVisual / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
             ctx.restore();
             
             ctx.fillStyle = 'red'; ctx.fillRect(this.x, this.y - 8, this.width, 3);
@@ -2148,9 +2189,6 @@ class Boss extends Enemy {
         let img = ASSETS.images[this.type];
         
         ctx.save();
-        if (this.poisonActive) {
-            ctx.filter = 'sepia(1) hue-rotate(80deg) saturate(4)';
-        }
 
         if (img && img.complete && img.naturalHeight !== 0) {
             let tamanhoVisual = this.width * this.escalaVisual;
@@ -2159,6 +2197,13 @@ class Boss extends Enemy {
             if (Date.now() - this.lastHitTime < 100 || Date.now() < this.colorUntil) ctx.globalAlpha = 0.5;
             
             ctx.drawImage(img, this.x - offsetCentralizado, this.y - offsetCentralizado, tamanhoVisual, tamanhoVisual);
+            if (this.poisonActive) {
+                ctx.globalAlpha = 0.30;
+                ctx.fillStyle = '#00cc00';
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, tamanhoVisual / 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
             
             // Desenha Escudo Visual Idêntico ao do Jogador
             if (this.shieldActive) {
@@ -2465,6 +2510,10 @@ function initGame() {
 function startGame() {
     audioManager.playWav('botton');
     audioManager.play('principal'); 
+    if (window.isMobileDevice && document.documentElement.requestFullscreen) {
+        document.documentElement.requestFullscreen().catch(() => {});
+        setTimeout(() => { fitGameToScreen(); if (window.positionMobileControls) window.positionMobileControls(); }, 600);
+    }
     document.getElementById('hud-top-left').style.display = 'block'; 
     document.getElementById('pause-btn-ingame').style.display = 'block'; 
     document.getElementById('perk-list-btn').style.display = 'block'; 
@@ -2486,9 +2535,14 @@ window.mobileControls = { moveX: 0, aimActive: false, aimDX: 0, aimDY: -1 };
 window.updateMobileAim = null;
 
 // Ajusta o jogo ao tamanho da tela (celular ou janela pequena)
+function getViewportSize() {
+    if (window.visualViewport) return { w: window.visualViewport.width, h: window.visualViewport.height };
+    return { w: window.innerWidth, h: window.innerHeight };
+}
 function fitGameToScreen() {
     const baseW = 1472, baseH = 690;
-    const scale = Math.min(window.innerWidth / baseW, window.innerHeight / baseH, 1);
+    const vp = getViewportSize();
+    const scale = Math.min(vp.w / baseW, vp.h / baseH, 1);
     const els = [document.getElementById('gameCanvas'), document.querySelector('.ui-layer')];
     document.querySelectorAll('.menu-screen').forEach(m => els.push(m));
     els.forEach(el => {
@@ -2498,10 +2552,12 @@ function fitGameToScreen() {
     });
     const modal = document.getElementById('perk-modal');
     if (modal) modal.style.transform = 'translate(-50%, -50%) scale(' + scale + ')';
+    if (window.positionMobileControls) window.positionMobileControls();
 }
 fitGameToScreen();
-window.addEventListener('resize', fitGameToScreen);
-window.addEventListener('orientationchange', fitGameToScreen);
+window.addEventListener('resize', () => { fitGameToScreen(); setTimeout(fitGameToScreen, 300); });
+window.addEventListener('orientationchange', () => { fitGameToScreen(); setTimeout(fitGameToScreen, 300); });
+if (window.visualViewport) window.visualViewport.addEventListener('resize', fitGameToScreen);
 
 if (window.isMobileDevice) {
     (function () {
@@ -2514,106 +2570,211 @@ if (window.isMobileDevice) {
         const aimBase = document.getElementById('aim-base');
         const aimKnob = document.getElementById('aim-knob');
         const jumpBtn = document.getElementById('jump-btn');
-        const MAX_DIST = 40;
+        const GAME_W = 1472, GAME_H = 690;
+        window.controlsEditMode = false;
 
-        // ---- Joystick de movimento (esquerda) ----
+        // ---- Layout salvo no navegador (coordenadas do jogo) ----
+        const defaultLayout = {
+            move: { x: 40, y: 480, size: 180 },
+            jump: { x: 1262, y: 490, size: 170 },
+            aim: { x: 1272, y: 160, size: 160 }
+        };
+        let layout;
+        try { layout = JSON.parse(localStorage.getItem('mobileControlsLayout')) || defaultLayout; }
+        catch (err) { layout = defaultLayout; }
+        ['move', 'jump', 'aim'].forEach(k => { if (!layout[k]) layout[k] = { ...defaultLayout[k] }; });
+
+        function clampLayout() {
+            ['move', 'jump', 'aim'].forEach(k => {
+                const c = layout[k];
+                c.size = Math.max(80, Math.min(400, c.size));
+                c.x = Math.max(0, Math.min(GAME_W - c.size, c.x));
+                c.y = Math.max(0, Math.min(GAME_H - c.size, c.y));
+            });
+        }
+
+        function place(el, c, rect, s) {
+            el.style.width = (c.size * s) + 'px';
+            el.style.height = (c.size * s) + 'px';
+            el.style.left = (rect.left + c.x * s) + 'px';
+            el.style.top = (rect.top + c.y * s) + 'px';
+            if (el === jumpBtn) el.style.fontSize = Math.max(9, Math.round(c.size * s * 0.12)) + 'px';
+        }
+
+        window.positionMobileControls = function () {
+            const rect = canvas.getBoundingClientRect();
+            const s = rect.width / GAME_W;
+            place(joyBase, layout.move, rect, s);
+            place(aimBase, layout.aim, rect, s);
+            place(jumpBtn, layout.jump, rect, s);
+        };
+
+        // ---- Checkbox do joystick de mira (desligado por padrão) ----
+        window.aimJoystickEnabled = localStorage.getItem('aimJoystickEnabled') === '1';
+        const mobileOptions = document.getElementById('mobile-options');
+        const aimToggle = document.getElementById('aim-toggle');
+        if (mobileOptions) mobileOptions.classList.remove('hidden');
+        function updateAimVisibility() {
+            aimBase.style.display = (window.aimJoystickEnabled || window.controlsEditMode) ? 'block' : 'none';
+        }
+        if (aimToggle) {
+            aimToggle.checked = window.aimJoystickEnabled;
+            aimToggle.addEventListener('change', () => {
+                window.aimJoystickEnabled = aimToggle.checked;
+                localStorage.setItem('aimJoystickEnabled', window.aimJoystickEnabled ? '1' : '0');
+                updateAimVisibility();
+            });
+        }
+
+        // ---- Modo de edição dos controles ----
+        let selectedControl = null;
+        let editDrag = null;
+        function clearSelection() {
+            selectedControl = null;
+            [joyBase, aimBase, jumpBtn].forEach(el => el.classList.remove('control-selected'));
+        }
+        window.openControlsEditor = function () {
+            window.controlsEditMode = true;
+            clearSelection();
+            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('controls-editor').classList.remove('hidden');
+            updateAimVisibility();
+            positionMobileControls();
+        };
+        function closeControlsEditor(save) {
+            if (save) {
+                clampLayout();
+                localStorage.setItem('mobileControlsLayout', JSON.stringify(layout));
+            } else {
+                try { layout = JSON.parse(localStorage.getItem('mobileControlsLayout')) || defaultLayout; }
+                catch (err) { layout = defaultLayout; }
+                ['move', 'jump', 'aim'].forEach(k => { if (!layout[k]) layout[k] = { ...defaultLayout[k] }; });
+            }
+            window.controlsEditMode = false;
+            clearSelection();
+            document.getElementById('controls-editor').classList.add('hidden');
+            document.getElementById('main-menu').classList.remove('hidden');
+            updateAimVisibility();
+            positionMobileControls();
+        }
+        function adjustSelectedSize(delta) {
+            if (!selectedControl) return;
+            layout[selectedControl].size += delta;
+            clampLayout();
+            positionMobileControls();
+        }
+        document.getElementById('ce-save').addEventListener('click', () => { audioManager.playWav('botton'); closeControlsEditor(true); });
+        document.getElementById('ce-cancel').addEventListener('click', () => { audioManager.playWav('botton'); closeControlsEditor(false); });
+        document.getElementById('ce-reset').addEventListener('click', () => {
+            audioManager.playWav('botton');
+            layout = { move: { ...defaultLayout.move }, jump: { ...defaultLayout.jump }, aim: { ...defaultLayout.aim } };
+            positionMobileControls();
+        });
+        document.getElementById('ce-minus').addEventListener('click', () => adjustSelectedSize(-20));
+        document.getElementById('ce-plus').addEventListener('click', () => adjustSelectedSize(20));
+
+        // ---- Toque dos controles (funciona no jogo E no modo edição) ----
+        function setupControl(el, key, onStart, onMove, onEnd) {
+            el.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (window.controlsEditMode) {
+                    clearSelection(); selectedControl = key; el.classList.add('control-selected');
+                    const t = e.changedTouches[0];
+                    const rect = canvas.getBoundingClientRect();
+                    editDrag = { id: t.identifier, startX: t.clientX, startY: t.clientY, origX: layout[key].x, origY: layout[key].y, scale: rect.width / GAME_W };
+                    return;
+                }
+                if (onStart) onStart(e);
+            }, { passive: false });
+            el.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (window.controlsEditMode && editDrag) {
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        const t = e.changedTouches[i];
+                        if (t.identifier !== editDrag.id) continue;
+                        const dx = (t.clientX - editDrag.startX) / editDrag.scale;
+                        const dy = (t.clientY - editDrag.startY) / editDrag.scale;
+                        layout[key].x = editDrag.origX + dx;
+                        layout[key].y = editDrag.origY + dy;
+                        clampLayout();
+                        positionMobileControls();
+                    }
+                    return;
+                }
+                if (onMove) onMove(e);
+            }, { passive: false });
+            const endHandler = (e) => {
+                if (window.controlsEditMode && editDrag) {
+                    for (let i = 0; i < e.changedTouches.length; i++) {
+                        if (e.changedTouches[i].identifier === editDrag.id) editDrag = null;
+                    }
+                    return;
+                }
+                if (onEnd) onEnd(e);
+            };
+            el.addEventListener('touchend', endHandler);
+            el.addEventListener('touchcancel', endHandler);
+        }
+
+        // Joystick de movimento
         let joyTouchId = null;
         const moveJoy = (touch) => {
             const rect = joyBase.getBoundingClientRect();
             const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+            const maxDist = rect.width * 0.32;
             let dx = touch.clientX - cx, dy = touch.clientY - cy;
             const dist = Math.hypot(dx, dy);
-            if (dist > MAX_DIST) { dx = dx / dist * MAX_DIST; dy = dy / dist * MAX_DIST; }
+            if (dist > maxDist) { dx = dx / dist * maxDist; dy = dy / dist * maxDist; }
             joyKnob.style.transform = 'translate(' + dx + 'px, ' + dy + 'px)';
-            window.mobileControls.moveX = dx / MAX_DIST;
+            window.mobileControls.moveX = dx / maxDist;
         };
-        joyBase.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (joyTouchId !== null) return;
-            const t = e.changedTouches[0];
-            joyTouchId = t.identifier;
-            moveJoy(t);
-        }, { passive: false });
-        joyBase.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === joyTouchId) moveJoy(e.changedTouches[i]);
-            }
-        }, { passive: false });
-        const endJoy = (e) => {
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === joyTouchId) {
-                    joyTouchId = null;
-                    window.mobileControls.moveX = 0;
-                    joyKnob.style.transform = 'translate(0px, 0px)';
-                }
-            }
-        };
-        joyBase.addEventListener('touchend', endJoy);
-        joyBase.addEventListener('touchcancel', endJoy);
+        setupControl(joyBase, 'move',
+            (e) => { if (joyTouchId !== null) return; const t = e.changedTouches[0]; joyTouchId = t.identifier; moveJoy(t); },
+            (e) => { for (let i = 0; i < e.changedTouches.length; i++) { if (e.changedTouches[i].identifier === joyTouchId) moveJoy(e.changedTouches[i]); } },
+            (e) => { for (let i = 0; i < e.changedTouches.length; i++) { if (e.changedTouches[i].identifier === joyTouchId) { joyTouchId = null; window.mobileControls.moveX = 0; joyKnob.style.transform = 'translate(0px, 0px)'; } } }
+        );
 
-        // ---- Joystick de mira (direita) ----
+        // Joystick de mira
         let aimTouchId = null;
         const moveAim = (touch) => {
             const rect = aimBase.getBoundingClientRect();
             const cx = rect.left + rect.width / 2, cy = rect.top + rect.height / 2;
+            const maxDist = rect.width * 0.32;
             let dx = touch.clientX - cx, dy = touch.clientY - cy;
             const dist = Math.hypot(dx, dy);
             if (dist > 8) {
-                window.mobileControls.aimActive = true;
                 window.mobileControls.aimDX = dx / dist;
                 window.mobileControls.aimDY = dy / dist;
             }
-            const vdist = Math.min(dist, MAX_DIST);
+            const vdist = Math.min(dist, maxDist);
             if (dist > 0) aimKnob.style.transform = 'translate(' + (dx / dist * vdist) + 'px, ' + (dy / dist * vdist) + 'px)';
         };
-        aimBase.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (aimTouchId !== null) return;
-            const t = e.changedTouches[0];
-            aimTouchId = t.identifier;
-            moveAim(t);
-        }, { passive: false });
-        aimBase.addEventListener('touchmove', (e) => {
-            e.preventDefault();
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === aimTouchId) moveAim(e.changedTouches[i]);
-            }
-        }, { passive: false });
-        const endAim = (e) => {
-            for (let i = 0; i < e.changedTouches.length; i++) {
-                if (e.changedTouches[i].identifier === aimTouchId) {
-                    aimTouchId = null;
-                    window.mobileControls.aimActive = false;
-                    aimKnob.style.transform = 'translate(0px, 0px)';
-                }
-            }
-        };
-        aimBase.addEventListener('touchend', endAim);
-        aimBase.addEventListener('touchcancel', endAim);
+        setupControl(aimBase, 'aim',
+            (e) => { if (aimTouchId !== null) return; const t = e.changedTouches[0]; aimTouchId = t.identifier; moveAim(t); },
+            (e) => { for (let i = 0; i < e.changedTouches.length; i++) { if (e.changedTouches[i].identifier === aimTouchId) moveAim(e.changedTouches[i]); } },
+            (e) => { for (let i = 0; i < e.changedTouches.length; i++) { if (e.changedTouches[i].identifier === aimTouchId) { aimTouchId = null; aimKnob.style.transform = 'translate(0px, 0px)'; } } }
+        );
 
-        // ---- Botão de pular ----
-        jumpBtn.addEventListener('touchstart', (e) => {
-            e.preventDefault();
-            if (typeof game !== 'undefined' && game) game.input.keys['Space'] = true;
-        }, { passive: false });
-        const endJump = (e) => {
-            e.preventDefault();
-            if (typeof game !== 'undefined' && game) game.input.keys['Space'] = false;
-        };
-        jumpBtn.addEventListener('touchend', endJump, { passive: false });
-        jumpBtn.addEventListener('touchcancel', () => {
-            if (typeof game !== 'undefined' && game) game.input.keys['Space'] = false;
-        });
+        // Botão de pular
+        setupControl(jumpBtn, 'jump',
+            () => { if (typeof game !== 'undefined' && game) game.input.keys['Space'] = true; },
+            null,
+            () => { if (typeof game !== 'undefined' && game) game.input.keys['Space'] = false; }
+        );
+
+        clampLayout();
+        updateAimVisibility();
+        positionMobileControls();
+        setTimeout(positionMobileControls, 300);
     })();
 
-    // Mira: joystick de mira se estiver sendo usado; senão, mira automática
+    // Mira: manual (se o joystick de mira estiver ligado) ou automática
     window.updateMobileAim = function () {
         if (typeof game === 'undefined' || !game || !game.player) return;
         const cx = game.player.x + game.player.width / 2;
         const cy = game.player.y + game.player.height / 2;
 
-        if (window.mobileControls.aimActive) {
+        if (window.aimJoystickEnabled) {
             game.input.mouse.x = cx + window.mobileControls.aimDX * 500;
             game.input.mouse.y = cy + window.mobileControls.aimDY * 500;
             return;
