@@ -328,6 +328,7 @@
         <h1>Archmage's Greed</h1>
         <div class="char-select-container" id="char-selection"></div>
         <button class="btn" id="btn-play" onclick="audioManager.playWav('botton'); startGame()">JOGAR</button>
+		<button class="btn" id="btn-settings" onclick="audioManager.playWav('botton'); toggleSettingsMenu()">⚙ CONFIGURAÇÕES</button>
 		<div id="mobile-options" class="hidden">
             <label id="aim-toggle-row"><input type="checkbox" id="aim-toggle"> Joystick de Mira (mira manual)</label>
             <button class="btn" id="btn-edit-controls" onclick="audioManager.playWav('botton'); openControlsEditor()">EDITAR CONTROLES</button>
@@ -336,6 +337,21 @@
         <div id="audio-hint">Clique para ativar o som</div>
     </div>
 
+    <div id="settings-menu" class="menu-screen hidden">
+        <h1 style="font-size:20px;">CONFIGURAÇÕES</h1>
+        <p style="font-size:10px; color:#ccc; margin-bottom:20px; text-align:center; max-width:600px; line-height:1.6;">
+            Taxa de quadros (apenas visual).<br>
+            Esta opção NUNCA altera a velocidade do jogo —<br>
+            serve apenas para suavidade e economia de bateria.
+        </p>
+        <div class="lang-select">
+            <button class="flag-btn" id="fps-60" onclick="audioManager.playWav('botton'); setRenderFps(60)">60 FPS</button>
+            <button class="flag-btn" id="fps-120" onclick="audioManager.playWav('botton'); setRenderFps(120)">120 FPS</button>
+            <button class="flag-btn" id="fps-240" onclick="audioManager.playWav('botton'); setRenderFps(240)">240 FPS</button>
+            <button class="flag-btn" id="fps-max" onclick="audioManager.playWav('botton'); setRenderFps(0)">MÁXIMO</button>
+        </div>
+        <button class="btn" onclick="audioManager.playWav('botton'); toggleSettingsMenu()" style="margin-top:25px;">VOLTAR</button>
+    </div>
     <div id="upgrade-menu" class="menu-screen hidden">
         <h2 id="wave-complete-text">WAVE COMPLETE!</h2>
         <p id="choose-perk-text" style="font-size:12px; margin-bottom:10px; color:#ccc">Escolha um perk para avançar</p>
@@ -1036,18 +1052,46 @@ buildTerrainCanvas() {
     }
 
     loop() {
-        const now = performance.now();
-        if (this.lastFrameTime === undefined) this.lastFrameTime = now;
-        const delta = now - this.lastFrameTime;
-        this.lastFrameTime = now;
-        this.frameDelta = Math.max(0, Math.min(50, delta));
+        // ⚠️ VELOCIDADE OFICIAL DO JOGO — NÃO ALTERE MAIS NUNCA ⚠️
+        // 240 = a velocidade que o jogo sempre teve no PC do criador.
+        // É IGUAL em qualquer aparelho (PC, celular, qualquer Hz).
+        // A engrenagem do menu NÃO mexe aqui — ela só limita o desenho.
+        const TICKS_PER_SECOND = 240;
+        const MAX_TICKS_PER_FRAME = 10;
 
-        if ((this.state === 'PLAYING' || this.state === 'BOSS_DEATH_CINEMATIC') && !this.paused) {
+        const now = performance.now();
+        if (this.lastTickTime === undefined) this.lastTickTime = now;
+        let delta = now - this.lastTickTime;
+        this.lastTickTime = now;
+        if (delta > 100) delta = 100;
+        if (delta < 0) delta = 0;
+        this.tickAccumulator = (this.tickAccumulator || 0) + delta;
+
+        const TICK_MS = 1000 / TICKS_PER_SECOND;
+        let ticks = 0;
+        while (this.tickAccumulator >= TICK_MS) {
+            this.tickAccumulator -= TICK_MS;
+            if ((this.state !== 'PLAYING' && this.state !== 'BOSS_DEATH_CINEMATIC') || this.paused) {
+                this.tickAccumulator = 0;
+                break;
+            }
             this.update();
-            this.draw();
-        } else {
+            ticks++;
+            if (ticks >= MAX_TICKS_PER_FRAME) { this.tickAccumulator = 0; break; }
+        }
+
+        // Desenho: respeita o limite da engrenagem (SÓ VISUAL — nunca muda a velocidade)
+        let canDraw = true;
+        const fpsCap = window.renderFpsCap || 0; // 0 = MÁXIMO
+        if (fpsCap > 0) {
+            if (!this.lastDrawTime) this.lastDrawTime = 0;
+            if (now - this.lastDrawTime < (1000 / fpsCap) - 1) canDraw = false;
+        }
+        if (canDraw) {
+            this.lastDrawTime = now;
             if (this.state !== 'MENU' && this.player) this.draw();
         }
+
         requestAnimationFrame(() => this.loop());
     }
 
@@ -1055,7 +1099,7 @@ buildTerrainCanvas() {
         if (!this.player) return;
 
         if (this.state === 'BOSS_DEATH_CINEMATIC') {
-            window.timeScale = 0.2 * (this.frameDelta / 16.667);
+            window.timeScale = 0.2;
             
             this.player.update();
             this.bullets.forEach(b => b.update());
@@ -1091,7 +1135,7 @@ buildTerrainCanvas() {
             return; 
         }
 
-        window.timeScale = Math.min(2.5, this.frameDelta / 16.667);
+        window.timeScale = 1.0;
         document.getElementById('fade-overlay').style.opacity = 0;
 
         this.player.update();
@@ -2032,6 +2076,9 @@ class Enemy {
         let img = ASSETS.images[this.type];
         
         ctx.save();
+        if (this.poisonActive) {
+            ctx.filter = 'sepia(1) hue-rotate(80deg) saturate(4)';
+        }
 
         if (img && img.complete && img.naturalHeight !== 0) {
             let tamanhoVisual = this.width * this.escalaVisual;
@@ -2040,13 +2087,6 @@ class Enemy {
             if (Date.now() - this.lastHitTime < 100) ctx.globalAlpha = 0.5;
             
             ctx.drawImage(img, this.x - offsetCentralizado, this.y - offsetCentralizado, tamanhoVisual, tamanhoVisual);
-            if (this.poisonActive) {
-                ctx.globalAlpha = 0.30;
-                ctx.fillStyle = '#00cc00';
-                ctx.beginPath();
-                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, tamanhoVisual / 2, 0, Math.PI * 2);
-                ctx.fill();
-            }
             ctx.restore();
             
             ctx.fillStyle = 'red'; ctx.fillRect(this.x, this.y - 8, this.width, 3);
@@ -2795,6 +2835,34 @@ if (window.isMobileDevice) {
             game.input.mouse.y = cy - 500;
         }
     };
+}
+/**
+ * CONFIGURAÇÕES (ENGRENAGEM) — Limite de FPS do DESENHO.
+ * Isso NUNCA afeta a velocidade do jogo, apenas a suavidade e a bateria.
+ * 0 = MÁXIMO (desenha tanto quanto o monitor aguentar).
+ */
+window.renderFpsCap = parseInt(localStorage.getItem('renderFpsCap'));
+if (isNaN(window.renderFpsCap)) window.renderFpsCap = 0;
+
+function setRenderFps(fps) {
+    window.renderFpsCap = fps;
+    localStorage.setItem('renderFpsCap', fps);
+    updateFpsButtons();
+}
+function updateFpsButtons() {
+    document.getElementById('fps-60').classList.toggle('active', window.renderFpsCap === 60);
+    document.getElementById('fps-120').classList.toggle('active', window.renderFpsCap === 120);
+    document.getElementById('fps-240').classList.toggle('active', window.renderFpsCap === 240);
+    document.getElementById('fps-max').classList.toggle('active', window.renderFpsCap === 0);
+}
+function toggleSettingsMenu() {
+    const el = document.getElementById('settings-menu');
+    if (el.classList.contains('hidden')) {
+        updateFpsButtons();
+        el.classList.remove('hidden');
+    } else {
+        el.classList.add('hidden');
+    }
 }
 window.onload = initGame;
 </script>
