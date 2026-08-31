@@ -305,7 +305,7 @@
     </div>
 
     <div id="dev-console" class="hidden">
-        <input type="text" id="dev-input" placeholder="> Comando (/wave 15, /perk catalyst)" autocomplete="off" />
+        <input type="text" id="dev-input" placeholder="> Comando (/wave 15, /perk catalyst, /soul 100)" autocomplete="off" />
     </div>
 
     <div id="perk-modal" class="hidden">
@@ -878,6 +878,14 @@ buildTerrainCanvas() {
         if(!cmd || !cmd.startsWith('/')) return;
         const parts = cmd.trim().split(' ');
         
+		if (parts[0] === '/soul' && parts[1]) {
+            let amount = parseInt(parts[1]);
+            if (!isNaN(amount)) {
+                this.souls += amount;
+                this.updateSoulsUI();
+                this.addFloatingText(this.width / 2, this.height / 2, `+${amount} ALMAS`, "#4da6ff");
+            }
+        }
         if (parts[0] === '/wave' && parts[1]) {
             this.wave = parseInt(parts[1]);
             this.enemies.forEach(e => e.dead = true);
@@ -1640,6 +1648,8 @@ class CompanionOrb {
             else if (tier === 2) { bulletStats.speed = 1.75; bulletStats.projSize = 4; bulletStats.pierce = 0; } 
             else if (tier === 3) { bulletStats.color = 'white'; }
             if (this.player.perks.cold) bulletStats.isCold = true;
+            bulletStats.staffSkin = this.player.staffIndex;
+            bulletStats.color = this.player.staffIndex === 2 ? '#ffcc33' : (this.player.staffIndex === 3 ? '#38b6ff' : 'white');
 
             game.bullets.push(ObjectPool.getBullet(this.x, this.y, angle, finalDmg, true, bulletStats));
             audioManager.playSfx('shoot');
@@ -1878,6 +1888,8 @@ findAimTarget(aimAngle) {
 
         let bulletStats = { ...this.stats, speed: 1.75, homingTier: this.perks.homing, isCold: this.perks.cold, execute: this.perks.execute, bouncing: this.perks.bouncing, chainTier: this.perks.chainLightning };
         if (this.perks.homing > 0) bulletStats.aimTarget = this.findAimTarget(angle);
+        bulletStats.staffSkin = this.staffIndex;
+        bulletStats.color = this.staffIndex === 2 ? '#ffcc33' : (this.staffIndex === 3 ? '#38b6ff' : 'white');
         game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, dmg, true, bulletStats));
         
         if (this.perks.multishot > 0) {
@@ -1887,6 +1899,8 @@ findAimTarget(aimAngle) {
                 let extraDmg = this.stats.damage * 0.6;
                 if (Math.random() < this.stats.critChance) extraDmg *= this.stats.critDmg;
                 let extraStats = { ...this.stats, speed: 1.75, homingTier: 0, chainTier: 0, bouncing: false };
+                extraStats.staffSkin = this.staffIndex;
+                extraStats.color = this.staffIndex === 2 ? '#ffcc33' : (this.staffIndex === 3 ? '#38b6ff' : 'white');
                 game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle + offset, extraDmg, true, extraStats));
             }
         }
@@ -2412,6 +2426,137 @@ const BulletSprites = {
         return c;
     }
 };
+/**
+ * SPRITES DOS PROJÉTEIS POR CAJADO (pré-renderizados — leve)
+ * staff 1 = cometa branco padrão (usa BulletSprites normal)
+ * staff 2 = sol glifo | staff 3 = orbe hextech + anel rúnico
+ */
+const StaffBulletSprites = {
+    _sun: null, _orb: null, _ring: null,
+
+    sun() {
+        if (this._sun) return this._sun;
+        const size = 96, cx = size / 2;
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        const g = c.getContext('2d');
+
+        let halo = g.createRadialGradient(cx, cx, 2, cx, cx, cx);
+        halo.addColorStop(0, 'rgba(255,250,210,0.55)');
+        halo.addColorStop(0.4, 'rgba(255,190,0,0.28)');
+        halo.addColorStop(1, 'rgba(255,150,0,0)');
+        g.fillStyle = halo;
+        g.fillRect(0, 0, size, size);
+
+        for (let i = 0; i < 12; i++) {
+            const a = i * Math.PI / 6;
+            const longo = i % 2 === 0;
+            const r1 = longo ? 17 : 15;
+            const r2 = longo ? 45 : 30;
+            const w = longo ? 0.14 : 0.09;
+            g.fillStyle = longo ? 'rgba(255,200,30,0.95)' : 'rgba(255,235,140,0.9)';
+            g.beginPath();
+            g.moveTo(cx + Math.cos(a - w) * r1, cx + Math.sin(a - w) * r1);
+            g.lineTo(cx + Math.cos(a) * r2, cx + Math.sin(a) * r2);
+            g.lineTo(cx + Math.cos(a + w) * r1, cx + Math.sin(a + w) * r1);
+            g.closePath();
+            g.fill();
+        }
+
+        let nucleo = g.createRadialGradient(cx, cx, 1, cx, cx, 20);
+        nucleo.addColorStop(0, '#ffffff');
+        nucleo.addColorStop(0.45, '#ffe680');
+        nucleo.addColorStop(0.75, '#ffb400');
+        nucleo.addColorStop(1, 'rgba(255,150,0,0)');
+        g.fillStyle = nucleo;
+        g.beginPath();
+        g.arc(cx, cx, 20, 0, Math.PI * 2);
+        g.fill();
+
+        this._sun = c;
+        return c;
+    },
+
+    orb() {
+        if (this._orb) return this._orb;
+        const size = 96, cx = size / 2;
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        const g = c.getContext('2d');
+
+        let aura = g.createRadialGradient(cx, cx, 2, cx, cx, cx);
+        aura.addColorStop(0, 'rgba(235,250,255,0.9)');
+        aura.addColorStop(0.25, 'rgba(90,190,255,0.5)');
+        aura.addColorStop(0.6, 'rgba(30,90,255,0.25)');
+        aura.addColorStop(1, 'rgba(0,40,180,0)');
+        g.fillStyle = aura;
+        g.fillRect(0, 0, size, size);
+
+        let nucleo = g.createRadialGradient(cx, cx, 1, cx, cx, 26);
+        nucleo.addColorStop(0, '#ffffff');
+        nucleo.addColorStop(0.3, '#b8f0ff');
+        nucleo.addColorStop(0.65, '#2e8bff');
+        nucleo.addColorStop(1, 'rgba(40,100,255,0)');
+        g.fillStyle = nucleo;
+        g.beginPath();
+        g.arc(cx, cx, 26, 0, Math.PI * 2);
+        g.fill();
+
+        g.strokeStyle = 'rgba(255,255,255,0.75)';
+        g.lineWidth = 1.5;
+        for (let i = 0; i < 3; i++) {
+            const a = i * 2.1;
+            g.beginPath();
+            g.moveTo(cx + Math.cos(a) * 4, cx + Math.sin(a) * 4);
+            g.lineTo(cx + Math.cos(a + 0.5) * 16, cx + Math.sin(a + 0.5) * 16);
+            g.stroke();
+        }
+
+        this._orb = c;
+        return c;
+    },
+
+    ring() {
+        if (this._ring) return this._ring;
+        const size = 128, cx = size / 2, r = 54;
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        const g = c.getContext('2d');
+
+        g.strokeStyle = 'rgba(130,225,255,0.9)';
+        g.lineWidth = 3;
+        g.beginPath();
+        for (let i = 0; i < 6; i++) {
+            const a = -Math.PI / 2 + i * Math.PI / 3;
+            const x = cx + Math.cos(a) * r, y = cx + Math.sin(a) * r;
+            if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+        }
+        g.closePath();
+        g.stroke();
+
+        g.strokeStyle = 'rgba(130,225,255,0.35)';
+        g.lineWidth = 1.5;
+        g.beginPath();
+        g.arc(cx, cx, 30, 0, Math.PI * 2);
+        g.stroke();
+
+        for (let i = 0; i < 6; i++) {
+            const a = -Math.PI / 2 + i * Math.PI / 3;
+            const x = cx + Math.cos(a) * r, y = cx + Math.sin(a) * r;
+            let dot = g.createRadialGradient(x, y, 0, x, y, 8);
+            dot.addColorStop(0, '#ffffff');
+            dot.addColorStop(0.4, '#5ec8ff');
+            dot.addColorStop(1, 'rgba(0,150,255,0)');
+            g.fillStyle = dot;
+            g.beginPath();
+            g.arc(x, y, 8, 0, Math.PI * 2);
+            g.fill();
+        }
+
+        this._ring = c;
+        return c;
+    }
+};
 class Projectile {
     constructor(x, y, angle, damage, isPlayer, stats = {}) { this.reset(x, y, angle, damage, isPlayer, stats); }
     
@@ -2507,6 +2652,7 @@ class Projectile {
         }
         
         this.color = isPlayer ? (stats.color || 'white') : (stats.color || 'red');
+        this.staffSkin = stats.staffSkin || 0;
         this.history = []; this.frameCount = 0; 
     }
 
@@ -2645,10 +2791,33 @@ class Projectile {
         }
 
         // Núcleo brilhante pulsante (sprite em cache — rápido)
-        let sprite = BulletSprites.get(this.color, this.isPlayer);
         let pulse = 1 + Math.sin(Date.now() / 90 + this.x * 0.05) * 0.10;
-        let d = this.radius * (this.isBossAttack ? 5.5 : 4.2) * pulse;
-        ctx.drawImage(sprite, this.x - d / 2, this.y - d / 2, d, d);
+
+        if (this.isPlayer && this.staffSkin === 2) {
+            // ☀️ Cajado Solar: glifo de sol girando
+            let d = this.radius * 5.2 * pulse;
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(Date.now() / 260);
+            ctx.drawImage(StaffBulletSprites.sun(), -d / 2, -d / 2, d, d);
+            ctx.restore();
+        } else if (this.isPlayer && this.staffSkin === 3) {
+            // 🔷 Cajado Hextech: orbe arcano + anel rúnico girando ao contrário
+            let d = this.radius * 4.8 * pulse;
+            ctx.drawImage(StaffBulletSprites.orb(), this.x - d / 2, this.y - d / 2, d, d);
+            let rd = this.radius * 7.2;
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(-Date.now() / 300);
+            ctx.globalAlpha = 0.85;
+            ctx.drawImage(StaffBulletSprites.ring(), -rd / 2, -rd / 2, rd, rd);
+            ctx.restore();
+        } else {
+            // Cometa branco padrão (cajado 1, inimigos e boss)
+            let sprite = BulletSprites.get(this.color, this.isPlayer);
+            let d = this.radius * (this.isBossAttack ? 5.5 : 4.2) * pulse;
+            ctx.drawImage(sprite, this.x - d / 2, this.y - d / 2, d, d);
+        }
     }
 }
 
