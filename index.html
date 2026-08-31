@@ -326,7 +326,10 @@
             <button class="flag-btn" id="lang-en" onclick="audioManager.playWav('botton'); setLanguage('en')"><img src="https://flagcdn.com/w40/us.png" alt="US" class="flag-img">EN-US</button>
         </div>
         <h1>Archmage's Greed</h1>
+        <p style="font-size:10px;color:#888;margin:15px 0 5px 0;">PERSONAGENS</p>
         <div class="char-select-container" id="char-selection"></div>
+        <p style="font-size:10px;color:#888;margin:15px 0 5px 0;">CAJADOS</p>
+        <div class="char-select-container" id="staff-selection"></div>
         <button class="btn" id="btn-play" onclick="audioManager.playWav('botton'); startGame()">JOGAR</button>
 		<button class="btn" id="btn-settings" onclick="audioManager.playWav('botton'); toggleSettingsMenu()">⚙ CONFIGURAÇÕES</button>
 		<div id="mobile-options" class="hidden">
@@ -489,12 +492,14 @@ const ObjectPool = {
 const ASSETS = { 
     images: { 
         mage1: new Image(), mage2: new Image(), mage3: new Image(),
+        cajado1: new Image(), cajado2: new Image(), cajado3: new Image(),
         triangulo: new Image(), losango: new Image(), redondo: new Image(),
         miniboss: new Image(), boss: new Image()
     }, 
     audio: { main: new Audio(), principal: new Audio(), boss: new Audio(), botton: new Audio(), bossdefeat: new Audio() } 
 };
 ASSETS.images.mage1.src = 'Assets/mage1.png'; ASSETS.images.mage2.src = 'Assets/mage2.png'; ASSETS.images.mage3.src = 'Assets/mage3.png';
+ASSETS.images.cajado1.src = 'Assets/cajado1.png'; ASSETS.images.cajado2.src = 'Assets/cajado2.png'; ASSETS.images.cajado3.src = 'Assets/cajado3.png';
 ASSETS.images.triangulo.src = 'Assets/triangulo.png'; ASSETS.images.losango.src = 'Assets/losango.png'; ASSETS.images.redondo.src = 'Assets/redondo.png';
 ASSETS.images.miniboss.src = 'Assets/miniboss.png'; ASSETS.images.boss.src = 'Assets/boss.png';
 
@@ -584,15 +589,15 @@ const maxTierCheck = (p, id, max) => (p.perksCounts[id] || 0) >= max;
 
 const UPGRADES_DB = {
     common: [
-        { id: 'pursuing_orb', name_en: 'Pursuing Orb', name_pt: 'Orbe Perseguidora', max: 3, desc_en: 'Orb automatically shoots enemies.', desc_pt: 'Orbe que atira nos inimigos automaticamente.', apply: (p) => p.perks.pursuingOrb++ },
+        { id: 'pursuing_orb', name_en: 'Pursuing Orb', name_pt: 'Orbe Perseguidora', max: 3, desc_en: 'Orb shoots (30/50/70% of your dmg). Max Lv 3.', desc_pt: 'Orbe que atira (30%/50%/70% do seu dano). Máx: Nv 3.', apply: (p) => p.perks.pursuingOrb++ },
         { id: 'catalyst', name_en: 'Catalyst', name_pt: 'Catalisador', max: 99, desc_en: 'Damage +20% of base (additive).', desc_pt: 'Dano +20% do base (aditivo).', apply: (p) => p.stats.damage = 10 * (1 + 0.2 * ((p.perksCounts['catalyst'] || 0) + 1) + 0.4 * (p.perksCounts['catalyst_plus'] || 0)) },
-        { id: 'eyesight', name_en: 'Eyesight', name_pt: 'Visão Aguçada', max: 5, desc_en: 'Crit Chance +5%.', desc_pt: 'Chance Crítica +5%.', apply: (p) => p.stats.critChance += 0.05 },
+        { id: 'eyesight', name_en: 'Eyesight', name_pt: 'Visão Aguçada', max: 5, desc_en: 'Crit Chance +5% (max 100%).', desc_pt: 'Chance Crítica +5% (máx 100%).', apply: (p) => p.stats.critChance = Math.min(1.0, p.stats.critChance + 0.05) },
         { id: 'growth', name_en: 'Growth', name_pt: 'Crescimento', max: 99, desc_en: 'Max HP +10.', desc_pt: 'Vida Máxima +10.', apply: (p) => { p.maxHp += 10; p.hp += 10; p.updateHpUI(); } },
         { id: 'impulse', name_en: 'Impulse', name_pt: 'Impulso', max: 99, desc_en: 'Jump Height +30% (max 20).', desc_pt: 'Altura do Pulo +30% (máx 20).', apply: (p) => p.stats.jumpPower = Math.min(20, p.stats.jumpPower * 1.3) },
         { id: 'renew', name_en: 'Renew', name_pt: 'Renovar', max: 99, desc_en: 'Full Heal.', desc_pt: 'Cura vida completamente.', apply: (p) => { p.hp = p.maxHp; p.updateHpUI(); } },
         { id: 'resist', name_en: 'Resist', name_pt: 'Resistência', max: 99, desc_en: 'Defense +4% (max 75%).', desc_pt: 'Defesa +4% (máx 75%).', apply: (p) => p.stats.defense = Math.min(0.75, p.stats.defense + 0.04) },
-        { id: 'resonance', name_en: 'Resonance', name_pt: 'Ressonância', max: 3, desc_en: 'Atk Speed +12%.', desc_pt: 'Velocidade de Ataque +12%.', apply: (p) => p.stats.fireRate *= 0.88 },
-        { id: 'souls', name_en: 'Souls', name_pt: 'Almas', max: 99, desc_en: 'Soul drop +1% (max 50%).', desc_pt: 'Chance de Almas +1% (máx 50%).', apply: (p) => p.stats.soulChance = Math.min(0.5, p.stats.soulChance + 0.01) },
+        { id: 'resonance', name_en: 'Resonance', name_pt: 'Ressonância', max: 3, desc_en: 'Atk Speed +12% (max 2x).', desc_pt: 'Vel. de Ataque +12% (máx 2x).', apply: (p) => p.stats.fireRate = Math.max(575, p.stats.fireRate * 0.88) },
+        { id: 'souls', name_en: 'Souls', name_pt: 'Almas', max: 3, desc_en: 'Soul chance: 0.5%/1%/2%.', desc_pt: 'Chance de Almas: 0,5%/1%/2%.', apply: (p) => p.stats.soulChance = [0.005, 0.01, 0.02][p.perksCounts['souls'] || 0] },
         { id: 'stability', name_en: 'Ricochet', name_pt: 'Ricochete', max: 3, desc_en: '30%/50%/100% chance to bounce to nearby enemy.', desc_pt: '30%/50%/100% chance de ricochetear p/ outro inimigo.', apply: (p) => p.perks.chainLightning++ },
         { id: 'swift', name_en: 'Swift', name_pt: 'Veloz', max: 3, desc_en: 'Move Speed +10% (Stacks 3x).', desc_pt: 'Velocidade de Movimento +10% (Acumula 3x).', apply: (p) => p.perks.swift++ },
         { id: 'leech', name_en: 'Leech', name_pt: 'Sanguessuga', max: 1, desc_en: 'Heal 5% of kill dmg (Max 2% HP)', desc_pt: 'Cura 5% do dano ao matar (Max 2% HP)', apply: (p) => p.stats.lifesteal = 0.05 }
@@ -601,16 +606,16 @@ const UPGRADES_DB = {
         { id: 'catalyst_plus', name_en: 'Catalyst+', name_pt: 'Catalisador+', max: 99, desc_en: 'Damage +40% of base (additive).', desc_pt: 'Dano +40% do base (aditivo).', apply: (p) => p.stats.damage = 10 * (1 + 0.2 * (p.perksCounts['catalyst'] || 0) + 0.4 * ((p.perksCounts['catalyst_plus'] || 0) + 1)) },
         { id: 'charge', name_en: 'Charge', name_pt: 'Carga', max: 99, desc_en: 'Projectile Size +20% (capped).', desc_pt: 'Tamanho do Projétil +20% (com limite).', apply: (p) => p.stats.projSize = Math.min(14, p.stats.projSize * 1.2) },
         { id: 'fragmentation', name_en: 'Fragmentation', name_pt: 'Fragmentação', max: 1, desc_en: 'Enemies explode into fragments.', desc_pt: 'Inimigos explodem em fragmentos.', apply: (p) => p.perks.fragmentation = true },
-        { id: 'gush', name_en: 'Gush', name_pt: 'Jato', max: 10, desc_en: '+1 Double Jump (max 10).', desc_pt: '+1 Pulo Duplo (máx 10).', apply: (p) => p.stats.jumpsMax += 1 },
+        { id: 'gush', name_en: 'Gush', name_pt: 'Jato', max: 5, desc_en: '+1 Double Jump (max 5).', desc_pt: '+1 Pulo Duplo (máx 5).', apply: (p) => p.stats.jumpsMax += 1 },
         { id: 'luck', name_en: 'Luck', name_pt: 'Sorte', max: 99, desc_en: 'Better RNG (max 10x).', desc_pt: 'Melhor RNG (máx 10x).', apply: (p) => game.luck = Math.min(10, game.luck + 0.2) },
-        { id: 'precision', name_en: 'Precision', name_pt: 'Precisão', max: 2, desc_en: 'Crit Dmg +20%.', desc_pt: 'Dano Crítico +20%.', apply: (p) => p.stats.critDmg += 0.2 },
-        { id: 'resonance_plus', name_en: 'Resonance+', name_pt: 'Ressonância+', max: 3, desc_en: 'Atk Speed +24%.', desc_pt: 'Velocidade de Ataque +24%.', apply: (p) => p.stats.fireRate *= 0.76 },
+        { id: 'precision', name_en: 'Precision', name_pt: 'Precisão', max: 10, desc_en: 'Crit Dmg +20% (max +200%).', desc_pt: 'Dano Crítico +20% (máx +200%).', apply: (p) => p.stats.critDmg = Math.min(4.0, p.stats.critDmg + 0.2) },
+        { id: 'resonance_plus', name_en: 'Resonance+', name_pt: 'Ressonância+', max: 3, desc_en: 'Atk Speed +24% (max 2x).', desc_pt: 'Vel. de Ataque +24% (máx 2x).', apply: (p) => p.stats.fireRate = Math.max(575, p.stats.fireRate * 0.76) },
         { id: 'shrink', name_en: 'Shrink', name_pt: 'Encolher', max: 99, desc_en: 'Player Size -10% (min limit).', desc_pt: 'Tamanho do Mago -10% (com mínimo).', apply: (p) => { p.width = Math.max(20, p.width * 0.9); p.height = Math.max(26, p.height * 0.9); } },
-        { id: 'swift_plus', name_en: 'Swift+', name_pt: 'Veloz+', max: 99, desc_en: 'Move Speed +40% (capped).', desc_pt: 'Velocidade de Movimento +40% (com limite).', apply: (p) => p.stats.speed = Math.min(5, p.stats.speed * 1.4) },
-        { id: 'thunderbolt', name_en: 'Lightning Bolt', name_pt: 'Raio', max: 3, desc_en: 'Lightning strikes periodic enemies.', desc_pt: 'Raios atingem inimigos periodicamente.', apply: (p) => p.perks.thunderbolt++ },
-        { id: 'homing', name_en: 'Homing Missiles', name_pt: 'Mísseis Teleguiados', max: 3, desc_en: 'Shots seek the enemy you aimed at.', desc_pt: 'Tiros seguem o inimigo que você mirou.', apply: (p) => p.perks.homing++ },
+        { id: 'swift_plus', name_en: 'Swift+', name_pt: 'Veloz+', max: 99, desc_en: 'Move Speed +40% (max 2x).', desc_pt: 'Velocidade de Movimento +40% (máx 2x).', apply: (p) => p.stats.speed = Math.min(3.0, p.stats.speed * 1.4) },
+        { id: 'thunderbolt', name_en: 'Lightning Bolt', name_pt: 'Raio', max: 3, desc_en: 'Lightning: 6/9/12% max HP (boss: 3/4/7%).', desc_pt: 'Raios: 6/9/12% da vida máx (boss: 3/4/7%).', apply: (p) => p.perks.thunderbolt++ },
+        { id: 'homing', name_en: 'Homing Missiles', name_pt: 'Mísseis Teleguiados', max: 3, desc_en: 'Shots chase your aim (Lv 3: never miss, focuses boss).', desc_pt: 'Tiros perseguem sua mira (Nv 3: infalível, foca o boss).', apply: (p) => p.perks.homing++ },
         { id: 'timewarp', name_en: 'Time Warp', name_pt: 'Dobra Temporal', max: 3, desc_en: 'Enemies slow 10%/15%/20%.', desc_pt: 'Inimigos lentos 10%/15%/20%.', apply: (p) => p.perks.timeWarp++ },
-        { id: 'multishot', name_en: 'Multishot', name_pt: 'Tiro Múltiplo', max: 1, desc_en: '20% chance extra shot.', desc_pt: '20% chance de tiro extra.', apply: (p) => p.perks.multishot = true },
+        { id: 'multishot', name_en: 'Multishot', name_pt: 'Tiro Múltiplo', max: 3, desc_en: 'Extra shot: 20%/30%/50% (60% dmg, no procs).', desc_pt: 'Tiro extra: 20%/30%/50% (60% do dano, sem procs).', apply: (p) => p.perks.multishot = (p.perks.multishot || 0) + 1 },
         { id: 'cold', name_en: 'Cold', name_pt: 'Gelo', max: 1, desc_en: 'Slows enemy fire rate (Stacks).', desc_pt: 'Lentidão no tiro inimigo (Acumula).', apply: (p) => p.perks.cold = true },
         { id: 'execute', name_en: 'Execute', name_pt: 'Executar', max: 1, desc_en: '2x Dmg if enemy < 15% HP.', desc_pt: '2x Dano se inimigo < 15% HP.', apply: (p) => p.perks.execute = true },
         { id: 'bouncing', name_en: 'Bouncing Bolt', name_pt: 'Parede Elástica', max: 1, desc_en: 'Shots bounce off walls 1x.', desc_pt: 'Tiros quicam na parede 1x.', apply: (p) => p.perks.bouncing = true },
@@ -676,7 +681,7 @@ function updatePerkListUI() {
 
         const row = document.createElement('div');
         row.className = 'perk-entry';
-        let valText = perkObj && perkObj.max > 3 ? `x${count}` : `${TEXTS[currentLang].tier} ${count}`;
+        let valText = perkObj && perkObj.max === 99 ? `x${count}` : `${TEXTS[currentLang].tier} ${count}`;
         if (perkObj && perkObj.max === 1) valText = TEXTS[currentLang].acquired;
         
         let descText = (currentLang === 'pt') ? perkObj.desc_pt : perkObj.desc_en;
@@ -692,7 +697,34 @@ function updatePerkListUI() {
         content.appendChild(row);
     }
 }
-
+/**
+ * AURORA PSICOATIVA — manchas de luz macias pré-renderizadas (leve pro celular)
+ */
+const AuroraBlobs = {
+    cache: [], HUE_STEPS: 24,
+    init() {
+        if (this.cache.length) return;
+        const size = 256;
+        for (let i = 0; i < this.HUE_STEPS; i++) {
+            const hue = i * (360 / this.HUE_STEPS);
+            const c = document.createElement('canvas');
+            c.width = c.height = size;
+            const g = c.getContext('2d');
+            const grad = g.createRadialGradient(size/2, size/2, 0, size/2, size/2, size/2);
+            grad.addColorStop(0, `hsla(${hue}, 90%, 62%, 1)`);
+            grad.addColorStop(0.4, `hsla(${hue}, 90%, 55%, 0.55)`);
+            grad.addColorStop(1, `hsla(${hue}, 90%, 50%, 0)`);
+            g.fillStyle = grad;
+            g.fillRect(0, 0, size, size);
+            this.cache.push(c);
+        }
+    },
+    get(hue) {
+        this.init();
+        let h = ((hue % 360) + 360) % 360;
+        return this.cache[Math.round(h / (360 / this.HUE_STEPS)) % this.HUE_STEPS];
+    }
+};
 class Game {
     constructor() {
         this.state = 'MENU';
@@ -906,7 +938,7 @@ buildTerrainCanvas() {
     start(charIndex) {
         this.state = 'PLAYING';
         this.paused = false;
-        this.player = new Player(this.width / 2, this.height - 150, charIndex);
+        this.player = new Player(this.width / 2, this.height - 150, charIndex, window.selectedStaff || 1);
         this.bullets = []; this.enemies = []; this.particles = []; this.lightningEffects = []; this.floatingTexts = [];
         this.wave = 1;
         document.getElementById('teleport-ui').style.display = 'none';
@@ -1015,7 +1047,7 @@ buildTerrainCanvas() {
             }
         });
 
-        if (!this.cinematicBoss.isBigBoss) this.souls += 10; else this.souls += 30;
+        if (!this.cinematicBoss.isBigBoss) this.souls += 3; else this.souls += 5;
         this.updateSoulsUI();
     }
 
@@ -1159,7 +1191,7 @@ buildTerrainCanvas() {
                 if (e.type !== 'boss' && e.type !== 'miniboss') ObjectPool.releaseEnemy(e);
                 this.enemies.splice(i, 1);
                 audioManager.playSfx('hit');
-                if (Math.random() < this.player.stats.soulChance * this.luck) {
+                if (Math.random() < Math.min(0.02, this.player.stats.soulChance * this.luck)) {
                     this.souls += 1;
                     this.updateSoulsUI();
                 }
@@ -1199,7 +1231,7 @@ buildTerrainCanvas() {
 
                 for (let k = 0; k < boltsToFire; k++) {
                     let hit = false; let targetX, targetY; let targetEnemy = null;
-                    let hitChance = tier === 1 ? 0.4 : (tier === 2 ? 0.5 : 0.8);
+                    let hitChance = tier === 1 ? 0.4 : (tier === 2 ? 0.5 : 1.0);
 
                     if (visibleEnemies.length > 0 && Math.random() < hitChance) {
                         targetEnemy = visibleEnemies[Math.floor(Math.random() * visibleEnemies.length)];
@@ -1215,24 +1247,25 @@ buildTerrainCanvas() {
                             nearEnemies.sort((a,b) => Math.abs((a.x + a.width/2) - targetX) - Math.abs((b.x + b.width/2) - targetX));
                             
                             for(let ne of nearEnemies) {
-                                if(hitCount >= 2) break; // Limite de 2 mobs mortos por raio
+                                if(hitCount >= 2) break;
                                 if(ne.type === 'boss' || ne.type === 'miniboss') {
                                     if(!bossHitThisCycle) {
-                                        ne.takeDamage(ne.maxHp * 0.07); // Apenas 7% da vida do Boss max.
+                                        ne.takeDamage(ne.maxHp * 0.07);
                                         bossHitThisCycle = true;
                                         hitCount++;
                                     }
                                 } else {
-                                    ne.takeDamage(ne.hp + 10); // Hitkill instantaneo
+                                    ne.takeDamage(ne.maxHp * 0.12);
                                     hitCount++;
                                 }
                             }
-                            targetY = game.height; // Faz raio ir até o fim da tela
+                            targetY = game.height;
                         } else {
-                            let pctDmg = tier === 1 ? 0.6 : 0.8;
-                            let bossPct = tier === 1 ? 0.05 : 0.08;
-                            let mult = (targetEnemy.type === 'boss' || targetEnemy.type === 'miniboss') ? bossPct : pctDmg;
-                            targetEnemy.takeDamage(targetEnemy.hp * mult);
+                            let isBossAlvo = (targetEnemy.type === 'boss' || targetEnemy.type === 'miniboss');
+                            let pct = tier === 1 ? 0.06 : 0.09;
+                            let bossPct = tier === 1 ? 0.03 : 0.04;
+                            let mult = isBossAlvo ? bossPct : pct;
+                            targetEnemy.takeDamage(targetEnemy.maxHp * mult);
                         }
                     }
                     this.lightningEffects.push(new LightningBeam(targetX, targetY, tier === 3));
@@ -1353,7 +1386,7 @@ buildTerrainCanvas() {
 
             let count = this.player.perksCounts[selectedUpgrade.id] || 0;
             let tierText = "";
-            if (selectedUpgrade.max > 3) tierText = `x${count}`;
+            if (selectedUpgrade.max === 99) tierText = `x${count}`;
             else if (selectedUpgrade.max === 1) tierText = "";
             else tierText = `${TEXTS[currentLang].tier} ${count + 1}`; 
             
@@ -1411,29 +1444,52 @@ buildTerrainCanvas() {
     }
 
     pickUniqueFrom(pool, chosenUpgrades) {
+        const p = this.player;
         let valid = pool.filter(u => {
             if (chosenUpgrades.includes(u.id)) return false;
-            if (u.id === 'teleport' && this.player.perks.teleport) return false;
-            if (u.id === 'phoenix' && this.player.perks.phoenix) return false;
-            if (u.id === 'homing' && maxTierCheck(this.player, 'homing', 3)) return false;
+            if (u.id === 'teleport' && p.perks.teleport) return false;
+            if (u.id === 'phoenix' && p.perks.phoenix) return false;
+            if (u.id === 'homing' && maxTierCheck(p, 'homing', 3)) return false;
+            if ((u.id === 'resonance' || u.id === 'resonance_plus') && p.stats.fireRate <= 575) return false;
+            if ((u.id === 'swift' || u.id === 'swift_plus') && p.stats.speed * (1 + p.perks.swift * 0.1) >= 3.0) return false;
+            if (u.id === 'eyesight' && p.stats.critChance >= 1.0) return false;
+            if (u.id === 'precision' && p.stats.critDmg >= 4.0) return false;
             if (u.id === 'resonance' || u.id === 'resonance_plus') {
-                let totalAtkSpd = (this.player.perksCounts['resonance'] || 0) + (this.player.perksCounts['resonance_plus'] || 0);
+                let totalAtkSpd = (p.perksCounts['resonance'] || 0) + (p.perksCounts['resonance_plus'] || 0);
                 if (totalAtkSpd >= 3) return false;
             }
-            return !maxTierCheck(this.player, u.id, u.max);
+            return !maxTierCheck(p, u.id, u.max);
         });
         if (valid.length === 0) return null;
         return valid[Math.floor(Math.random() * valid.length)];
     }
 
     draw() {
+        const t = Date.now() / 1000;
         let hueSpeed = this.isBossWave ? 0.12 : 0.05;
         let hue = (Date.now() * hueSpeed) % 360;
         let sat = this.isBossWave ? 50 : 35;
-        let luz = this.isBossWave ? 7 : 5;
+        let luz = this.isBossWave ? 6.5 + Math.sin(t * 0.35) * 1.5 : 5;
         ctx.fillStyle = `hsl(${hue}, ${sat}%, ${luz}%)`;
         ctx.fillRect(0, 0, this.width, this.height);
 
+        // Aurora psicoativa: manchas de luz que flutuam e derrem uma na outra (só na wave de boss)
+        if (this.isBossWave) {
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            for (let i = 0; i < 5; i++) {
+                const bx = this.width / 2 + Math.sin(t * (0.11 + i * 0.037) + i * 1.9) * this.width * 0.33;
+                const by = this.height * (0.26 + 0.13 * i) + Math.cos(t * (0.09 + i * 0.031) + i * 2.7) * this.height * 0.15;
+                const breathe = 1 + Math.sin(t * 0.45 + i * 1.3) * 0.25;
+                const rad = this.width * (0.15 + 0.05 * i) * breathe;
+                const hueB = hue + i * 72 + Math.sin(t * 0.13 + i) * 40;
+                ctx.globalAlpha = 0.11 + 0.05 * Math.sin(t * 0.4 + i * 2.1);
+                ctx.drawImage(AuroraBlobs.get(hueB), bx - rad, by - rad, rad * 2, rad * 2);
+            }
+            ctx.restore();
+        }
+
+        // Brilho pulsante do topo (igual era antes)
         let pulseSpeed = this.isBossWave ? 600 : 1100;
         let pulse = Math.max(0, 0.10 + Math.sin(Date.now() / pulseSpeed) * 0.05);
         let glow = ctx.createRadialGradient(this.width / 2, 0, 60, this.width / 2, 0, this.height);
@@ -1486,9 +1542,10 @@ buildTerrainCanvas() {
         if (this.terrainCanvas) ctx.drawImage(this.terrainCanvas, 0, 0);
         
         if (this.player && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
-            const centerX = this.player.x + this.player.width / 2;
-            const centerY = this.player.y + this.player.height / 2;
-            const angle = Math.atan2(this.input.mouse.y - centerY, this.input.mouse.x - centerX);
+            const tip = this.player.getStaffTip();
+            const centerX = tip.x;
+            const centerY = tip.y;
+            const angle = tip.angle;
             const endX = centerX + Math.cos(angle) * 2000; const endY = centerY + Math.sin(angle) * 2000;
             
             if (this.player.laserActive) {
@@ -1570,13 +1627,15 @@ class CompanionOrb {
         }
         if (nearest) {
             let angle = Math.atan2((nearest.y + nearest.height/2) - this.y, (nearest.x + nearest.width/2) - this.x);
-            let dmg = this.player.stats.damage;
+            let mult = tier === 1 ? 0.3 : (tier === 2 ? 0.5 : 0.7);
+            let dmg = this.player.stats.damage * mult;
             if (Math.random() < this.player.stats.critChance) dmg *= this.player.stats.critDmg;
             if (this.player.hp < this.player.maxHp / 2) dmg *= 1.5;
-            let bulletStats = { ...this.player.stats, speed: 1.75 };
-            let finalDmg = tier === 3 ? dmg : this.player.stats.damage * 0.5;
+            let bulletStats = { ...this.player.stats, speed: 1.75, aimTarget: nearest };
+            let finalDmg = dmg;
             if (this.player.perks.homing > 0) bulletStats.homingTier = this.player.perks.homing;
             if (this.player.perks.chainLightning > 0) bulletStats.chainTier = this.player.perks.chainLightning;
+            if (this.player.perks.bouncing) bulletStats.bouncing = true;
             if (tier === 1) { bulletStats.speed = 0.85; bulletStats.projSize = 2; bulletStats.pierce = 0; } 
             else if (tier === 2) { bulletStats.speed = 1.75; bulletStats.projSize = 4; bulletStats.pierce = 0; } 
             else if (tier === 3) { bulletStats.color = 'white'; }
@@ -1594,10 +1653,10 @@ class CompanionOrb {
 }
 
 class Player {
-    constructor(x, y, charIndex) {
-        this.x = x; this.y = y; this.width = 52; this.height = 69; 
+    constructor(x, y, charIndex, staffIndex = 1) {
+        this.x = x; this.y = y; this.width = 62; this.height = 83; 
         this.vx = 0; this.vy = 0; this.grounded = false; this.color = CONFIG.colors.player; this.charIndex = charIndex; 
-        this.walkTimer = 0; this.hp = 100; this.maxHp = 100;
+        this.walkTimer = 0; this.hp = 100; this.maxHp = 100; this.staffIndex = staffIndex;
         
         this.stats = { speed: CONFIG.playerSpeed, jumpPower: CONFIG.jumpForce, damage: 10, fireRate: 1150, critChance: 0.05, critDmg: 2.0, lifesteal: 0, soulChance: 0.01, pierce: 0, projSize: 4, jumpsMax: 1, defense: 0 };
         this.jumpsLeft = 0; this.perksCounts = {}; 
@@ -1659,9 +1718,10 @@ class Player {
     }
 
     fireLaserTick() {
-        const centerX = this.x + this.width / 2;
-        const centerY = this.y + this.height / 2;
-        const angle = Math.atan2(game.input.mouse.y - centerY, game.input.mouse.x - centerX);
+        const tip = this.getStaffTip();
+        const centerX = tip.x;
+        const centerY = tip.y;
+        const angle = tip.angle;
         const endX = centerX + Math.cos(angle) * 2000;
         const endY = centerY + Math.sin(angle) * 2000;
 
@@ -1729,11 +1789,12 @@ class Player {
         if (game.state === 'TELEPORTING') return; // Bloqueia movimento
 
         let speedMult = 1.0;
-        if (this.perks.swift > 0) speedMult += (this.perks.swift * 0.1); 
+        if (this.perks.swift > 0) speedMult += (this.perks.swift * 0.1);
+        let moveSpeed = Math.min(CONFIG.playerSpeed * 2.0, this.stats.speed * speedMult);
 
         let mobMove = window.mobileControls ? window.mobileControls.moveX : 0;
-        if (game.input.keys['KeyA'] || mobMove < -0.25) { this.vx = -this.stats.speed * speedMult; this.facing = -1; if(this.grounded) this.walkTimer += 0.2 * window.timeScale; }
-        else if (game.input.keys['KeyD'] || mobMove > 0.25) { this.vx = this.stats.speed * speedMult; this.facing = 1; if(this.grounded) this.walkTimer += 0.2 * window.timeScale; }
+        if (game.input.keys['KeyA'] || mobMove < -0.25) { this.vx = -moveSpeed; this.facing = -1; if(this.grounded) this.walkTimer += 0.2 * window.timeScale; }
+        else if (game.input.keys['KeyD'] || mobMove > 0.25) { this.vx = moveSpeed; this.facing = 1; if(this.grounded) this.walkTimer += 0.2 * window.timeScale; }
         else { this.vx *= Math.pow(CONFIG.friction, window.timeScale); this.walkTimer = 0; }
 
         if (game.input.keys['Space']) {
@@ -1806,9 +1867,11 @@ findAimTarget(aimAngle) {
         });
         return best;
     }
+	
     shoot() {
-        const centerX = this.x + this.width / 2; const centerY = this.y + this.height / 2;
-        const angle = Math.atan2(game.input.mouse.y - centerY, game.input.mouse.x - centerX);
+        const tip = this.getStaffTip();
+        const centerX = tip.x; const centerY = tip.y;
+        const angle = tip.angle;
         let dmg = this.stats.damage;
         if (this.hp < this.maxHp / 2) dmg *= 1.5;
         if (Math.random() < this.stats.critChance) dmg *= this.stats.critDmg;
@@ -1817,9 +1880,15 @@ findAimTarget(aimAngle) {
         if (this.perks.homing > 0) bulletStats.aimTarget = this.findAimTarget(angle);
         game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, dmg, true, bulletStats));
         
-        if (this.perks.multishot && Math.random() < 0.2) {
-             let offset = (Math.random() - 0.5) * 0.5; 
-             game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle + offset, dmg, true, bulletStats));
+        if (this.perks.multishot > 0) {
+            let mChance = [0.2, 0.3, 0.5][this.perks.multishot - 1];
+            if (Math.random() < mChance) {
+                let offset = (Math.random() - 0.5) * 0.5;
+                let extraDmg = this.stats.damage * 0.6;
+                if (Math.random() < this.stats.critChance) extraDmg *= this.stats.critDmg;
+                let extraStats = { ...this.stats, speed: 1.75, homingTier: 0, chainTier: 0, bouncing: false };
+                game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle + offset, extraDmg, true, extraStats));
+            }
         }
         audioManager.playSfx('shoot');
     }
@@ -1872,6 +1941,40 @@ findAimTarget(aimAngle) {
             audioManager.play('main');
         }
     }
+	drawStaff(ctx) {
+        const imgKey = `cajado${this.staffIndex}`;
+        const img = ASSETS.images[imgKey];
+        if (!img || !img.complete || img.naturalHeight === 0) return;
+
+        const bobY = Math.sin(this.walkTimer) * 3;
+        const pivotX = this.x + this.width / 2;
+        const pivotY = this.y + bobY + this.height * 0.9; // pivô 10% acima dos pés
+        const angle = Math.atan2(game.input.mouse.y - pivotY, game.input.mouse.x - pivotX);
+
+        const imgH = this.height * 1.2; // comprimento total: do chão até 20% acima da cabeça
+        const imgW = imgH * (img.naturalWidth / img.naturalHeight) * 0.85;
+        const baseOffset = this.height * 0.1; // pedaço do cabo entre o pivô e o chão
+
+        // O cajado ainda TOCA o chão: 10% do cabo fica abaixo do pivô
+        ctx.save();
+        ctx.translate(pivotX, pivotY);
+        ctx.rotate(angle + Math.PI / 2);
+        ctx.drawImage(img, -imgW / 2, -(imgH - baseOffset), imgW, imgH);
+        ctx.restore();
+    }
+
+    getStaffTip() {
+        const bobY = Math.sin(this.walkTimer) * 3;
+        const pivotX = this.x + this.width / 2;
+        const pivotY = this.y + bobY + this.height * 0.9;
+        const angle = Math.atan2(game.input.mouse.y - pivotY, game.input.mouse.x - pivotX);
+        const len = this.height * 1.1; // do pivô (canela) até a gema
+        return {
+            x: pivotX + Math.cos(angle) * len,
+            y: pivotY + Math.sin(angle) * len,
+            angle: angle
+        };
+    }
 
     draw(ctx) {
         if (Date.now() < this.invulnUntil && Math.floor(Date.now() / 100) % 2 === 0) return;
@@ -1882,8 +1985,13 @@ findAimTarget(aimAngle) {
         const imgKey = `mage${this.charIndex}`; const img = ASSETS.images[imgKey];
         let bobY = Math.sin(this.walkTimer) * 3;
 
-        if (img && img.complete && img.naturalHeight !== 0) ctx.drawImage(img, this.x, this.y + bobY, this.width, this.height);
-        else { ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y + bobY, this.width, this.height); }
+        if (img && img.complete && img.naturalHeight !== 0) {
+            const proporcao = img.naturalWidth / img.naturalHeight;
+            const alturaDesenho = this.height;
+            const larguraDesenho = alturaDesenho * proporcao;
+            ctx.drawImage(img, this.x + (this.width - larguraDesenho) / 2, this.y + bobY, larguraDesenho, alturaDesenho);
+        } else { ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y + bobY, this.width, this.height); }
+        this.drawStaff(ctx);
         this.orb.draw(ctx);
     }
 }
@@ -2270,7 +2378,40 @@ class Boss extends Enemy {
         }
     }
 }
+/**
+ * SPRITES DE PROJÉTEIS — brilho pré-renderizado (lindo e leve)
+ */
+const BulletSprites = {
+    cache: {},
+    get(color, isPlayer) {
+        let key = color + '|' + (isPlayer ? 'p' : 'e');
+        if (this.cache[key]) return this.cache[key];
+        const size = 64;
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        const g = c.getContext('2d');
+        const cx = size / 2;
 
+        let grad = g.createRadialGradient(cx, cx, 1, cx, cx, cx);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.30, '#ffffff');
+        grad.addColorStop(0.55, color);
+        grad.addColorStop(1, color);
+        g.fillStyle = grad;
+        g.fillRect(0, 0, size, size);
+
+        g.globalCompositeOperation = 'destination-in';
+        let fade = g.createRadialGradient(cx, cx, 0, cx, cx, cx);
+        fade.addColorStop(0, 'rgba(0,0,0,1)');
+        fade.addColorStop(0.45, 'rgba(0,0,0,0.85)');
+        fade.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = fade;
+        g.fillRect(0, 0, size, size);
+
+        this.cache[key] = c;
+        return c;
+    }
+};
 class Projectile {
     constructor(x, y, angle, damage, isPlayer, stats = {}) { this.reset(x, y, angle, damage, isPlayer, stats); }
     
@@ -2294,15 +2435,30 @@ class Projectile {
         this.isHomingActive = false; this.target = null; this.aimTarget = stats.aimTarget || null;
         
         if (this.isPlayer && this.homingTier > 0) {
-            let chance = this.homingTier === 1 ? 0.4 : (this.homingTier === 2 ? 0.65 : 1.00);
+            let chance = this.homingTier === 1 ? 0.7 : (this.homingTier === 2 ? 0.8 : 1.00);
             if (Math.random() < chance) {
                 this.isHomingActive = true;
                 
                 if (this.aimTarget && !this.aimTarget.dead) {
                     this.target = this.aimTarget;
+                } else if (this.homingTier === 3) {
+                    // Nível 3: infalível — foca o boss se existir, senão o inimigo mais próximo
+                    let bossAlvo = null;
+                    game.enemies.forEach(e => {
+                        if (!e.dead && (e.type === 'boss' || e.type === 'miniboss')) bossAlvo = e;
+                    });
+                    if (bossAlvo) {
+                        this.target = bossAlvo;
+                    } else {
+                        let bestDist = Infinity;
+                        game.enemies.forEach(e => {
+                            if (e.dead || e.y <= -50) return;
+                            let d = Math.hypot(e.x - this.x, e.y - this.y);
+                            if (d < bestDist) { bestDist = d; this.target = e; }
+                        });
+                    }
                 } else {
                     let bestDist = 600; 
-                    
                     game.enemies.forEach(e => {
                         if(e.y > -50 && e.y < game.height && e.x > 0 && e.x < game.width && !e.dead) {
                             let d = Math.hypot(e.x - this.x, e.y - this.y);
@@ -2378,7 +2534,7 @@ class Projectile {
                 currentAngle += Math.sign(angleDiff) * turnRate;
             }
 
-            if (Math.abs(angleDiff) > Math.PI / 1.5) { 
+            if (this.homingTier < 3 && Math.abs(angleDiff) > Math.PI / 1.5) { 
                 this.isHomingActive = false;
             } else {
                 this.vx = Math.cos(currentAngle) * this.speed;
@@ -2466,18 +2622,33 @@ class Projectile {
     }
 
     draw(ctx) {
-        ctx.save(); ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+        // Rastro em formato de cometa (afina e some)
         if (this.history.length > 1) {
+            ctx.save();
+            ctx.lineCap = 'round'; ctx.lineJoin = 'round';
             for (let i = 0; i < this.history.length - 1; i++) {
-                const p1 = this.history[i]; const p2 = this.history[i+1]; const alpha = (i / this.history.length);
-                let maxAlpha = this.isPlayer ? 0.7 : 0.49; ctx.globalAlpha = alpha * maxAlpha;
-                ctx.strokeStyle = this.color; ctx.lineWidth = this.radius * 1.5;
+                const p1 = this.history[i]; const p2 = this.history[i + 1];
+                const t = (i + 1) / this.history.length;
+                ctx.globalAlpha = t * (this.isPlayer ? 0.45 : 0.30);
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = Math.max(1, this.radius * 1.8 * t);
                 ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+
+                if (this.isPlayer) {
+                    ctx.globalAlpha = t * 0.85;
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = Math.max(1, this.radius * 0.6 * t);
+                    ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+                }
             }
+            ctx.restore();
         }
-        ctx.restore();
-        ctx.fillStyle = '#ffffff'; ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2); ctx.fill();
-        ctx.strokeStyle = this.color; ctx.lineWidth = 1.5; ctx.stroke();
+
+        // Núcleo brilhante pulsante (sprite em cache — rápido)
+        let sprite = BulletSprites.get(this.color, this.isPlayer);
+        let pulse = 1 + Math.sin(Date.now() / 90 + this.x * 0.05) * 0.10;
+        let d = this.radius * (this.isBossAttack ? 5.5 : 4.2) * pulse;
+        ctx.drawImage(sprite, this.x - d / 2, this.y - d / 2, d, d);
     }
 }
 
@@ -2520,7 +2691,7 @@ function initGame() {
     audioManager.play('main');
     
     const select = document.getElementById('char-selection');
-    const chars = [{ id: 1, name: 'Default', cost: 0, unlocked: true }, { id: 2, name: 'Void', cost: 100, unlocked: false }, { id: 3, name: 'Crazy', cost: 200, unlocked: false }];
+    const chars = [{ id: 1, name: 'Default', cost: 0, unlocked: true }, { id: 2, name: 'Nomad', cost: 100, unlocked: false }, { id: 3, name: 'Arcanist', cost: 200, unlocked: false }];
     const unlockedData = JSON.parse(localStorage.getItem('unlockedChars') || '[1]');
     
     chars.forEach((c, index) => {
@@ -2544,7 +2715,41 @@ function initGame() {
         };
         select.appendChild(el);
     });
-    window.selectedChar = 1; requestAnimationFrame(() => game.loop());
+    window.selectedChar = 1;
+
+    // ---- Cajados ----
+    const staffSelect = document.getElementById('staff-selection');
+    const staffs = [
+        { id: 1, name: 'Default', cost: 0 },
+        { id: 2, name: 'Solar Glyph', cost: 100 },
+        { id: 3, name: 'Arcane Flow', cost: 180 }
+    ];
+    const unlockedStaffs = JSON.parse(localStorage.getItem('unlockedStaffs') || '[1]');
+    window.selectedStaff = parseInt(localStorage.getItem('selectedStaff') || '1');
+
+    staffs.forEach((s) => {
+        const isUnlocked = unlockedStaffs.includes(s.id); const el = document.createElement('div');
+        el.className = `char-card ${isUnlocked ? '' : 'char-locked'}`; if (window.selectedStaff === s.id) el.classList.add('selected');
+        
+        el.innerHTML = `<img src="Assets/cajado${s.id}.png" style="width:44px;height:84px;display:block;margin:0 auto;object-fit:contain;" alt="Cajado ${s.id}">
+            <p>${s.name}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px">${s.cost} Souls</p>` : ''}`;
+            
+        el.onclick = () => {
+            audioManager.playWav('botton'); 
+            if (audioManager.current && audioManager.current.paused) audioManager.play('main');
+            if (isUnlocked) { document.querySelectorAll('#staff-selection .char-card').forEach(x => x.classList.remove('selected')); el.classList.add('selected'); window.selectedStaff = s.id; localStorage.setItem('selectedStaff', s.id); } 
+            else {
+                if (game.souls >= s.cost) {
+                    if(confirm(`Comprar ${s.name} por ${s.cost} almas?`)) {
+                        game.souls -= s.cost; game.updateSoulsUI(); unlockedStaffs.push(s.id); localStorage.setItem('unlockedStaffs', JSON.stringify(unlockedStaffs)); location.reload();
+                    }
+                }
+            }
+        };
+        staffSelect.appendChild(el);
+    });
+
+    requestAnimationFrame(() => game.loop());
 }
 
 function startGame() {
