@@ -1402,7 +1402,7 @@ class Game {
             this.meteorWaveStartTime = Date.now();
             document.getElementById('meteor-warning').style.display = 'block';
             audioManager.playSfx('meteor_alert');
-            setTimeout(() => { document.getElementById('meteor-warning').style.display = 'none'; }, 3000);
+            setTimeout(() => { document.getElementById('meteor-warning').style.display = 'none'; }, 20000);
             eventShown = true;
         }
 
@@ -2438,16 +2438,216 @@ class FloatingText {
         ctx.fillText(this.text, this.x, this.y); ctx.restore();
     }
 }
+/**
+ * ORBE ARCANO — Sprites pré-renderizados (cristal + anel rúnico)
+ */
+const OrbSprite = {
+    _core: null, _coreGold: null, _ring: null, _ringInner: null,
 
+    init() {
+        if (this._core) return;
+
+        // ===== NÚCLEO DE CRISTAL (azul) =====
+        const size = 64, cx = size / 2, cy = size / 2;
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        const g = c.getContext('2d');
+
+        // Aura de brilho
+        let aura = g.createRadialGradient(cx, cy, 10, cx, cy, 30);
+        aura.addColorStop(0, 'rgba(100,180,255,0.25)');
+        aura.addColorStop(0.5, 'rgba(60,140,255,0.1)');
+        aura.addColorStop(1, 'rgba(30,80,200,0)');
+        g.fillStyle = aura;
+        g.beginPath(); g.arc(cx, cy, 30, 0, Math.PI * 2); g.fill();
+
+        // Esfera de cristal (gradiente 3D)
+        let sphere = g.createRadialGradient(cx - 6, cy - 6, 2, cx, cy, 22);
+        sphere.addColorStop(0, 'rgba(255,255,255,1)');
+        sphere.addColorStop(0.15, 'rgba(210,240,255,0.95)');
+        sphere.addColorStop(0.35, 'rgba(120,210,255,0.85)');
+        sphere.addColorStop(0.6, 'rgba(50,150,255,0.6)');
+        sphere.addColorStop(0.85, 'rgba(20,80,200,0.35)');
+        sphere.addColorStop(1, 'rgba(10,40,150,0)');
+        g.fillStyle = sphere;
+        g.beginPath(); g.arc(cx, cy, 24, 0, Math.PI * 2); g.fill();
+
+        // Redemoinhos de energia interna
+        g.strokeStyle = 'rgba(160,230,255,0.35)';
+        g.lineWidth = 1.5;
+        for (let i = 0; i < 3; i++) {
+            g.beginPath();
+            g.arc(cx + Math.cos(i * 2.1) * 5, cy + Math.sin(i * 2.1) * 5, 7 + i * 4, 0, Math.PI * 1.5);
+            g.stroke();
+        }
+
+        // Bolhas de energia (subindo)
+        for (let i = 0; i < 7; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const r = 4 + Math.random() * 12;
+            g.fillStyle = `rgba(180,230,255,${0.15 + Math.random() * 0.25})`;
+            g.beginPath();
+            g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.8 + Math.random() * 1.2, 0, Math.PI * 2);
+            g.fill();
+        }
+
+        // Reflexo de vidro (parte superior esquerda)
+        g.fillStyle = 'rgba(255,255,255,0.55)';
+        g.beginPath();
+        g.ellipse(cx - 7, cy - 9, 5, 3, -0.5, 0, Math.PI * 2);
+        g.fill();
+
+        // Reflexo secundário (parte inferior direita)
+        g.fillStyle = 'rgba(200,240,255,0.2)';
+        g.beginPath();
+        g.ellipse(cx + 6, cy + 7, 3, 2, 0.5, 0, Math.PI * 2);
+        g.fill();
+
+        this._core = c;
+
+        // ===== NÚCLEO DOURADO (tier 3) =====
+        const cg = document.createElement('canvas');
+        cg.width = cg.height = size;
+        const gg = cg.getContext('2d');
+
+        let auraG = gg.createRadialGradient(cx, cy, 10, cx, cy, 30);
+        auraG.addColorStop(0, 'rgba(255,200,80,0.3)');
+        auraG.addColorStop(0.5, 'rgba(255,170,40,0.12)');
+        auraG.addColorStop(1, 'rgba(200,120,0,0)');
+        gg.fillStyle = auraG;
+        gg.beginPath(); gg.arc(cx, cy, 30, 0, Math.PI * 2); gg.fill();
+
+        let sphereG = gg.createRadialGradient(cx - 6, cy - 6, 2, cx, cy, 22);
+        sphereG.addColorStop(0, 'rgba(255,255,240,1)');
+        sphereG.addColorStop(0.15, 'rgba(255,240,180,0.95)');
+        sphereG.addColorStop(0.35, 'rgba(255,210,100,0.85)');
+        sphereG.addColorStop(0.6, 'rgba(255,170,40,0.6)');
+        sphereG.addColorStop(0.85, 'rgba(220,130,10,0.35)');
+        sphereG.addColorStop(1, 'rgba(180,90,0,0)');
+        gg.fillStyle = sphereG;
+        gg.beginPath(); gg.arc(cx, cy, 24, 0, Math.PI * 2); gg.fill();
+
+        gg.strokeStyle = 'rgba(255,230,150,0.4)';
+        gg.lineWidth = 1.5;
+        for (let i = 0; i < 3; i++) {
+            gg.beginPath();
+            gg.arc(cx + Math.cos(i * 2.1) * 5, cy + Math.sin(i * 2.1) * 5, 7 + i * 4, 0, Math.PI * 1.5);
+            gg.stroke();
+        }
+
+        for (let i = 0; i < 7; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const r = 4 + Math.random() * 12;
+            gg.fillStyle = `rgba(255,240,200,${0.2 + Math.random() * 0.25})`;
+            gg.beginPath();
+            gg.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 0.8 + Math.random() * 1.2, 0, Math.PI * 2);
+            gg.fill();
+        }
+
+        gg.fillStyle = 'rgba(255,255,255,0.6)';
+        gg.beginPath();
+        gg.ellipse(cx - 7, cy - 9, 5, 3, -0.5, 0, Math.PI * 2);
+        gg.fill();
+
+        this._coreGold = cg;
+
+        // ===== ANEL RÚNICO EXTERNO =====
+        const rsize = 100, rcx = rsize / 2, rcy = rsize / 2;
+        const rc = document.createElement('canvas');
+        rc.width = rc.height = rsize;
+        const rg = rc.getContext('2d');
+
+        // Anel principal
+        rg.strokeStyle = 'rgba(80,180,255,0.55)';
+        rg.lineWidth = 1.5;
+        rg.beginPath();
+        rg.arc(rcx, rcy, 38, 0, Math.PI * 2);
+        rg.stroke();
+
+        // Glifos rúnicos (símbolos mágicos)
+        for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2;
+            const px = rcx + Math.cos(a) * 38;
+            const py = rcy + Math.sin(a) * 38;
+            rg.fillStyle = 'rgba(140,220,255,0.7)';
+            rg.save();
+            rg.translate(px, py);
+            rg.rotate(a);
+            if (i % 4 === 0) {
+                rg.beginPath(); rg.moveTo(0, -4); rg.lineTo(3, 2.5); rg.lineTo(-3, 2.5); rg.closePath(); rg.fill();
+            } else if (i % 4 === 1) {
+                rg.beginPath(); rg.arc(0, 0, 2.5, 0, Math.PI * 2); rg.fill();
+            } else if (i % 4 === 2) {
+                rg.beginPath(); rg.moveTo(0, -4); rg.lineTo(2.5, 0); rg.lineTo(0, 4); rg.lineTo(-2.5, 0); rg.closePath(); rg.fill();
+            } else {
+                rg.fillRect(-1, -4, 2, 8);
+            }
+            rg.restore();
+        }
+
+        // Arcos de energia
+        rg.strokeStyle = 'rgba(100,190,255,0.35)';
+        rg.lineWidth = 2;
+        for (let i = 0; i < 3; i++) {
+            const startA = (i / 3) * Math.PI * 2;
+            rg.beginPath();
+            rg.arc(rcx, rcy, 35, startA, startA + 0.9);
+            rg.stroke();
+        }
+
+        this._ring = rc;
+
+        // ===== ANEL INTERNO (contra-rotação) =====
+        const isize = 70, icx = isize / 2, icy = isize / 2;
+        const ic = document.createElement('canvas');
+        ic.width = ic.height = isize;
+        const ig = ic.getContext('2d');
+
+        ig.strokeStyle = 'rgba(140,220,255,0.4)';
+        ig.lineWidth = 1;
+        ig.beginPath();
+        ig.arc(icx, icy, 26, 0, Math.PI * 2);
+        ig.stroke();
+
+        // Pequenos traços radiais
+        for (let i = 0; i < 6; i++) {
+            const a = (i / 6) * Math.PI * 2;
+            ig.strokeStyle = 'rgba(120,200,255,0.3)';
+            ig.lineWidth = 1;
+            ig.beginPath();
+            ig.moveTo(icx + Math.cos(a) * 22, icy + Math.sin(a) * 22);
+            ig.lineTo(icx + Math.cos(a) * 28, icy + Math.sin(a) * 28);
+            ig.stroke();
+        }
+
+        this._ringInner = ic;
+    },
+
+    getCore() { this.init(); return this._core; },
+    getCoreGold() { this.init(); return this._coreGold; },
+    getRing() { this.init(); return this._ring; },
+    getRingInner() { this.init(); return this._ringInner; }
+};
 class CompanionOrb {
     constructor(player) {
         this.player = player; this.x = player.x; this.y = player.y; this.lastShot = Date.now();
+        this.trailHistory = [];
+        this.trailTick = 0;
+        this.flashUntil = 0;
     }
     update() {
         let tier = this.player.perks.pursuingOrb;
         if (tier <= 0) return;
         let targetX = this.player.x + this.player.width + 25; let targetY = this.player.y + 10;
         this.x += (targetX - this.x) * 0.1 * window.timeScale; this.y += (targetY - this.y) * 0.1 * window.timeScale;
+
+        // Rastro fantasma
+        this.trailTick++;
+        if (this.trailTick % 5 === 0) {
+            this.trailHistory.push({ x: this.x, y: this.y });
+            if (this.trailHistory.length > 4) this.trailHistory.shift();
+        }
+
         let now = Date.now(); let currentFireRate = this.player.stats.fireRate; 
         if (game.state !== 'BOSS_DEATH_CINEMATIC' && now - this.lastShot > currentFireRate) {
             let onScreenEnemies = game.enemies.filter(e => e.y > 0 && e.y < game.height && !e.dead);
@@ -2476,14 +2676,97 @@ class CompanionOrb {
             if (this.player.perks.cold) bulletStats.isCold = true;
             bulletStats.staffSkin = this.player.staffIndex;
             bulletStats.color = this.player.staffIndex === 2 ? '#ffcc33' : (this.player.staffIndex === 3 ? '#38b6ff' : 'white');
+			this.flashUntil = Date.now() + 200;
             game.bullets.push(ObjectPool.getBullet(this.x, this.y, angle, dmg, true, bulletStats));
             audioManager.playSfx('shoot');
         }
     }
-    draw(ctx) {
-        if (this.player.perks.pursuingOrb <= 0) return;
-        ctx.fillStyle = '#4da6ff'; ctx.beginPath(); ctx.arc(this.x, this.y, 6, 0, Math.PI*2); ctx.fill();
-        ctx.strokeStyle = '#fff'; ctx.lineWidth = 1; ctx.stroke();
+        draw(ctx) {
+        const tier = this.player.perks.pursuingOrb;
+        if (tier <= 0) return;
+
+        const t = Date.now() / 1000;
+        const pulse = 1 + Math.sin(t * 3.5) * 0.03;
+        const isGold = (tier === 3);
+        const coreSprite = isGold ? OrbSprite.getCoreGold() : OrbSprite.getCore();
+        const flash = Date.now() < this.flashUntil;
+        const coreSize = 30 * pulse * (flash ? 1.4 : 1);
+
+        // ===== Rastro fantasma =====
+        if (this.trailHistory.length > 0) {
+            for (let i = 0; i < this.trailHistory.length; i++) {
+                const pos = this.trailHistory[i];
+                const alpha = (i + 1) / this.trailHistory.length * 0.15;
+                const size = coreSize * (0.6 + i * 0.1);
+                ctx.save();
+                ctx.globalAlpha = alpha;
+                ctx.drawImage(coreSprite, pos.x - size / 2, pos.y - size / 2, size, size);
+                ctx.restore();
+            }
+        }
+
+        // ===== Anel rúnico externo (girando) =====
+        const ringSize = 42 * pulse;
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(t * 1.2);
+        ctx.globalAlpha = 0.35 + Math.sin(t * 2) * 0.05;
+        ctx.drawImage(OrbSprite.getRing(), -ringSize / 2, -ringSize / 2, ringSize, ringSize);
+        ctx.restore();
+
+        // ===== Anel interno (contra-rotação, tier 2+) =====
+        if (tier >= 2) {
+            const innerSize = 38 * pulse;
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(-t * 2.0);
+            ctx.globalAlpha = 0.5;
+            ctx.drawImage(OrbSprite.getRingInner(), -innerSize / 2, -innerSize / 2, innerSize, innerSize);
+            ctx.restore();
+        }
+
+        // ===== Núcleo pulsante =====
+        ctx.drawImage(coreSprite, this.x - coreSize / 2, this.y - coreSize / 2, coreSize, coreSize);
+
+        // ===== Faíscas orbitando =====
+        const sparkleCount = isGold ? 7 : 5;
+        for (let i = 0; i < sparkleCount; i++) {
+            const sa = (i / sparkleCount) * Math.PI * 2 + t * (1.8 + i * 0.25);
+            const sr = 20 + Math.sin(t * 2.2 + i) * 5;
+            const sx = this.x + Math.cos(sa) * sr;
+            const sy = this.y + Math.sin(sa) * sr;
+            const ss = 1.2 + Math.sin(t * 4 + i * 1.3) * 1.2;
+            const sparkColor = isGold 
+                ? `rgba(255,220,120,${0.3 + Math.sin(t * 3 + i) * 0.2})`
+                : `rgba(150,220,255,${0.3 + Math.sin(t * 3 + i) * 0.2})`;
+            ctx.fillStyle = sparkColor;
+            ctx.beginPath();
+            ctx.arc(sx, sy, Math.max(0.3, ss), 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        // ===== Flash ao atirar =====
+        if (flash) {
+            const flashProgress = (this.flashUntil - Date.now()) / 200;
+            const flashR = coreSize * 0.7;
+            let flashGrad = ctx.createRadialGradient(this.x, this.y, 2, this.x, this.y, flashR);
+            if (isGold) {
+                flashGrad.addColorStop(0, 'rgba(255,240,180,0.22)');
+                flashGrad.addColorStop(0.5, 'rgba(255,200,80,0.08)');
+                flashGrad.addColorStop(1, 'rgba(255,150,0,0)');
+            } else {
+                flashGrad.addColorStop(0, 'rgba(150,220,255,0.22)');
+                flashGrad.addColorStop(0.5, 'rgba(80,180,255,0.08)');
+                flashGrad.addColorStop(1, 'rgba(30,100,255,0)');
+            }
+            ctx.save();
+            ctx.globalAlpha = flashProgress;
+            ctx.fillStyle = flashGrad;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, flashR, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
     }
 }
 
@@ -3655,64 +3938,97 @@ const EnemyBulletFX = {
     cache: {},
     get(color) {
         if (this.cache[color]) return this.cache[color];
-        const size = 56, cx = size / 2;
+        const size = 64, cx = size / 2;
         const c = document.createElement('canvas');
         c.width = c.height = size;
         const g = c.getContext('2d');
 
-        // Definir paleta por cor
-        let core, mid, rim, glowC, dots;
+        let core, mid, rim, glowC, dots, swirl;
         if (color === 'red') {
-            core = '#ffccaa'; mid = '#ee3311'; rim = '#771100'; glowC = 'rgba(255,60,30,0.25)'; dots = 'rgba(255,200,150,0.6)';
+            core = '#ffddbb'; mid = '#ee3311'; rim = '#771100';
+            glowC = 'rgba(255,60,30,0.3)'; dots = 'rgba(255,200,150,0.7)';
+            swirl = 'rgba(255,150,100,0.4)';
         } else if (color === '#4da6ff') {
-            core = '#ccf0ff'; mid = '#2288ee'; rim = '#003366'; glowC = 'rgba(50,140,255,0.25)'; dots = 'rgba(180,230,255,0.6)';
+            core = '#ddf5ff'; mid = '#2288ee'; rim = '#003366';
+            glowC = 'rgba(50,140,255,0.3)'; dots = 'rgba(180,230,255,0.7)';
+            swirl = 'rgba(120,200,255,0.4)';
         } else if (color === '#800080') {
-            core = '#f0ccf0'; mid = '#9922aa'; rim = '#330033'; glowC = 'rgba(180,50,180,0.25)'; dots = 'rgba(230,170,230,0.6)';
+            core = '#f5ddf5'; mid = '#9922aa'; rim = '#330033';
+            glowC = 'rgba(180,50,180,0.3)'; dots = 'rgba(230,170,230,0.7)';
+            swirl = 'rgba(200,100,200,0.4)';
         } else {
-            core = '#ccffcc'; mid = '#22cc33'; rim = '#004400'; glowC = 'rgba(50,255,70,0.25)'; dots = 'rgba(190,255,190,0.6)';
+            core = '#ddffdd'; mid = '#22cc33'; rim = '#004400';
+            glowC = 'rgba(50,255,70,0.3)'; dots = 'rgba(190,255,190,0.7)';
+            swirl = 'rgba(120,255,120,0.4)';
         }
 
-        // Glow externo
-        let glow = g.createRadialGradient(cx, cx, 8, cx, cx, cx);
+        // Glow externo (mais suave e largo)
+        let glow = g.createRadialGradient(cx, cx, 6, cx, cx, cx);
         glow.addColorStop(0, glowC);
-        glow.addColorStop(0.6, glowC.replace('0.25', '0.1'));
+        glow.addColorStop(0.35, glowC.replace('0.3', '0.12'));
+        glow.addColorStop(0.65, glowC.replace('0.3', '0.04'));
         glow.addColorStop(1, 'rgba(0,0,0,0)');
         g.fillStyle = glow;
         g.fillRect(0, 0, size, size);
 
-        // Corpo com gradiente 3D
-        let body = g.createRadialGradient(cx - 4, cx - 4, 2, cx, cx, 13);
-        body.addColorStop(0, core);
-        body.addColorStop(0.35, mid);
-        body.addColorStop(0.8, rim);
-        g.fillStyle = body;
-        g.beginPath();
-        g.arc(cx, cx, 13, 0, Math.PI * 2);
-        g.fill();
-
-        // Borda escura (contorno)
-        g.strokeStyle = rim;
-        g.lineWidth = 2;
-        g.beginPath();
-        g.arc(cx, cx, 13, 0, Math.PI * 2);
-        g.stroke();
-
-        // Anel de energia interna
-        g.strokeStyle = 'rgba(255,255,255,0.2)';
+        // Anel externo secundário (fino)
+        g.strokeStyle = glowC.replace('0.3', '0.15');
         g.lineWidth = 1;
         g.beginPath();
-        g.arc(cx, cx, 9, 0, Math.PI * 2);
+        g.arc(cx, cx, 17, 0, Math.PI * 2);
         g.stroke();
 
-        // Pontinhos de energia (textura)
-        for (let i = 0; i < 5; i++) {
-            const a = (i / 5) * Math.PI * 2 + 0.5;
-            const r = 4 + (i % 3) * 2;
+        // Corpo principal (gradiente 3D melhorado)
+        let body = g.createRadialGradient(cx - 5, cx - 5, 2, cx, cx, 15);
+        body.addColorStop(0, core);
+        body.addColorStop(0.2, core);
+        body.addColorStop(0.45, mid);
+        body.addColorStop(0.75, mid);
+        body.addColorStop(0.92, rim);
+        g.fillStyle = body;
+        g.beginPath();
+        g.arc(cx, cx, 15, 0, Math.PI * 2);
+        g.fill();
+
+        // Borda escura (mais grossa)
+        g.strokeStyle = rim;
+        g.lineWidth = 2.5;
+        g.beginPath();
+        g.arc(cx, cx, 15, 0, Math.PI * 2);
+        g.stroke();
+
+        // Correntes de energia internas (swirls)
+        g.strokeStyle = swirl;
+        g.lineWidth = 1;
+        for (let i = 0; i < 2; i++) {
+            g.beginPath();
+            g.arc(cx + Math.cos(i * 3.1) * 3, cx + Math.sin(i * 3.1) * 3, 6 + i * 3, i, i + Math.PI * 1.2);
+            g.stroke();
+        }
+
+        // Anel de energia interna
+        g.strokeStyle = 'rgba(255,255,255,0.25)';
+        g.lineWidth = 1;
+        g.beginPath();
+        g.arc(cx, cx, 10, 0, Math.PI * 2);
+        g.stroke();
+
+        // Pontinhos de energia (mais, com variação)
+        for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2 + 0.3;
+            const r = 3 + (i % 4) * 2.5;
+            const ds = 0.8 + (i % 3) * 0.5;
             g.fillStyle = dots;
             g.beginPath();
-            g.arc(cx + Math.cos(a) * r, cx + Math.sin(a) * r, 1.2, 0, Math.PI * 2);
+            g.arc(cx + Math.cos(a) * r, cx + Math.sin(a) * r, ds, 0, Math.PI * 2);
             g.fill();
         }
+
+        // Reflexo especular (brilho de vidro)
+        g.fillStyle = 'rgba(255,255,255,0.4)';
+        g.beginPath();
+        g.ellipse(cx - 4, cx - 5, 3, 2, -0.5, 0, Math.PI * 2);
+        g.fill();
 
         this.cache[color] = c;
         return c;
@@ -3937,7 +4253,7 @@ class Projectile {
             ctx.restore();
         } else if (!this.isPlayer) {
             // Projétil inimigo com textura
-            let d = this.radius * (this.isBossAttack ? 5.5 : 4.5) * pulse;
+            let d = this.radius * (this.isBossAttack ? 6.5 : 5.5) * pulse;
             ctx.drawImage(EnemyBulletFX.get(this.color), this.x - d / 2, this.y - d / 2, d, d);
         } else {
             // Cometa branco (cajado 1)
