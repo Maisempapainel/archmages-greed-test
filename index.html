@@ -359,7 +359,7 @@
         <div id="kamikaze-warning" style="position:absolute; top:28%; left:50%; transform:translate(-50%,-50%); font-size:28px; color:#ff2222; text-shadow:0 0 15px red; z-index:50; pointer-events:none; display:none; animation:kami-flash 1.2s ease-in-out infinite;">⚠ KAMIKAZE! ⚠</div>
         <div id="meteor-warning" style="position:absolute; top:28%; left:50%; transform:translate(-50%,-50%); font-size:28px; color:#ff8800; text-shadow:0 0 15px #ff6600; z-index:50; pointer-events:none; display:none; animation:meteor-flash 1.5s ease-in-out infinite;">☄ CHUVA DE METEOROS! ☄</div>
         <div id="golden-warning" style="position:absolute; top:28%; left:50%; transform:translate(-50%,-50%); font-size:28px; color:#ffd700; text-shadow:0 0 15px #ffd700; z-index:50; pointer-events:none; display:none; animation:golden-flash 1.3s ease-in-out infinite;">★ GENERAIS A CAMINHO! ★</div>
-
+        <div id="streak-display" style="position:absolute; top:65px; left:50%; transform:translateX(-50%); font-size:14px; color:#ffd700; text-shadow:0 0 10px #ffd700; pointer-events:none; display:none; z-index:50; transition: transform 0.1s;"></div>
         <div id="wave-display">WAVE 1</div>
         
         <button id="perk-list-btn" onclick="audioManager.playWav('botton'); togglePerkModal()">PERKS</button>
@@ -1096,6 +1096,9 @@ class Game {
         this.patternSpawnIndex = 0;
         this.waveTotal = 0;
         this.upgradeChoices = 5;
+		this.streakCount = 0;
+        this.streakLastKill = 0;
+        this.streakMultiplier = 1;
         this.paused = false;
         
         // Eventos de wave
@@ -1388,6 +1391,9 @@ class Game {
         const isBoss = (this.wave % CONFIG.bossWaveInterval === 0 || this.wave % CONFIG.miniBossInterval === 0);
         this.isBossWave = isBoss;
         if (this.player) this.player.hurtThisWave = false;
+		this.streakCount = 0;
+        this.streakLastKill = 0;
+        this.streakMultiplier = 1;
 
         // Reset de eventos
         this.isMeteorWave = false;
@@ -1984,6 +1990,34 @@ class Game {
                     ObjectPool.releaseEnemy(e);
                     this.kills++;
                     this.statTotalKills++;
+					// ===== STREAK SYSTEM =====
+                    const agoraStreak = Date.now();
+                    if (agoraStreak - this.streakLastKill < 2000) {
+                        this.streakCount++;
+                    } else {
+                        this.streakCount = 1;
+                    }
+                    this.streakLastKill = agoraStreak;
+
+                    if (this.streakCount >= 10) this.streakMultiplier = 3;
+                    else if (this.streakCount >= 5) this.streakMultiplier = 2;
+                    else if (this.streakCount >= 3) this.streakMultiplier = 1.5;
+                    else this.streakMultiplier = 1;
+
+                    if (this.streakCount === 5) {
+                        this.addFloatingText(this.width / 2, 130, '5 STREAK! x2 ALMAS', '#ffd700');
+                        this.addShake(4);
+                    }
+                    if (this.streakCount === 10) {
+                        this.addFloatingText(this.width / 2, 130, '10 STREAK! x3 ALMAS', '#ff6600');
+                        this.addShake(6);
+                        this.hitStop(60);
+                    }
+                    if (this.streakCount === 20) {
+                        this.addFloatingText(this.width / 2, 130, 'RAMPAGE! x3 ALMAS', '#ff2200');
+                        this.addShake(10);
+                        this.hitStop(100);
+                    }
                     localStorage.setItem('statTotalKills', this.statTotalKills);
                     if (e.isGolden) {
                         this.statGoldenKills++;
@@ -1998,7 +2032,7 @@ class Game {
                 audioManager.playSfx('enemy_die');
                 const soulMult = e.isGolden ? 3 : 1;
                 if (Math.random() < Math.min(0.02, this.player.stats.soulChance * this.luck * soulMult)) {
-                    this.souls += 1;
+                    this.souls += Math.ceil(1 * this.streakMultiplier);
                     this.statTotalSouls++;
                     localStorage.setItem('statTotalSouls', this.statTotalSouls);
                     this.checkSoulAchievement();
@@ -2031,6 +2065,27 @@ class Game {
         // Aviso de Kamikaze na tela
         const kamiAviso = this.enemies.some(e => e.kamikaze && e.kamikazeState === 'aviso');
         document.getElementById('kamikaze-warning').style.display = kamiAviso ? 'block' : 'none';
+		// ===== HUD DO STREAK =====
+        const streakEl = document.getElementById('streak-display');
+        if (this.streakCount >= 2 && Date.now() - this.streakLastKill < 2000) {
+            streakEl.style.display = 'block';
+            const multTxt = this.streakMultiplier > 1 ? ` ×${this.streakMultiplier}` : '';
+            streakEl.innerText = `${this.streakCount} STREAK${multTxt}`;
+            
+            const timeSinceKill = Date.now() - this.streakLastKill;
+            if (timeSinceKill < 200) {
+                const pop = 1 + (1 - timeSinceKill / 200) * 0.35;
+                streakEl.style.transform = `translateX(-50%) scale(${pop})`;
+            } else {
+                streakEl.style.transform = 'translateX(-50%)';
+            }
+            
+            const urgency = this.streakCount >= 10 ? '#ff6600' : (this.streakCount >= 5 ? '#ffd700' : '#ffaa00');
+            streakEl.style.color = urgency;
+            streakEl.style.textShadow = `0 0 10px ${urgency}`;
+        } else {
+            streakEl.style.display = 'none';
+        }
     }
 
     manageThunder() {
@@ -2872,6 +2927,8 @@ class Player {
         this.manaShieldReady = false; this.manaShieldCooldown = 0;
         this.dashActiveUntil = 0; this.dashCooldownUntil = 0; this.dashDirection = 1; this.dashTickCounter = 0;
         this.squashY = 1; this.hurtFlashUntil = 0; this.hurtThisWave = false;
+		this.coyoteTimeUntil = 0;
+        this.jumpBufferUntil = 0;
         this.perfectRun = true;
         this.orb = new CompanionOrb(this); this.lastShot = 0; this.facing = 1; this.invulnUntil = 0;
         this.healingFatigueUntil = 0; 
@@ -3094,15 +3151,35 @@ class Player {
             let mobMove = window.mobileControls ? window.mobileControls.moveX : 0;
             let indoEsquerda = game.input.keys['KeyA'] || game.input.keys['ArrowLeft'] || mobMove < -0.25;
             let indoDireita = game.input.keys['KeyD'] || game.input.keys['ArrowRight'] || mobMove > 0.25;
-            if (indoEsquerda) { this.vx = -moveSpeed; this.facing = -1; if (this.grounded) this.walkTimer += 0.2 * window.timeScale; }
-            else if (indoDireita) { this.vx = moveSpeed; this.facing = 1; if (this.grounded) this.walkTimer += 0.2 * window.timeScale; }
-            else { this.vx *= Math.pow(CONFIG.friction, window.timeScale); this.walkTimer = 0; }
+            const accelRate = moveSpeed / 12;
+            if (indoEsquerda) {
+                this.vx = Math.max(-moveSpeed, this.vx - accelRate * window.timeScale);
+                this.facing = -1;
+                if (this.grounded) this.walkTimer += 0.2 * window.timeScale;
+            } else if (indoDireita) {
+                this.vx = Math.min(moveSpeed, this.vx + accelRate * window.timeScale);
+                this.facing = 1;
+                if (this.grounded) this.walkTimer += 0.2 * window.timeScale;
+            } else { this.vx *= Math.pow(CONFIG.friction, window.timeScale); this.walkTimer = 0; }
         }
 
-        if (game.input.keys['Space'] || game.input.keys['ArrowUp'] || game.input.keys['KeyW']) {
-            if (!this.jumpKeyHeld) { 
-                if (this.grounded) { this.vy = -this.stats.jumpPower; this.grounded = false; this.jumpsLeft = this.stats.jumpsMax - 1; this.squashY = 1.35; } 
-                else if (this.jumpsLeft > 0) { this.vy = -this.stats.jumpPower; this.jumpsLeft--; this.squashY = 1.3; }
+        const jumpPressed = game.input.keys['Space'] || game.input.keys['ArrowUp'] || game.input.keys['KeyW'];
+        
+        if (jumpPressed) {
+            if (!this.jumpKeyHeld) {
+                if (this.grounded || Date.now() < this.coyoteTimeUntil) {
+                    this.vy = -this.stats.jumpPower;
+                    this.grounded = false;
+                    this.jumpsLeft = this.stats.jumpsMax - 1;
+                    this.squashY = 1.35;
+                    this.coyoteTimeUntil = 0;
+                } else if (this.jumpsLeft > 0) {
+                    this.vy = -this.stats.jumpPower;
+                    this.jumpsLeft--;
+                    this.squashY = 1.3;
+                } else {
+                    this.jumpBufferUntil = Date.now() + 100;
+                }
                 this.jumpKeyHeld = true;
             }
         } else { this.jumpKeyHeld = false; }
@@ -3125,6 +3202,22 @@ class Player {
             if (this.checkRect(this, b)) {
                 if (this.vy > 0) { this.y = b.y - this.height; this.vy = 0; this.grounded = true; if (estavaNoAr) this.squashY = 0.72; } 
                 else if (this.vy < 0) { this.y = b.y + b.h; this.vy = 0; }
+            }
+        }
+		// Coyote time: acabou de sair do chão
+        if (estavaNoAr === false && !this.grounded) {
+            this.coyoteTimeUntil = Date.now() + 150;
+        }
+        
+        // Jump buffer: aterrissou com pulo guardado
+        if (estavaNoAr === true && this.grounded) {
+            if (this.jumpBufferUntil > Date.now()) {
+                this.vy = -this.stats.jumpPower;
+                this.grounded = false;
+                this.jumpsLeft = this.stats.jumpsMax - 1;
+                this.squashY = 1.35;
+                this.jumpBufferUntil = 0;
+                this.jumpKeyHeld = true;
             }
         }
 
@@ -3320,6 +3413,8 @@ class Enemy {
         
         this.lastHitTime = 0; this.coldStacks = 0; this.coldUntil = 0; this.lastHitDamage = 0;
         this.lastShootTime = Date.now() - 2000 + Math.random() * 500;
+		this.isChargingShot = false;
+        this.currentShootInterval = 2300;
         
         this.poisonStacks = 0;
         this.poisonActive = false;
@@ -3463,7 +3558,19 @@ class Enemy {
 
         let shootInterval = 2300 / fireRateMod;
         if (this.isGolden) shootInterval = shootInterval / 2;
-        if (!this.kamikaze && game.state !== 'BOSS_DEATH_CINEMATIC' && Date.now() - this.lastShootTime > shootInterval) { this.shoot(); this.lastShootTime = Date.now(); }
+        this.currentShootInterval = shootInterval;
+
+        if (!this.kamikaze && game.state !== 'BOSS_DEATH_CINEMATIC') {
+            const timeSinceShot = Date.now() - this.lastShootTime;
+            const timeUntilShot = shootInterval - timeSinceShot;
+            this.isChargingShot = (timeUntilShot < 400 && timeUntilShot > 0);
+            
+            if (timeUntilShot <= 0) { 
+                this.shoot(); 
+                this.lastShootTime = Date.now(); 
+                this.isChargingShot = false;
+            }
+        }
 
         this.tickDebuffs();
     }
@@ -3543,7 +3650,8 @@ class Enemy {
 
     draw(ctx) {
         let img = ASSETS.images[this.type];
-        // Aura de energia atrás do inimigo
+
+        // 2. Aura de energia
         if (!this.dead) {
             const auraColors = { triangulo: 'rgba(255,80,30,', losango: 'rgba(60,150,255,', redondo: 'rgba(60,220,80,' };
             const auraBase = auraColors[this.type] || 'rgba(255,255,255,';
@@ -3561,7 +3669,7 @@ class Enemy {
             ctx.fill();
         }
 
-        // Rastro fantasma
+        // 3. Rastro fantasma
         if (this.trailHistory.length > 0 && !this.kamikaze) {
             const imgT = ASSETS.images[this.type];
             if (imgT && imgT.complete && imgT.naturalHeight !== 0) {
@@ -3577,6 +3685,8 @@ class Enemy {
                 }
             }
         }
+
+        // 4. Sprite principal do inimigo
         ctx.save();
         if (this.poisonActive) {
             ctx.filter = 'sepia(1) hue-rotate(80deg) saturate(4)';
@@ -3590,7 +3700,7 @@ class Enemy {
             let tamanhoVisual = this.width * this.escalaVisual;
             let offsetCentralizado = (tamanhoVisual - this.width) / 2;
             if (Date.now() - this.lastHitTime < 100) ctx.globalAlpha = 0.5;
-            
+
             ctx.drawImage(img, this.x - offsetCentralizado, this.y - offsetCentralizado, tamanhoVisual, tamanhoVisual);
 
             if (this.kamikaze && this.kamikazeState === 'aviso' && Math.floor(Date.now() / 130) % 2 === 0) {
@@ -3601,19 +3711,20 @@ class Enemy {
                 ctx.fillStyle = '#ff2222';
                 ctx.fillText('!', this.x + this.width/2, this.y - 22);
             }
-            
+
             if (this.isGolden) {
                 ctx.font = '14px "Press Start 2P"';
                 ctx.textAlign = 'center';
                 ctx.fillStyle = '#ffd700';
                 ctx.fillText('★', this.x + this.width/2, this.y - 15);
             }
-            
+
             ctx.restore();
-            
+
+            // 5. Barra de HP
             ctx.fillStyle = 'red'; ctx.fillRect(this.x, this.y - 8, this.width, 3);
             let hpRatio = Math.max(0, Math.min(1, this.hp / this.maxHp));
-            ctx.fillStyle = this.isGolden ? '#ffd700' : 'green'; 
+            ctx.fillStyle = this.isGolden ? '#ffd700' : 'green';
             ctx.fillRect(this.x, this.y - 8, this.width * hpRatio, 3);
         } else {
             let displayColor = (Date.now() - this.lastHitTime < 100) ? 'white' : (this.isGolden ? '#ffd700' : '#ccc');
@@ -3687,7 +3798,18 @@ class Boss extends Enemy {
         if (Date.now() < this.coldUntil) fireRateMod = Math.pow(0.8, this.coldStacks);
         fireInterval /= fireRateMod;
 
-        if (game.state !== 'BOSS_DEATH_CINEMATIC' && Date.now() - this.lastShootTime > fireInterval) { this.bossAttack(); this.lastShootTime = Date.now(); }
+        this.currentBossFireInterval = fireInterval;
+        
+        if (game.state !== 'BOSS_DEATH_CINEMATIC') {
+            const bossTimeUntilShot = fireInterval - (Date.now() - this.lastShootTime);
+            this.isChargingShot = (bossTimeUntilShot < 500 && bossTimeUntilShot > 0);
+            
+            if (bossTimeUntilShot <= 0) { 
+                this.bossAttack(); 
+                this.lastShootTime = Date.now(); 
+                this.isChargingShot = false;
+            }
+        }
 
         this.tickDebuffs();
     }
@@ -3745,6 +3867,43 @@ class Boss extends Enemy {
             let tamanhoVisual = this.width * this.escalaVisual;
             let offsetCentralizado = (tamanhoVisual - this.width) / 2;
             if (Date.now() - this.lastHitTime < 100 || Date.now() < this.colorUntil) ctx.globalAlpha = 0.5;
+			// Telegraph do boss (anel duplo pulsante)
+            if (this.isChargingShot) {
+                const interval = this.currentBossFireInterval || 1500;
+                const timeSinceShot = Date.now() - this.lastShootTime;
+                const chargeProgress = Math.min(1, Math.max(0, (timeSinceShot - (interval - 500)) / 500));
+                const cxT = this.x + this.width / 2;
+                const cyT = this.y + this.height / 2;
+                
+                ctx.save();
+                // Anel externo
+                const maxR1 = tamanhoVisual / 2 + 14;
+                const minR1 = tamanhoVisual / 2 + 4;
+                const r1 = maxR1 - (maxR1 - minR1) * chargeProgress;
+                ctx.strokeStyle = `rgba(255,100,100,${0.15 + chargeProgress * 0.4})`;
+                ctx.lineWidth = 2 + chargeProgress * 3;
+                ctx.beginPath();
+                ctx.arc(cxT, cyT, r1, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Anel interno
+                const r2 = tamanhoVisual / 2 + 2;
+                ctx.strokeStyle = `rgba(255,255,255,${chargeProgress * 0.3})`;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(cxT, cyT, r2, 0, Math.PI * 2);
+                ctx.stroke();
+                
+                // Glow
+                if (chargeProgress > 0.6) {
+                    ctx.globalAlpha = (chargeProgress - 0.6) * 0.2;
+                    ctx.fillStyle = '#ff4444';
+                    ctx.beginPath();
+                    ctx.arc(cxT, cyT, tamanhoVisual / 2, 0, Math.PI * 2);
+                    ctx.fill();
+                }
+                ctx.restore();
+            }
             ctx.drawImage(img, this.x - offsetCentralizado, this.y - offsetCentralizado, tamanhoVisual, tamanhoVisual);
             
             if (this.shieldActive) {
