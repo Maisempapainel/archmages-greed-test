@@ -952,6 +952,34 @@
                 top: 50%; margin-top: calc(min(52vh, 235px) / -2); bottom: auto; }
         }
     </style>
+
+    <style id="v10-style">
+        /* ================= v10 — FINALE & POLIMENTO ================= */
+
+        /* [v10] FINALE: durante a cinemática final TODA a UI desliga e some
+           (HP, almas, pause, skills, botões, joystick) — só o mundo resta */
+        body.finale .ui-layer > * { display: none !important; }
+        body.finale #mobile-controls { display: none !important; }
+        body.finale #dev-console { display: none !important; }
+        body.finale #audio-controls { display: none !important; }
+        body.finale #crt-fx, body.finale #crt-vig { z-index: 30001; }
+
+        /* [v10] DETALHE da lápide: clicar numa estátua da galeria mostra a
+           descrição da conquista num painel elegante abaixo da galeria */
+        #ach-detail {
+            width: min(680px, 92vw); margin-top: 12px;
+            background: #07070a;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            box-shadow: inset 0 0 0 1px rgba(255,215,0,0.35);
+            padding: 14px 16px; text-align: center;
+        }
+        #ach-detail .ad-name { font-family: var(--f-disp); font-weight: 700; font-size: 12px;
+            color: #ffd700; letter-spacing: 2px; margin-bottom: 8px; }
+        #ach-detail .ad-desc { font-family: var(--f-body); font-size: 11px; color: #c9c9d2; line-height: 1.6; }
+        #ach-detail .ad-hint { font-family: var(--f-body); font-size: 8px; color: #5a5a66; margin-top: 8px; letter-spacing: 1px; }
+        .statue-item { cursor: pointer; transition: transform 0.12s, box-shadow 0.12s; }
+        .statue-item:hover { transform: translateY(-3px); }
+    </style>
 </head>
 <body>
 
@@ -1039,7 +1067,7 @@
     </div>
 
     <div id="dev-console" class="hidden">
-        <input type="text" id="dev-input" placeholder="> Comando (/wave 15, /perk catalyst, /soul 100, /spectate mode, /god mode, /clear, /next)" autocomplete="off" />
+        <input type="text" id="dev-input" placeholder="> Comando (/wave 15, /perk catalyst, /soul 100, /spectate mode, /god mode, /normal mode, /clear, /next)" autocomplete="off" />
     </div>
 
     <div id="perk-modal" class="hidden">
@@ -1121,8 +1149,12 @@
             <p class="menu-label gallery-title">GALERIA DAS CONQUISTAS</p>
             <p class="gallery-sub">Cada conquista ergue uma estátua aqui no santuário.</p>
             <div id="ach-gallery"></div>
+            <!-- [v10] clicar numa lápide revela a descrição da conquista -->
+            <div id="ach-detail" class="hidden"></div>
         </div>
-        <button class="btn" onclick="audioManager.playWav('botton'); toggleSanctuary()" style="margin-top:15px;">VOLTAR</button>
+        <!-- [v10] no celular, o VOLTAR dos Pactos fecha o painel e volta DIRETO
+             pro menu inicial (antes reabria o hub do Santuário) -->
+        <button class="btn" onclick="audioManager.playWav('botton'); sanctuaryBack()" style="margin-top:15px;">VOLTAR</button>
     </div>
 
     <!-- [v9] CELULAR: o Santuário abre um submenu com os DOIS caminhos separados
@@ -1246,7 +1278,25 @@ const TEXTS = {
         stMaxHp: "Vida Máx:", stDmg: "Dano Base:", stAtkSpd: "Vel. Ataque:", stCritC: "Chance Crítico:", stCritD: "Dano Crítico:", stLifesteal: "Roubo de Vida:", stHpNote: "(Máx 2% HP)",
         meteorSurv: "SOBREVIVEU AOS METEOROS!", heritageArc: "HERANÇA ARCANA",
         fullscreenT: "Tela cheia", soundT: "Som",
-        aimToggleTxt: "Joystick de Mira (mira manual)"
+        aimToggleTxt: "Joystick de Mira (mira manual)",
+        // [v10] cheats com i18n
+        spectateOn: "MODO ESPECTADOR", spectateOff: "ESPECTADOR OFF",
+        godOn: "GOD MODE", godOff: "GOD MODE OFF",
+        normalMode: "MODO NORMAL — inimigos voltam a te atacar",
+        waveLocked: "WAVE TRAVADA — /next P/ AVANÇAR",
+        waveJump: "PULANDO PARA WAVE",
+        waveLimit: "NÃO EXISTE NADA ALÉM DA WAVE 10.000",
+        // [v10] FINALE da wave 10.000
+        fLine1: "EU ESTAVA TÃO PERTO",
+        fLine2: "PORQUE ISSO FOI ACONTECER COMIGO?",
+        fLine3: "NO QUE EU ERREI???",
+        fLine4: "FORAM OS PERGAMINHOS???",
+        fLine5: "FORAM OS RITOS?",
+        fLine6: "SERÁ QUE A PROFECIA ESTAVA ERRADA??",
+        fFinal1: "EU ESTAVA TÃO PERTO",
+        fFinal2: "NÃOOOOOOOO",
+        fEnding: "A ganância do mago foi tanta que acabou sendo a sua própria ruína",
+        wave10k: "WAVE 10.000"
     },
     en: {
         play: "PLAY", controls: "A/D or ← → to Move, Space/↑ to Jump, Mouse to Aim, F for Skill",
@@ -1277,7 +1327,25 @@ const TEXTS = {
         stMaxHp: "Max HP:", stDmg: "Base Damage:", stAtkSpd: "Atk Speed:", stCritC: "Crit Chance:", stCritD: "Crit Damage:", stLifesteal: "Lifesteal:", stHpNote: "(Max 2% HP)",
         meteorSurv: "SURVIVED THE METEORS!", heritageArc: "ARCANE HERITAGE",
         fullscreenT: "Fullscreen", soundT: "Sound",
-        aimToggleTxt: "Aim joystick (manual aim)"
+        aimToggleTxt: "Aim joystick (manual aim)",
+        // [v10] cheats i18n
+        spectateOn: "SPECTATOR MODE", spectateOff: "SPECTATOR OFF",
+        godOn: "GOD MODE", godOff: "GOD MODE OFF",
+        normalMode: "NORMAL MODE — enemies attack you again",
+        waveLocked: "WAVE LOCKED — /next TO ADVANCE",
+        waveJump: "JUMPING TO WAVE",
+        waveLimit: "THERE IS NOTHING BEYOND WAVE 10,000",
+        // [v10] Wave 10,000 FINALE
+        fLine1: "I WAS SO CLOSE",
+        fLine2: "WHY DID THIS HAVE TO HAPPEN TO ME?",
+        fLine3: "WHERE DID I GO WRONG???",
+        fLine4: "WAS IT THE SCROLLS???",
+        fLine5: "WAS IT THE RITES?",
+        fLine6: "WAS THE PROPHECY WRONG??",
+        fFinal1: "I WAS SO CLOSE",
+        fFinal2: "NOOOOOOOO",
+        fEnding: "The mage's greed was so great that it became his own ruin",
+        wave10k: "WAVE 10,000"
     }
 };
 
@@ -1409,6 +1477,14 @@ ASSETS.audio.principal.src = 'Assets/Principal.wav'; ASSETS.audio.principal.loop
 ASSETS.audio.boss.src = 'Assets/Boss.wav'; ASSETS.audio.boss.loop = true;
 ASSETS.audio.botton.src = 'Assets/botton.wav';
 ASSETS.audio.bossdefeat.src = 'Assets/bossdefeat.wav';
+// [v10] FINALE: risadas.mp3 da pasta Assets (tocamos só os primeiros 15s em loop;
+// se o arquivo não existir, uma risada maligna PROCEDURAL entra no lugar)
+ASSETS.audio.risadas = new Audio();
+ASSETS.audio.risadas.src = 'Assets/risadas.mp3';
+ASSETS.audio.risadas.loop = false; // o loop de 15s é controlado na mão
+ASSETS.audio._risadasOk = false;
+ASSETS.audio.risadas.addEventListener('canplaythrough', () => { ASSETS.audio._risadasOk = true; }, { once: true });
+ASSETS.audio.risadas.addEventListener('error', () => { ASSETS.audio._risadasOk = false; }, { once: true });
 
 const audioManager = {
     current: null, context: null, isMuted: false, 
@@ -1716,7 +1792,149 @@ const audioManager = {
             osc.frequency.exponentialRampToValueAtTime(28, now + 0.7);
             gain.gain.setValueAtTime(0.05 * vol, now); gain.gain.linearRampToValueAtTime(0, now + 0.7);
             osc.start(now); osc.stop(now + 0.7);
+        } else if (type === 'meteor_crash') {
+            // [v10] CRASH de meteoro no chão (estilo fliperama): estalo de
+            // impacto + boom grave descendo + crunch de ruído + zap agudo
+            const dur = 0.85;
+            // 1) estalo seco do primeiro contato
+            osc.type = 'square'; osc.frequency.setValueAtTime(340, now);
+            osc.frequency.exponentialRampToValueAtTime(38, now + 0.16);
+            gain.gain.setValueAtTime(0.20 * vol, now); gain.gain.linearRampToValueAtTime(0, now + 0.16);
+            osc.start(now); osc.stop(now + 0.16);
+            // 2) boom grave (o peso da pedra)
+            const oB = ctx.createOscillator(), gB = ctx.createGain();
+            oB.connect(gB); gB.connect(ctx.destination);
+            oB.type = 'sine'; oB.frequency.setValueAtTime(120, now);
+            oB.frequency.exponentialRampToValueAtTime(24, now + 0.5);
+            gB.gain.setValueAtTime(0.34 * vol, now); gB.gain.linearRampToValueAtTime(0, now + 0.5);
+            oB.start(now); oB.stop(now + 0.52);
+            // 3) crunch de ruído (terra e pedra se partindo)
+            const nLen = Math.floor(ctx.sampleRate * dur);
+            const nBuf = ctx.createBuffer(1, nLen, ctx.sampleRate);
+            const nD = nBuf.getChannelData(0);
+            for (let i = 0; i < nLen; i++) nD[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / nLen, 2.2);
+            const nSrc = ctx.createBufferSource(), nF = ctx.createBiquadFilter(), nG = ctx.createGain();
+            nSrc.buffer = nBuf; nF.type = 'lowpass';
+            nF.frequency.setValueAtTime(2600, now); nF.frequency.exponentialRampToValueAtTime(180, now + dur);
+            nG.gain.setValueAtTime(0.26 * vol, now); nG.gain.linearRampToValueAtTime(0, now + dur);
+            nSrc.connect(nF); nF.connect(nG); nG.connect(ctx.destination);
+            nSrc.start(now); nSrc.stop(now + dur);
+            // 4) zap agudo descendo (assinatura arcade)
+            const oZ = ctx.createOscillator(), gZ = ctx.createGain();
+            oZ.connect(gZ); gZ.connect(ctx.destination);
+            oZ.type = 'sawtooth'; oZ.frequency.setValueAtTime(900, now + 0.05);
+            oZ.frequency.exponentialRampToValueAtTime(70, now + 0.4);
+            gZ.gain.setValueAtTime(0.10 * vol, now + 0.05); gZ.gain.linearRampToValueAtTime(0, now + 0.4);
+            oZ.start(now + 0.05); oZ.stop(now + 0.42);
         }
+    },
+    // ===== [v10] FINALE DA WAVE 10.000 — trilha sonora do apocalipse =====
+    // RUMBLE contínuo: sub-grave + ruído marrom filtrado, ganho controlável
+    _rumble: null,
+    startFinaleRumble(level) {
+        this.init();
+        const ctx = this.context;
+        if (!this._rumble) {
+            const master = ctx.createGain(); master.gain.value = 0;
+            master.connect(ctx.destination);
+            // sub-grave respirando
+            const o1 = ctx.createOscillator(); o1.type = 'sine'; o1.frequency.value = 34;
+            const o2 = ctx.createOscillator(); o2.type = 'sine'; o2.frequency.value = 41; o2.detune.value = 9;
+            const og = ctx.createGain(); og.gain.value = 0.55;
+            o1.connect(og); o2.connect(og); og.connect(master);
+            o1.start(); o2.start();
+            // ruído marrom (a terra gemendo)
+            const len = ctx.sampleRate * 2;
+            const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+            const d = buf.getChannelData(0);
+            let last = 0;
+            for (let i = 0; i < len; i++) { const w = Math.random() * 2 - 1; last = (last + 0.02 * w) / 1.02; d[i] = last * 3.5; }
+            const src = ctx.createBufferSource(); src.buffer = buf; src.loop = true;
+            const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 120;
+            const ng = ctx.createGain(); ng.gain.value = 0.8;
+            src.connect(f); f.connect(ng); ng.connect(master);
+            src.start();
+            this._rumble = { master, osc: [o1, o2], src };
+        }
+        const vol = this.isMuted ? 0 : this.globalVolume;
+        this._rumble.master.gain.setTargetAtTime(Math.min(0.5, vol * level * 0.55), ctx.currentTime, 0.6);
+    },
+    setFinaleRumble(level) {
+        if (!this._rumble) return;
+        const vol = this.isMuted ? 0 : this.globalVolume;
+        this._rumble.master.gain.setTargetAtTime(Math.min(0.5, vol * level * 0.55), this.context.currentTime, 0.4);
+    },
+    stopFinaleRumble() {
+        if (!this._rumble) return;
+        this._rumble.master.gain.setTargetAtTime(0, this.context.currentTime, 0.3);
+    },
+    // RISADAS do fim: os PRIMEIROS 15s de Assets/risadas.mp3 em loop (o arquivo
+    // tem 30s, mas reinicia do começo aos 15s, como pedido). Sem o arquivo,
+    // entra uma risada maligna PROCEDURAL (WebAudio) no mesmo esquema de loop.
+    _laughSynth: null,
+    startLaughs() {
+        this.init();
+        this._laughLoopOn = true;
+        const vol = this.sfxVol();
+        if (ASSETS.audio._risadasOk) {
+            const a = ASSETS.audio.risadas;
+            try {
+                a.currentTime = 0;
+                a.volume = Math.min(1, vol * 1.15);
+                a.muted = this.isMuted;
+                a.play().catch(() => this._startLaughSynth());
+                // [LOOP 15s] o arquivo tem 30s, mas aos 15s volta pro começo
+                if (this._laughInterval) clearInterval(this._laughInterval);
+                this._laughInterval = setInterval(() => {
+                    if (!this._laughLoopOn) return;
+                    try {
+                        if (a.currentTime >= 15) { a.currentTime = 0; a.play().catch(() => {}); }
+                    } catch (e) { }
+                }, 250);
+            } catch (e) { this._startLaughSynth(); }
+        } else {
+            this._startLaughSynth();
+        }
+    },
+    _startLaughSynth() {
+        // risada procedural: sequências de "HÄH-HÄH-HÄH" com formantes
+        // descendentes e eco — maligna o suficiente pra um fliperama
+        if (this._laughSynth) return;
+        this.init();
+        const ctx = this.context;
+        const self = this;
+        const laughOnce = (t0) => {
+            const vol = self.isMuted ? 0 : self.globalVolume;
+            const nHa = 3 + Math.floor(Math.random() * 2);
+            for (let i = 0; i < nHa; i++) {
+                const st = t0 + i * (0.30 + Math.random() * 0.06);
+                const drop = 1 - (i / nHa) * 0.30; // cada "há" um pouco mais grave
+                const o = ctx.createOscillator(), og = ctx.createGain(), f = ctx.createBiquadFilter();
+                o.type = 'sawtooth';
+                o.frequency.setValueAtTime(150 * drop, st);
+                o.frequency.exponentialRampToValueAtTime(96 * drop, st + 0.20);
+                f.type = 'bandpass'; f.Q.value = 2.2;
+                f.frequency.setValueAtTime(560, st);
+                f.frequency.exponentialRampToValueAtTime(300, st + 0.20);
+                og.gain.setValueAtTime(0.0001, st);
+                og.gain.linearRampToValueAtTime(0.16 * vol, st + 0.03);
+                og.gain.exponentialRampToValueAtTime(0.001, st + 0.24);
+                o.connect(f); f.connect(og); og.connect(ctx.destination);
+                o.start(st); o.stop(st + 0.26);
+            }
+        };
+        const round = () => {
+            if (!self._laughLoopOn) { self._laughSynth = null; return; }
+            laughOnce(ctx.currentTime + 0.05);
+            self._laughSynth = setTimeout(round, 1500 + Math.random() * 900); // ~ciclo de 15s/10
+        };
+        round();
+    },
+    stopLaughs() {
+        this._laughLoopOn = false;
+        if (this._laughInterval) { clearInterval(this._laughInterval); this._laughInterval = null; }
+        if (this._laughSynth) { clearTimeout(this._laughSynth); this._laughSynth = null; }
+        try { ASSETS.audio.risadas.pause(); } catch (e) { }
     }
 };
 
@@ -1797,9 +2015,9 @@ const Haptics = {
             try { navigator.vibrate(1); } catch (e) { }
         }
     },
-    hit() { this.buzz(45); },              // tomou dano
-    kill() { this.buzz(12); },             // matou um inimigo
-    boss() { this.buzz([70, 50, 130]); }   // chefe caiu
+    hit() { this.buzz([70, 35, 70]); },      // [v10] tomou dano: DOIS pulsos fortes
+    kill() { this.buzz(18); },              // matou um inimigo
+    boss() { this.buzz([90, 60, 150]); }    // chefe caiu
 };
 
 /**
@@ -2040,7 +2258,12 @@ const ACHIEVEMENTS_DB = [
     { id: 'wave_1000', icon: '🔥', name_pt: 'Imortal', name_en: 'Immortal', desc_pt: 'Alcance a wave 1000.', desc_en: 'Reach wave 1000.', goal: 1 },
     { id: 'hunter_15000', icon: '☄️', name_pt: 'Apocalipse', name_en: 'Apocalypse', desc_pt: 'Mate 15.000 inimigos no total.', desc_en: 'Kill 15,000 enemies total.', goal: 15000 },
     { id: 'hunter_100k', icon: '♾️', name_pt: 'Infinito', name_en: 'Infinite', desc_pt: 'Mate 100.000 inimigos no total.', desc_en: 'Kill 100,000 enemies total.', goal: 100000 },
-    { id: 'legend', icon: '🌠', name_pt: 'A Lenda', name_en: 'The Legend', desc_pt: 'Wave 50 sem tomar NENHUM dano.', desc_en: 'Reach wave 50 with zero damage.', goal: 1 }
+    { id: 'legend', icon: '🌠', name_pt: 'A Lenda', name_en: 'The Legend', desc_pt: 'Wave 50 sem tomar NENHUM dano.', desc_en: 'Reach wave 50 with zero damage.', goal: 1 },
+
+    // ===== [v10] O FIM DE TUDO — a última conquista do jogo =====
+    { id: 'greed_monstrous', icon: '🕳️', name_pt: 'GANÂNCIA MONSTRUOSA', name_en: 'MONSTROUS GREED',
+      desc_pt: 'A ganância do mago foi tanta que corroeu sua mente e devorou o seu corpo.',
+      desc_en: "The mage's greed was so great that it corroded his mind and devoured his body.", goal: 1 }
 ];
 
 const META_UPGRADES_DB = [
@@ -2168,6 +2391,144 @@ const MeteorSprite = {
                 g.arc(cx + Math.cos(a) * r, cy + Math.sin(a) * r, 1.5 + Math.random() * 2, 0, Math.PI * 2);
                 g.fill();
             }
+
+            this._sprites.push(c);
+        }
+    },
+    get(i) {
+        this.init();
+        return this._sprites[i % this._sprites.length];
+    }
+};
+
+/**
+ * [v10] CRATERA DE METEORO — a marca que a chuva de meteoros deixa no chão.
+ * Pré-renderizada em 3 variantes: poço em perspectiva com gradiente interno,
+ * borda queimada erguida (com luz na aresta de cima), rachaduras radiais,
+ * esfumaçado, entulho e pedrinhas. As BRASAS esfriam em tempo real e a cratera
+ * inteira some suavemente em ~10 segundos.
+ */
+const CraterSprite = {
+    _sprites: [],
+    init() {
+        if (this._sprites.length) return;
+        for (let v = 0; v < 3; v++) {
+            const S = 160, cx = S / 2, cy = S / 2;
+            const rx = 62, ry = 24; // elipse em perspectiva (visto de cima em ângulo)
+            const c = document.createElement('canvas');
+            c.width = c.height = S;
+            const g = c.getContext('2d');
+            let seed = 9000 + v * 777;
+            const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
+
+            // 1) escurecimento geral do terreno ao redor (chão chamuscado)
+            const scG = g.createRadialGradient(cx, cy, rx * 0.4, cx, cy, rx * 1.55);
+            scG.addColorStop(0, 'rgba(8,5,12,0.55)');
+            scG.addColorStop(0.6, 'rgba(12,7,16,0.34)');
+            scG.addColorStop(1, 'rgba(12,7,16,0)');
+            g.fillStyle = scG;
+            g.beginPath(); g.ellipse(cx, cy, rx * 1.55, ry * 1.75, 0, 0, Math.PI * 2); g.fill();
+
+            // 2) manchas de queimadura irregulares ao redor do impacto
+            for (let s = 0; s < 9; s++) {
+                const a = rnd() * Math.PI * 2;
+                const d = rx * (0.85 + rnd() * 0.55);
+                const sx = cx + Math.cos(a) * d, sy = cy + Math.sin(a) * d * 0.62;
+                const sr = 6 + rnd() * 13;
+                const sm = g.createRadialGradient(sx, sy, 1, sx, sy, sr);
+                sm.addColorStop(0, 'rgba(5,3,8,0.5)');
+                sm.addColorStop(1, 'rgba(5,3,8,0)');
+                g.fillStyle = sm;
+                g.beginPath(); g.ellipse(sx, sy, sr, sr * 0.6, rnd() * 3, 0, Math.PI * 2); g.fill();
+            }
+
+            // 3) RACHADURAS radiais saindo do centro (jagged, afinando)
+            g.strokeStyle = 'rgba(4,2,7,0.75)';
+            const nCr = 7 + Math.floor(rnd() * 3);
+            for (let k = 0; k < nCr; k++) {
+                const a0 = (k / nCr) * Math.PI * 2 + rnd() * 0.5;
+                let px = cx + Math.cos(a0) * rx * 0.55, py = cy + Math.sin(a0) * ry * 0.55;
+                let ang = a0;
+                g.beginPath(); g.moveTo(px, py);
+                const segs = 3 + Math.floor(rnd() * 2);
+                g.lineWidth = 2.2;
+                for (let sg = 0; sg < segs; sg++) {
+                    ang += (rnd() - 0.5) * 0.55;
+                    const len = (rx * 0.42) * (1 - sg / segs) * (0.7 + rnd() * 0.5);
+                    px += Math.cos(ang) * len;
+                    py += Math.sin(ang) * len * 0.62;
+                    g.lineTo(px, py);
+                }
+                g.stroke();
+            }
+
+            // 4) a BORDA erguida da cratera: anel externo com sombra embaixo
+            //    e luz em cima (relevo de verdade)
+            g.save();
+            g.translate(cx, cy);
+            // sombra da borda (parte de baixo do anel)
+            g.strokeStyle = 'rgba(3,2,6,0.8)';
+            g.lineWidth = 7;
+            g.beginPath(); g.ellipse(0, 2.5, rx, ry, 0, 0.15, Math.PI - 0.15); g.stroke();
+            // corpo da borda (terra revolvida)
+            g.strokeStyle = '#241a30';
+            g.lineWidth = 6;
+            g.beginPath(); g.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2); g.stroke();
+            // luz batendo na aresta superior do anel
+            g.strokeStyle = 'rgba(168,150,190,0.75)';
+            g.lineWidth = 2.2;
+            g.beginPath(); g.ellipse(0, -1.5, rx - 1, ry - 1, 0, Math.PI + 0.25, Math.PI * 2 - 0.25); g.stroke();
+            // pontinhos de terra na borda (granulado)
+            for (let k = 0; k < 26; k++) {
+                const a = rnd() * Math.PI * 2;
+                const px2 = Math.cos(a) * (rx + (rnd() - 0.5) * 4);
+                const py2 = Math.sin(a) * (ry + (rnd() - 0.5) * 3);
+                g.fillStyle = rnd() < 0.5 ? 'rgba(150,132,175,0.5)' : 'rgba(20,13,28,0.8)';
+                g.fillRect(px2 - 1, py2 - 1, 1.6 + rnd() * 1.4, 1.4 + rnd());
+            }
+            g.restore();
+
+            // 5) O POÇO: gradiente interno afundando (parede + fundo escuro)
+            const pitG = g.createRadialGradient(cx, cy - ry * 0.25, 1, cx, cy, rx * 0.95);
+            pitG.addColorStop(0, 'rgba(2,1,4,0.97)');
+            pitG.addColorStop(0.45, 'rgba(10,6,15,0.94)');
+            pitG.addColorStop(0.8, 'rgba(22,14,32,0.9)');
+            pitG.addColorStop(1, 'rgba(30,20,42,0.0)');
+            g.fillStyle = pitG;
+            g.beginPath(); g.ellipse(cx, cy, rx * 0.86, ry * 0.86, 0, 0, Math.PI * 2); g.fill();
+
+            // 6) anéis internos concêntricos (as camadas do impacto)
+            g.strokeStyle = 'rgba(60,44,80,0.4)';
+            g.lineWidth = 1.2;
+            for (let ring = 1; ring <= 3; ring++) {
+                const k2 = ring / 4;
+                g.beginPath(); g.ellipse(cx, cy, rx * 0.86 * k2, ry * 0.86 * k2, 0, 0, Math.PI * 2); g.stroke();
+            }
+
+            // 7) ENTULHO: pedrinhas e lasca escuras dentro e na borda
+            for (let k = 0; k < 14; k++) {
+                const a = rnd() * Math.PI * 2;
+                const d = rnd() * 0.95;
+                const px = cx + Math.cos(a) * rx * d * 0.9;
+                const py = cy + Math.sin(a) * ry * d * 0.9;
+                const ps = 1.6 + rnd() * 3;
+                g.fillStyle = ['#3d3050', '#2a2038', '#4c3f60'][Math.floor(rnd() * 3)];
+                g.save();
+                g.translate(px, py);
+                g.rotate(rnd() * 3);
+                g.fillRect(-ps / 2, -ps / 3, ps, ps * 0.66);
+                g.fillStyle = 'rgba(190,175,215,0.35)';
+                g.fillRect(-ps / 2, -ps / 3, ps, 0.8);
+                g.restore();
+            }
+
+            // 8) veio central derretido (onde a pedra encostou)
+            const core = g.createRadialGradient(cx, cy, 0.5, cx, cy, rx * 0.3);
+            core.addColorStop(0, 'rgba(255,120,50,0.55)');
+            core.addColorStop(0.5, 'rgba(180,60,20,0.28)');
+            core.addColorStop(1, 'rgba(120,40,20,0)');
+            g.fillStyle = core;
+            g.beginPath(); g.ellipse(cx, cy, rx * 0.3, ry * 0.3, 0, 0, Math.PI * 2); g.fill();
 
             this._sprites.push(c);
         }
@@ -2356,6 +2717,21 @@ class Game {
         // [v9] Toast de conquista de volta (agora premium, com fanfarra)
         this.achToastQueue = [];
         this.achToastBusy = false;
+
+        // [v10] FINALE da wave 10.000 — a máquina de estados do fim do mundo
+        this.finale = null;
+        this.finaleDone = false;
+
+        // [v10] PERFORMANCE: teto de inimigos VIVOS na tela (40). Waves altas
+        // fazem fila: a cada abate, entra o próximo até acabar a wave.
+        this.maxEnemiesAlive = 40;
+        // [v10] teto GLOBAL de projéteis (a wave 2000 é o limite de dificuldade;
+        // nada de mil projéteis simultâneos numa wave 9999)
+        this.maxBullets = 340;
+
+        // [v10] CRATERAS DE METEORO (gameplay): marca no chão que esfria e some
+        this.meteorCraters = [];
+        this.frenzyDustCap = 0;
         
         this.player = null;
         this.bullets = [];
@@ -2687,6 +3063,8 @@ class Game {
 
     initInput() {
         window.addEventListener('keydown', e => {
+            // [v10] FINALE: o mundo acabou — nenhum comando, pausa ou ESC existe mais
+            if (this.state === 'FINALE') { e.preventDefault(); return; }
             if (document.activeElement === document.getElementById('dev-input')) {
                 if (e.code === 'Enter') {
                     this.processDevCommand(document.getElementById('dev-input').value);
@@ -2750,7 +3128,13 @@ class Game {
     processDevCommand(cmd) {
         if (!cmd || !cmd.startsWith('/')) return;
         const parts = cmd.trim().split(' ');
-        
+        const T = () => TEXTS[currentLang];
+        // [v10] durante o FINALE o mundo acabou: nenhum comando tem poder
+        if (this.state === 'FINALE') {
+            this.addFloatingText(this.width / 2, this.height / 2 - 30, T().fLine1, '#ff4444', 13);
+            return;
+        }
+
         // [v9] MODO ESPECTADOR: intangível, os inimigos nem te reconhecem
         // (não atiram, não mergulham) e a sua mira desliga — só observar.
         if (parts[0] === '/spectate') {
@@ -2760,9 +3144,9 @@ class Game {
                 this.player.godMode = false;
                 this.enemies.forEach(e => { e.lastShootTime = Date.now(); });
                 this.bullets = this.bullets.filter(b => { if (!b.isPlayer) { ObjectPool.releaseBullet(b); return false; } return true; });
-                this.addFloatingText(this.width / 2, this.height / 2 - 30, 'MODO ESPECTADOR', '#9fd0ff', 16);
+                this.addFloatingText(this.width / 2, this.height / 2 - 30, T().spectateOn, '#9fd0ff', 16);
             } else {
-                this.addFloatingText(this.width / 2, this.height / 2 - 30, 'ESPECTADOR OFF', '#ffffff', 14);
+                this.addFloatingText(this.width / 2, this.height / 2 - 30, T().spectateOff, '#ffffff', 14);
             }
             return;
         }
@@ -2773,10 +3157,19 @@ class Game {
             this.player.godMode = !this.player.godMode;
             if (this.player.godMode) {
                 this.player.spectate = false;
-                this.addFloatingText(this.width / 2, this.height / 2 - 30, 'GOD MODE', '#ffd700', 16);
+                this.addFloatingText(this.width / 2, this.height / 2 - 30, T().godOn, '#ffd700', 16);
             } else {
-                this.addFloatingText(this.width / 2, this.height / 2 - 30, 'GOD MODE OFF', '#ffffff', 14);
+                this.addFloatingText(this.width / 2, this.height / 2 - 30, T().godOff, '#ffffff', 14);
             }
+            return;
+        }
+        // [v10] /NORMAL MODE: sai de espectador/god — inimigos voltam a te
+        // reconhecer, você volta a levar dano: o jogo como sempre foi.
+        if (parts[0] === '/normal') {
+            if (!this.player) return;
+            this.player.spectate = false;
+            this.player.godMode = false;
+            this.addFloatingText(this.width / 2, this.height / 2 - 30, T().normalMode, '#7dffb0', 14);
             return;
         }
         // [v9] /CLEAR: varre os inimigos e TRAVA a wave (sem perks, sem avanço).
@@ -2787,7 +3180,7 @@ class Game {
             this.enemiesToSpawn = 0;
             this.meteors = [];
             this.waveLock = true;
-            this.addFloatingText(this.width / 2, this.height / 2 - 30, 'WAVE ' + this.wave + ' TRAVADA — /next P/ AVANÇAR', '#4da6ff', 13);
+            this.addFloatingText(this.width / 2, this.height / 2 - 30, 'WAVE ' + this.wave + ' — ' + T().waveLocked, '#4da6ff', 13);
             return;
         }
         // [v9] /NEXT: destrava a wave atual e abre os perks -> próxima wave
@@ -2812,12 +3205,19 @@ class Game {
             }
         }
         if (parts[0] === '/wave' && parts[1]) {
-            this.wave = parseInt(parts[1]);
+            let wv = parseInt(parts[1]);
+            if (isNaN(wv)) return;
+            // [v10] O MUNDO ACABA NA WAVE 10.000 — não existe nada além dela
+            if (wv > 10000) {
+                wv = 10000;
+                this.addFloatingText(this.width / 2, this.height / 2 - 30, TEXTS[currentLang].waveLimit, '#ff4444', 13);
+            }
+            this.wave = wv;
             this.enemies.forEach(e => e.dead = true);
             this.enemiesToSpawn = 0;
             this.meteors = [];
             this.state = 'PLAYING';
-            this.addFloatingText(this.width/2, this.height/2, `PULANDO PARA WAVE ${this.wave}`, "yellow");
+            this.addFloatingText(this.width/2, this.height/2, TEXTS[currentLang].waveJump + ' ' + this.wave, "yellow");
             this.startWave();
         } else if (parts[0] === '/perk' && parts[1]) {
             const perkId = parts[1];
@@ -2924,6 +3324,12 @@ class Game {
         this.state = 'PLAYING';
         this.paused = false;
         this.player = new Player(this.width / 2, this.height - 150, charIndex, window.selectedStaff || 1);
+        // [v10] celular: o MAGO também fica maior (escala de OBJETO — nada de
+        // zoom de câmera que corta as paredes da arena)
+        if (window.isMobileDevice) {
+            this.player.width = Math.round(this.player.width * 1.22);
+            this.player.height = Math.round(this.player.height * 1.22);
+        }
         this.bullets = []; this.enemies = []; this.particles = []; this.lightningEffects = []; this.floatingTexts = [];
         this.cinematicShards = []; // [v4]
         this.meteors = [];
@@ -2945,6 +3351,9 @@ class Game {
 
     startWave() {
         const isBoss = (this.wave % CONFIG.bossWaveInterval === 0 || this.wave % CONFIG.miniBossInterval === 0);
+        // [v10] A WAVE 10.000 NÃO É UMA WAVE — é o fim do mundo. Nada de chefes,
+        // inimigos ou perks: só a cinemática final.
+        if (this.wave >= 10000) { this.startFinale(); return; }
         this.isBossWave = isBoss;
         if (this.player) this.player.hurtThisWave = false;
                 this.streakCount = 0;
@@ -3389,8 +3798,20 @@ class Game {
     // [v6→v7] KAMIKAZE estilhaçado no chão: MUITA mais sucata visível
     // (engrenagens grossas, chapas, parafusos) + craterinha queimada 4,5s
     spawnKamiCrash(x, gy) {
-        this.spawnShockwave(x, gy - 4, 80, '#ff8866', 380, 3);
+        // [v10] sem ONDA CIRCULAR: o crash agora é uma PLUMA direcional —
+        // poeira e lascas voando pros lados e pra cima, como impacto de verdade
+        for (let i = 0; i < 16; i++) {
+            const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.6;
+            const sp = 1.5 + Math.random() * 4;
+            if (this.particles.length >= this.particleCap) break;
+            const p = ObjectPool.getParticle(x, gy - 4, Math.random() < 0.5 ? 'rgba(190,180,210,0.55)' : 'rgba(120,110,140,0.5)',
+                3 + Math.random() * 4, 480 + Math.random() * 320, 0);
+            p.vx = Math.cos(ang) * sp; p.vy = Math.sin(ang) * sp;
+            p.grav = 0.05;
+            this.particles.push(p);
+        }
         this.createExplosion(x, gy - 8, '#ff8844', 20, 7, 6, 700);
+        this.createDebris(x, gy - 6, '#262133', 5, 4.4, 4.2, 800);
         this.addShake(6);
         this.hitStop(40);
         audioManager.playSfx('shatter');
@@ -3428,14 +3849,37 @@ class Game {
         const dt = Math.min(50, now - (this._gjT || now)); this._gjT = now;
         for (let i = this.groundJunk.length - 1; i >= 0; i--) {
             const j = this.groundJunk[i];
+            const prevY = j.y;
             j.vy += 0.026 * dt / 4;
             j.x += j.vx * dt / 16;
             j.y += j.vy * dt / 16;
             j.rot += j.vrot * dt / 16;
-            if (j.y >= j.gy) {
-                j.y = j.gy;
-                j.vy *= -0.36; j.vx *= 0.72; j.vrot *= 0.6;
-                if (Math.abs(j.vy) < 0.35) { j.vy = 0; j.vx = 0; j.vrot = 0; }
+            // [v10] ENGRENS DE VERDADE: gravidade, chão recalculado a cada passo
+            // e colisão com as ESTRUTURAS — nada de atravessar paredes/torres
+            // nem aterrissar flutuando num vão. Onde caírem, ficam.
+            const emVoo = j.vy !== 0 || j.vx !== 0 || j.vrot !== 0;
+            if (emVoo) {
+                // paredes da arena
+                if (j.x < 8) { j.x = 8; j.vx *= -0.45; }
+                if (j.x > this.width - 8) { j.x = this.width - 8; j.vx *= -0.45; }
+                // laterais dos blocos sólidos (plataformas e torres)
+                for (let bi = 0; bi < this.blocks.length; bi++) {
+                    const b = this.blocks[bi];
+                    if (j.x > b.x - 3 && j.x < b.x + b.w + 3 && j.y > b.y + 6 && j.y < b.y + b.h) {
+                        if (j.x < b.x + b.w / 2) { j.x = b.x - 3; if (j.vx > 0) j.vx *= -0.45; }
+                        else { j.x = b.x + b.w + 3; if (j.vx < 0) j.vx *= -0.45; }
+                        j.vrot *= 0.7;
+                    }
+                }
+                // o chão de verdade EMBAIXO da engrenagem (degraus inclusos)
+                const gy = this.groundBelow(j.x, prevY);
+                if (gy !== null && j.y >= gy && j.vy > 0) {
+                    j.y = gy;
+                    j.vy *= -0.36; j.vx *= 0.72; j.vrot *= 0.6;
+                    if (Math.abs(j.vy) < 0.35) { j.vy = 0; j.vx = 0; j.vrot = 0; }
+                }
+                // caiu num vão sem chão: se perde no abismo lá embaixo
+                if (j.y > this.height + 60) { this.groundJunk.splice(i, 1); continue; }
             }
             if (now - j.born > 5000) this.groundJunk.splice(i, 1); // 5s e sumiu
         }
@@ -3537,6 +3981,137 @@ class Game {
                 }
             }
             ctx.restore();
+        }
+    }
+
+    // ===== [v10] MORTE SEM ANEL: clarão de impacto + fagulhas em risco =====
+    spawnDeathFlash(x, y, golden) {
+        if (!this.deathFlashes) this.deathFlashes = [];
+        if (this.deathFlashes.length > 14) this.deathFlashes.shift();
+        this.deathFlashes.push({ x, y, born: Date.now(), dur: 130, r: golden ? 60 : 46 });
+    }
+    spawnDeathSpark(x, y, color) {
+        if (!this.deathSparks) this.deathSparks = [];
+        if (this.deathSparks.length > 90) this.deathSparks.shift();
+        const a = Math.random() * Math.PI * 2;
+        const sp = 5 + Math.random() * 7;
+        this.deathSparks.push({
+            x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+            len: 6 + Math.random() * 11,
+            color: Math.random() < 0.3 ? '#ffffff' : color,
+            born: Date.now(), dur: 190 + Math.random() * 170
+        });
+    }
+    updateDeathFx() {
+        const now = Date.now();
+        if (this.deathFlashes) this.deathFlashes = this.deathFlashes.filter(f => now - f.born < f.dur);
+        if (this.deathSparks) {
+            for (let i = this.deathSparks.length - 1; i >= 0; i--) {
+                const s = this.deathSparks[i];
+                if (now - s.born > s.dur) { this.deathSparks.splice(i, 1); continue; }
+                s.x += s.vx * window.timeScale;
+                s.y += s.vy * window.timeScale;
+                s.vx *= Math.pow(0.9, window.timeScale);
+                s.vy *= Math.pow(0.9, window.timeScale);
+            }
+        }
+    }
+    drawDeathFx(g) {
+        const now = Date.now();
+        if (this.deathSparks && this.deathSparks.length) {
+            g.save();
+            g.lineCap = 'round';
+            for (let i = 0; i < this.deathSparks.length; i++) {
+                const s = this.deathSparks[i];
+                const k = 1 - (now - s.born) / s.dur;
+                if (k <= 0) continue;
+                g.globalAlpha = k;
+                g.strokeStyle = s.color;
+                g.lineWidth = 1.6 + k * 1.4;
+                const vl = Math.hypot(s.vx, s.vy) || 1;
+                const ux = s.vx / vl, uy = s.vy / vl;
+                g.beginPath();
+                g.moveTo(s.x, s.y);
+                g.lineTo(s.x - ux * s.len * k, s.y - uy * s.len * k);
+                g.stroke();
+            }
+            g.restore();
+        }
+        if (this.deathFlashes && this.deathFlashes.length) {
+            g.save();
+            g.globalCompositeOperation = 'lighter';
+            for (let i = 0; i < this.deathFlashes.length; i++) {
+                const f = this.deathFlashes[i];
+                const k = 1 - (now - f.born) / f.dur;
+                if (k <= 0) continue;
+                const r = f.r * (0.45 + (1 - k) * 0.75);
+                const fg = g.createRadialGradient(f.x, f.y, 1, f.x, f.y, r);
+                fg.addColorStop(0, 'rgba(255,255,255,' + (0.7 * k).toFixed(2) + ')');
+                fg.addColorStop(0.4, 'rgba(238,238,255,' + (0.26 * k).toFixed(2) + ')');
+                fg.addColorStop(1, 'rgba(200,200,255,0)');
+                g.fillStyle = fg;
+                g.beginPath(); g.arc(f.x, f.y, r, 0, Math.PI * 2); g.fill();
+            }
+            g.restore();
+        }
+    }
+
+    // ===== [v10] CRATERAS DE METEORO (gameplay) =====
+    spawnMeteorCrater(x, y, intensity) {
+        if (!this.meteorCraters) this.meteorCraters = [];
+        if (this.meteorCraters.length >= 8) this.meteorCraters.shift(); // teto de decals
+        const r = 46 + intensity * 30 + Math.random() * 12;
+        this.meteorCraters.push({
+            x: x, y: y, r: r, born: Date.now(), dur: 10000,
+            variant: Math.floor(Math.random() * 3), seed: Math.random() * 6.28
+        });
+    }
+
+    updateMeteorCraters() {
+        if (!this.meteorCraters || !this.meteorCraters.length) return;
+        const now = Date.now();
+        for (let i = this.meteorCraters.length - 1; i >= 0; i--) {
+            if (now - this.meteorCraters[i].born > this.meteorCraters[i].dur) this.meteorCraters.splice(i, 1);
+        }
+    }
+
+    drawMeteorCraters(g) {
+        if (!this.meteorCraters || !this.meteorCraters.length) return;
+        const now = Date.now();
+        for (let i = 0; i < this.meteorCraters.length; i++) {
+            const cr = this.meteorCraters[i];
+            const age = now - cr.born;
+            // fade suave nos últimos 2,5s de vida
+            const fade = age > cr.dur - 2500 ? Math.max(0, 1 - (age - (cr.dur - 2500)) / 2500) : 1;
+            if (fade <= 0) continue;
+            // as brasas esfriam nos primeiros ~3s
+            const heat = Math.max(0, 1 - age / 3000);
+            const t = now / 1000;
+            const flick = 0.75 + Math.sin(t * 9 + cr.seed) * 0.25;
+            g.save();
+            g.globalAlpha = fade;
+            const spr = CraterSprite.get(cr.variant);
+            g.drawImage(spr, cr.x - cr.r, cr.y - cr.r * 0.62, cr.r * 2, cr.r * 1.24);
+            // brasa viva esfriando (por cima do veio central)
+            if (heat > 0) {
+                g.globalCompositeOperation = 'lighter';
+                g.globalAlpha = fade * heat * flick * 0.8;
+                const br = cr.r * 0.34;
+                const bg2 = g.createRadialGradient(cr.x, cr.y, 1, cr.x, cr.y, br);
+                bg2.addColorStop(0, 'rgba(255,170,80,0.8)');
+                bg2.addColorStop(0.5, 'rgba(255,90,30,0.35)');
+                bg2.addColorStop(1, 'rgba(255,60,20,0)');
+                g.fillStyle = bg2;
+                g.beginPath(); g.ellipse(cr.x, cr.y, br, br * 0.5, 0, 0, Math.PI * 2); g.fill();
+                // fumacinha subindo enquanto esquenta
+                if (Math.random() < 0.12 && this.particles.length < this.particleCap) {
+                    const p = ObjectPool.getParticle(cr.x + (Math.random() - 0.5) * cr.r * 0.5, cr.y - 4,
+                        'rgba(140,130,160,0.4)', 2.5 + Math.random() * 2.5, 900, 0);
+                    p.vy = -(0.3 + Math.random() * 0.4); p.vx = (Math.random() - 0.5) * 0.2;
+                    this.particles.push(p);
+                }
+            }
+            g.restore();
         }
     }
 
@@ -3952,13 +4527,27 @@ class Game {
                 if (m.trail.length > 8) m.trail.shift();
                 
                 if (m.y >= m.targetY) {
-                    // Impacto!
-                    this.spawnShockwave(m.x, m.targetY, 85, '#ff8833', 400, 3); // [JUICE]
+                    // Impacto! [v10] CRASH de fliperama + CRATERA de verdade
+                    // no chão (que esfria e some em ~10s) + terra ejetada
+                    this.spawnMeteorCrater(m.x, m.targetY, intensity);
                     this.createExplosion(m.x, m.targetY, '#ff6600', 25, 10, 7, 800);
                     this.createExplosion(m.x, m.targetY, '#ffaa00', 15, 6, 4, 600);
+                    // EJETA de terra/pedra: lascas escuras voando pra cima e pros lados
+                    this.createDebris(m.x, m.targetY - 4, '#3a2e45', 8, 5, 5.5, 900);
+                    this.createDebris(m.x, m.targetY - 4, '#584a66', 5, 3.6, 6.5, 750);
+                    for (let pe = 0; pe < 14; pe++) {
+                        if (this.particles.length >= this.particleCap) break;
+                        const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+                        const sp = 2 + Math.random() * 5;
+                        const p = ObjectPool.getParticle(m.x, m.targetY - 6,
+                            Math.random() < 0.4 ? '#ffb763' : '#8a7a9e', 2.5 + Math.random() * 3.5, 520, 0);
+                        p.vx = Math.cos(ang) * sp; p.vy = Math.sin(ang) * sp;
+                        p.grav = 0.07;
+                        this.particles.push(p);
+                    }
                     this.addShake(10 + intensity * 8);
                     this.hitStop(50);
-                    audioManager.playSfx('meteor_impact');
+                    audioManager.playSfx('meteor_crash');
                     
                     // Dano ao jogador se estiver perto
                     if (this.player) {
@@ -4061,7 +4650,7 @@ class Game {
         let ticks = 0;
         while (this.tickAccumulator >= TICK_MS) {
             this.tickAccumulator -= TICK_MS;
-            if ((this.state !== 'PLAYING' && this.state !== 'BOSS_DEATH_CINEMATIC') || this.paused) {
+            if ((this.state !== 'PLAYING' && this.state !== 'BOSS_DEATH_CINEMATIC' && this.state !== 'FINALE') || this.paused) {
                 this.tickAccumulator = 0;
                 break;
             }
@@ -4192,6 +4781,25 @@ class Game {
 
         window.timeScale = 1.0;
         document.getElementById('fade-overlay').style.opacity = 0;
+
+        // ===== [v10] FINALE DA WAVE 10.000 — o mundo acabando, tick a tick =====
+        if (this.state === 'FINALE') {
+            this.finaleTick();
+            // partículas e fagulhas continuam vivas (o mundo é que está morrendo)
+            for (let i = this.particles.length - 1; i >= 0; i--) {
+                let p = this.particles[i];
+                p.update();
+                if (p.dead) { ObjectPool.releaseParticle(p); this.particles.splice(i, 1); }
+            }
+            this.updateDeathFx();
+            for (let i = this.floatingTexts.length - 1; i >= 0; i--) {
+                let t = this.floatingTexts[i];
+                t.update();
+                if (t.dead) this.floatingTexts.splice(i, 1);
+            }
+            return;
+        }
+
         if (this.shake > 0.3) this.shake *= Math.pow(0.96, window.timeScale); else this.shake = 0;
 
         this.player.update();
@@ -4260,10 +4868,12 @@ class Game {
                     this.checkKillAchievements();
                 }
                 this.enemies.splice(i, 1);
-                // [JUICE] ultimo inimigo da wave: micro camera-lenta + onda de choque
+                // [JUICE] ultimo inimigo da wave: micro camera-lenta + EXPLOSÃO DE
+                // FAGULHAS brancas (sem anel — a wave termina em faíscas, não em bolha)
                 if (this.state === 'PLAYING' && this.enemies.length === 0 && this.enemiesToSpawn <= 0) {
                     this.hitStop(120);
-                    this.spawnShockwave(e.x + e.width / 2, e.y + e.height / 2, 130, '#ffffff', 450, 3);
+                    for (let s = 0; s < 16; s++) this.spawnDeathSpark(e.x + e.width / 2, e.y + e.height / 2, '#ffffff');
+                    this.spawnDeathFlash(e.x + e.width / 2, e.y + e.height / 2, true);
                     audioManager.playSfx('wave_clear');
                 }
                 audioManager.playSfx('enemy_die');
@@ -4285,6 +4895,7 @@ class Game {
         }
         this.updateGroundJunk(); // [v6] peças do kamikaze no chão
         this.updateKamiCraters(); // [v7] crateras do kamikaze
+        this.updateMeteorCraters(); // [v10] crateras de meteoro
         this.updateSoulOrbs(); // [v7] almas voando até o mago
 
         for (let i = this.lightningEffects.length - 1; i >= 0; i--) {
@@ -4306,6 +4917,7 @@ class Game {
             if (s.dead) this.shockwaves.splice(i, 1);
         }
         this.updateBgDust();
+        this.updateDeathFx(); // [v10] fagulhas e clarões de morte
 
         // Aviso de Kamikaze na tela
         const kamiAviso = this.enemies.some(e => e.kamikaze && e.kamikazeState === 'aviso');
@@ -4415,8 +5027,15 @@ class Game {
             this.showUpgradeMenu();
         }
         if (this.enemiesToSpawn > 0) {
-            if (Date.now() - this.lastSpawnTime > 1000) { 
-                this.spawnPatternEnemy(); this.enemiesToSpawn--; this.lastSpawnTime = Date.now();
+            // [v10] TETO DE INIMIGOS VIVOS (40): a wave faz FILA — a cada abate
+            // entra o próximo. Nem a wave 9999 lota a tela além disso.
+            const vivos = this.enemies.filter(e => !e.dead).length;
+            if (vivos < (this.maxEnemiesAlive || 40)) {
+                // fila grande = reposição mais ágil (a wave nunca "trava" esperando)
+                const gap = this.enemiesToSpawn > 20 ? 550 : 1000;
+                if (Date.now() - this.lastSpawnTime > gap) {
+                    this.spawnPatternEnemy(); this.enemiesToSpawn--; this.lastSpawnTime = Date.now();
+                }
             }
         }
     }
@@ -4825,8 +5444,20 @@ class Game {
                 card.classList.add('picked');
                 const perkName = (currentLang === 'pt') ? selectedUpgrade.name_pt : selectedUpgrade.name_en;
                 if (this.player) {
-                    this.spawnShockwave(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, 130, '#ffffff', 460, 3);
-                    this.createExplosion(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, 'white', 16, 5, 4, 700);
+                    // [v10] perk absorvido: PARTÍCULAS CONVERGINDO pro mago (sem anel)
+                    const pcx = this.player.x + this.player.width / 2;
+                    const pcy = this.player.y + this.player.height / 2;
+                    for (let pk = 0; pk < 14; pk++) {
+                        if (this.particles.length >= this.particleCap) break;
+                        const a = Math.random() * Math.PI * 2;
+                        const d = 70 + Math.random() * 60;
+                        const p = ObjectPool.getParticle(pcx + Math.cos(a) * d, pcy + Math.sin(a) * d,
+                            Math.random() < 0.5 ? '#ffffff' : '#9fd0ff', 2 + Math.random() * 2.5, 460, 0);
+                        const dx = pcx - p.x, dy = pcy - p.y, dd = Math.hypot(dx, dy) || 1;
+                        p.vx = dx / dd * 3.2; p.vy = dy / dd * 3.2;
+                        this.particles.push(p);
+                    }
+                    this.createExplosion(pcx, pcy, 'white', 10, 4, 3.5, 500);
                 }
                 // [v5] o nome da perk CAI da posição da PRÓPRIA carta, sutil,
                 // desce um pouco e evapora no fade (sem gigante, sem ir pro centro)
@@ -5480,13 +6111,18 @@ class Game {
         // [v6] BURACO NEGRO SUPERMASSIVO — o espaço-tempo distorcendo AO VIVO
         if (this.blackHole) {
             const bh = this.blackHole;
-            const R = bh.shadowR;
+            // [v10] O ANÚNCIO DO FIM: da wave 9000 à 9999 o buraco negro CRESCE
+            // progressivamente (chegando ao DOBRO do tamanho) e DESLIZA pro
+            // CENTRO do cenário — o pano de fundo virando o protagonista
+            const fk = Math.max(0, Math.min(1, (this.wave - 9000) / 999));
+            const R = bh.shadowR * (1 + fk);
+            const bx = bh.x + (this.width / 2 - bh.x) * fk;
+            const by = bh.y + (330 - bh.y) * fk;
             const bNow = performance.now();
             const bDt = Math.min(50, bNow - (this._bhLastT || bNow)) / 1000;
             this._bhLastT = bNow;
             const bt = bNow / 1000;
             const rot = -0.14, cosR = Math.cos(rot), sinR = Math.sin(rot);
-            const bx = bh.x, by = bh.y;
             const proj = (ex, ey) => [bx + ex * cosR - ey * sinR, by + ex * sinR + ey * cosR];
 
             // 0) bruma violeta respirando (o campo gravitacional "pesa" no ar)
@@ -6278,6 +6914,13 @@ class Game {
             ctx.translate(-camX + shakeX, -camY + shakeY);
         }
 
+        // [v10] FINALE: zoom cinematográfico no mago (últimas palavras / engolido)
+        if (this.state === 'FINALE' && this.finale && this.finale.zoom && this.finale.zoom !== 1) {
+            ctx.translate(this.width / 2, this.height / 2);
+            ctx.scale(this.finale.zoom, this.finale.zoom);
+            ctx.translate(-this.finale.zoomX, -this.finale.zoomY);
+        }
+
         if (this.showTeleportZonesUntil && Date.now() < this.showTeleportZonesUntil) {
             ctx.save();
             ctx.fillStyle = 'rgba(0, 255, 255, 0.15)';
@@ -6312,10 +6955,11 @@ class Game {
             ctx.restore();
         }
         this.drawKamiCraters(ctx); // [v7] crateras do kamikaze
+        this.drawMeteorCraters(ctx); // [v10] crateras de meteoro
         this.drawWeather(ctx, false); // [v7] chuva de éter, poças e relâmpagos
         this.drawShadows(ctx); // [v3] sombras 3D sob as entidades
         
-        if (this.player && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
+        if (this.player && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC' && this.state !== 'FINALE') {
             const tip = this.player.getStaffTip();
             const centerX = tip.x;
             const centerY = tip.y;
@@ -6330,12 +6974,13 @@ class Game {
             }
         }
 
-        this.player.draw(ctx);
+        if (!this.finaleHide) this.player.draw(ctx); // [v10] no engolido, o mago é desenhado à parte (espiral)
         this.enemies.forEach(e => { if (!e.dead) e.draw(ctx); });
         this.drawLockMarkers(ctx); // [v6] alvo travado pelo toque
         this.drawMeteors(ctx);
         this.bullets.forEach(b => b.draw(ctx));
         this.particles.forEach(p => p.draw(ctx));
+        this.drawDeathFx(ctx); // [v10] fagulhas em risco + clarão de impacto
         this.drawSoulOrbs(ctx); // [v7] almas voando até o mago
         this.drawGroundJunk(ctx); // [v6] engrenagens do kamikaze no chão
         this.lightningEffects.forEach(l => l.draw(ctx));
@@ -6379,6 +7024,8 @@ class Game {
         }
 
         this.drawBossBar(ctx); // [JUICE] barra do chefe no topo
+
+        this.drawFinale(ctx); // [v10] o fim do mundo (overlay do FINALE)
 
         if (this.player && this.player.hurtFlashUntil > Date.now()) {
             const a = Math.min(0.4, (this.player.hurtFlashUntil - Date.now()) / 400 * 0.45);
@@ -7132,7 +7779,9 @@ class Player {
             if (!e.dead && e.y > -50) {
                 const ep = { x: e.x + e.width / 2, y: e.y + e.height / 2 };
                 const dist = distToSegment(ep, p1, p2);
-                if (dist < (25 / 2 + e.width / 2)) {
+                // [v10] raio pela SILHUETA visual do inimigo (não mais a caixinha)
+                const hitR = 13 + e.width * (e.escalaVisual || 1.8) * 0.42;
+                if (dist < hitR) {
                     let isBoss = (e.type === 'boss' || e.type === 'miniboss');
                     let tier = this.perks.decimator;
                     let pct = 0;
@@ -7330,8 +7979,16 @@ class Player {
                     this.vy = -this.stats.jumpPower;
                     this.jumpsLeft--;
                     this.squashY = 1.3;
-                    // [JUICE] anel de ar no pulo duplo
-                    game.spawnShockwave(this.x + this.width / 2, this.y + this.height, 26, 'rgba(255,255,255,0.8)', 260, 2);
+                    // [v10] pulo duplo: POEIRA em jato pros lados (sem anel)
+                    for (let dj = 0; dj < 7; dj++) {
+                        const dir = (dj % 2 === 0) ? -1 : 1;
+                        if (game.particles.length >= game.particleCap) break;
+                        const p = ObjectPool.getParticle(this.x + this.width / 2, this.y + this.height,
+                            'rgba(225,225,240,0.6)', 2.5 + Math.random() * 2.5, 320, 0);
+                        p.vx = dir * (1.2 + Math.random() * 1.8);
+                        p.vy = -Math.random() * 0.6;
+                        game.particles.push(p);
+                    }
                 } else {
                     this.jumpBufferUntil = Date.now() + 100;
                 }
@@ -7471,18 +8128,20 @@ class Player {
             this.manaShieldReady = false; this.manaShieldCooldown = Date.now() + 20000; 
             document.getElementById('mana-shield-indicator').style.display = 'none';
             game.addFloatingText(this.x, this.y - 20, TEXTS[currentLang].blocked, "#4dff4d");
-            // [v4] o escudo ESTILHACA: anel de choque + fragmentos verdes voando
+            // [v10] o escudo ESTILHAÇA EM HEXÁGONOS (sem anel): as células do
+            // favo voam em pedaços verdes girando e se apagam
             const scx = this.x + this.width / 2, scy = this.y + this.height / 2;
-            game.spawnShockwave(scx, scy, 95, '#4dff4d', 420, 3);
-            game.createExplosion(scx, scy, '#a8ffbe', 10, 5, 5, 420);
-            for (let i = 0; i < 12; i++) {
+            for (let i = 0; i < 14; i++) {
                 if (game.particles.length >= game.particleCap) break;
-                const a = (i / 12) * Math.PI * 2 + Math.random() * 0.4;
-                const sp = 2 + Math.random() * 3;
-                const p = ObjectPool.getParticle(scx + Math.cos(a) * 46, scy + Math.sin(a) * 46, '#4dff4d', 3 + Math.random() * 4, 560, 0);
+                const a = (i / 14) * Math.PI * 2 + Math.random() * 0.4;
+                const sp = 2.4 + Math.random() * 3.4;
+                const p = ObjectPool.getParticle(scx + Math.cos(a) * 30, scy + Math.sin(a) * 30, '#4dff4d', 4 + Math.random() * 4, 560, 0);
                 p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp;
+                p.verts = [[Math.cos(0) * 0.95, Math.sin(0) * 0.95], [Math.cos(2.094) * 0.95, Math.sin(2.094) * 0.95], [Math.cos(4.189) * 0.95, Math.sin(4.189) * 0.95]];
+                p.rot = Math.random() * 6.28; p.vrot = (Math.random() - 0.5) * 0.5;
                 game.particles.push(p);
             }
+            game.createExplosion(scx, scy, '#a8ffbe', 10, 5, 5, 420);
             audioManager.playSfx('shatter'); this.invulnUntil = Date.now() + 3000; return;
         }
 
@@ -7644,26 +8303,41 @@ const OutlinedSprites = {
         c.width = W + pad * 2;
         c.height = H + pad * 2;
         const g = c.getContext('2d');
-        // ===== 0) GLOW BRANQUINHO bem fraco em volta (realça contra o fundo) =====
+        // ===== 0) GLOW BRANQUINHO — agora um BLUR SUAVE de verdade, bem leve
+        // (nada de anéis/silhueta dura: só uma névoa achatada no contorno que
+        // destaca o inimigo do cenário escuro, como você pediu) =====
         const glow = document.createElement('canvas');
-        glow.width = c.width; glow.height = c.height;
+        glow.width = c.width + 8; glow.height = c.height + 8;
         const gg = glow.getContext('2d');
-        // silhueta expandida em 3 anéis de offsets (12 direções cada)
-        const rings = [3, 4.5, 6];
-        for (let ri = 0; ri < rings.length; ri++) {
-            for (let a = 0; a < 12; a++) {
-                const an = (a / 12) * Math.PI * 2 + ri * 0.26;
-                gg.drawImage(src, pad + Math.cos(an) * rings[ri], pad + Math.sin(an) * rings[ri]);
-            }
-        }
-        // pinta a silhueta expandida de BRANCO suave
+        gg.drawImage(src, pad + 4, pad + 4);
         gg.globalCompositeOperation = 'source-in';
-        gg.fillStyle = 'rgba(255,255,255,0.85)';
+        gg.fillStyle = '#ffffff';
         gg.fillRect(0, 0, glow.width, glow.height);
-        // cola o glow com força controlada (bem fraco, elegante)
-        g.globalAlpha = 0.34;
-        g.drawImage(glow, 0, 0);
-        g.globalAlpha = 1;
+        // o navegador suporta ctx.filter? (Safari antigo não: cai no fallback)
+        gg.filter = 'blur(1px)';
+        const filtroOk = (gg.filter === 'blur(1px)');
+        gg.filter = 'none';
+        if (filtroOk) {
+            // névoa larga, quase imperceptível
+            g.save();
+            g.globalAlpha = 0.14;
+            g.filter = 'blur(5px)';
+            g.drawImage(glow, -4, -4);
+            // fio suave rente ao sprite
+            g.globalAlpha = 0.11;
+            g.filter = 'blur(2px)';
+            g.drawImage(glow, -4, -4);
+            g.filter = 'none';
+            g.restore();
+        } else {
+            // fallback sem filter: silhueta dupla bem fraquinha e apertada
+            g.globalAlpha = 0.10;
+            g.drawImage(glow, -4 - 1.5, -4);
+            g.drawImage(glow, -4 + 1.5, -4);
+            g.drawImage(glow, -4, -4 - 1.5);
+            g.drawImage(glow, -4, -4 + 1.5);
+            g.globalAlpha = 1;
+        }
         // ===== 1) CONTORNO escuro: silhueta 2px em volta do sprite =====
         const dark = document.createElement('canvas');
         dark.width = W + 4; dark.height = H + 4;
@@ -7722,6 +8396,72 @@ const BossAuraSprite = {
 };
 
 /**
+ * [v10] ANÉIS RÚNICOS DO CHEFE — pré-renderizados em duas famílias:
+ * 'glyphs' (12 runas mágicas desenhadas, cada uma diferente) e 'ticks'
+ * (40 traços radiais estilo mecanismo). Giram em sentidos opostos no draw,
+ * em planos elípticos — a mesma linguagem visual do buraco negro.
+ */
+const BossRings = {
+    _c: {},
+    ring(kind, col) {
+        const key = kind + '|' + col;
+        if (this._c[key]) return this._c[key];
+        const S = 240, cx = S / 2, cy = S / 2, r = S / 2 - 8;
+        const c = document.createElement('canvas');
+        c.width = c.height = S;
+        const g = c.getContext('2d');
+        if (kind === 'glyphs') {
+            for (let i = 0; i < 12; i++) {
+                const a = (i / 12) * Math.PI * 2;
+                const x = cx + Math.cos(a) * r, y = cy + Math.sin(a) * r;
+                g.save();
+                g.translate(x, y);
+                g.rotate(a + Math.PI / 2);
+                g.strokeStyle = col;
+                g.fillStyle = col;
+                g.lineWidth = 1.7;
+                g.lineJoin = 'round';
+                g.lineCap = 'round';
+                const k = i % 4;
+                if (k === 0) {
+                    // losango oco com núcleo
+                    g.beginPath(); g.moveTo(0, -4.6); g.lineTo(3.4, 0); g.lineTo(0, 4.6); g.lineTo(-3.4, 0); g.closePath(); g.stroke();
+                    g.beginPath(); g.arc(0, 0, 1.2, 0, Math.PI * 2); g.fill();
+                } else if (k === 1) {
+                    // círculo atravessado por traço duplo
+                    g.beginPath(); g.arc(0, 0, 3.4, 0, Math.PI * 2); g.stroke();
+                    g.beginPath(); g.moveTo(-5.4, 0); g.lineTo(5.4, 0); g.stroke();
+                    g.beginPath(); g.moveTo(0, -5.4); g.lineTo(0, -3.4); g.stroke();
+                } else if (k === 2) {
+                    // Z rúnico
+                    g.beginPath(); g.moveTo(-3.6, -4.2); g.lineTo(3.6, -4.2); g.lineTo(-3.6, 4.2); g.lineTo(3.6, 4.2); g.stroke();
+                } else {
+                    // triângulo com pupila
+                    g.beginPath(); g.moveTo(0, -4.8); g.lineTo(4.2, 3.6); g.lineTo(-4.2, 3.6); g.closePath(); g.stroke();
+                    g.beginPath(); g.arc(0, 1.1, 1.3, 0, Math.PI * 2); g.fill();
+                }
+                g.restore();
+            }
+        } else {
+            // ticks: 40 traços radiais, a cada 4 um mais longo
+            for (let i = 0; i < 40; i++) {
+                const a = (i / 40) * Math.PI * 2;
+                const long = i % 4 === 0;
+                const r0 = r - (long ? 8 : 4);
+                g.strokeStyle = col;
+                g.lineWidth = long ? 2.1 : 1.1;
+                g.beginPath();
+                g.moveTo(cx + Math.cos(a) * r0, cy + Math.sin(a) * r0);
+                g.lineTo(cx + Math.cos(a) * r, cy + Math.sin(a) * r);
+                g.stroke();
+            }
+        }
+        this._c[key] = c;
+        return c;
+    }
+};
+
+/**
  * [PERFORMANCE] Auras de energia PRE-RENDERIZADAS por tipo de inimigo
  * (antes: createRadialGradient + arc para CADA inimigo a CADA quadro).
  */
@@ -7746,6 +8486,91 @@ const EnemyAuras = {
     }
 };
 
+/**
+ * [v10] HITBOX QUE SEGUE O SPRITE — os inimigos não são mais caixas: o
+ * contorno de colisão é a PRÓPRIA SILHUETA do .png (áreas transparentes são
+ * atravessadas). Construímos uma máscara de pixels do sprite (grade
+ * reduzida, alpha > 70) e testamos círculo-vs-máscara. Se o navegador não
+ * deixar ler os pixels (arquivo aberto via file:// em alguns navegadores),
+ * entra um fallback GEOMÉTRICO por formato (triângulo/losango/redondo) —
+ * muito mais fiel que a caixa antiga, e nunca conta área transparente.
+ */
+const EnemyHitbox = {
+    masks: {},
+    _fallback(type) {
+        const shapes = { triangulo: 'tri', losango: 'diamond', redondo: 'circle', miniboss: 'diamond', boss: 'diamond' };
+        return { pix: false, shape: shapes[type] || 'circle' };
+    },
+    get(type) {
+        if (this.masks[type] !== undefined) return this.masks[type];
+        const img = ASSETS.images[type];
+        // imagem ainda não carregou? fallback SEM cachear (tenta de novo depois)
+        if (!img || !img.complete || img.naturalHeight === 0) return this._fallback(type);
+        let mask = null;
+        try {
+            // a máscara é um QUADRADO porque o jogo desenha o sprite num
+            // quadrado de lado width*escalaVisual (esticado, se necessário)
+            const w = 52;
+            const c = document.createElement('canvas');
+            c.width = w; c.height = w;
+            const g = c.getContext('2d', { willReadFrequently: true });
+            g.drawImage(img, 0, 0, w, w);
+            const data = g.getImageData(0, 0, w, w).data;
+            const cells = new Uint8Array(w * w);
+            for (let i = 0; i < w * w; i++) cells[i] = data[i * 4 + 3] > 70 ? 1 : 0;
+            mask = { pix: true, w: w, h: w, cells: cells };
+        } catch (e) {
+            mask = null; // canvas contaminado (segurança do navegador): geométrico
+        }
+        this.masks[type] = mask || this._fallback(type);
+        return this.masks[type];
+    },
+    /**
+     * O ponto/círculo (px, py, r) em coordenadas de MUNDO toca a SILHUETA
+     * do inimigo e (desenhado com lado `width*escalaVisual`, centrado)?
+     */
+    hits(e, px, py, r) {
+        const size = e.width * (e.escalaVisual || 1.8);
+        const cx = e.x + e.width / 2, cy = e.y + e.height / 2;
+        const hx = size / 2;
+        // fase ampla: fora da caixa visual (+raio) nem olha a máscara
+        if (px < cx - hx - r || px > cx + hx + r || py < cy - hx - r || py > cy + hx + r) return false;
+        const m = this.get(e.type);
+        const lx = (px - (cx - hx)) / size; // 0..1 na caixa visual
+        const ly = (py - (cy - hx)) / size;
+        if (!m.pix) {
+            // ===== fallback geométrico: segue o FORMATO do tipo =====
+            const rr = r / size;
+            if (m.shape === 'circle') {
+                return Math.hypot(lx - 0.5, ly - 0.5) <= 0.5 + rr * 0.6;
+            }
+            if (m.shape === 'diamond') {
+                // losango: soma das distâncias normalizadas <= meia diagonal
+                return (Math.abs(lx - 0.5) + Math.abs(ly - 0.5)) <= 0.5 + rr * 0.7;
+            }
+            // triângulo apontando pra baixo: topo largo, vértice embaixo
+            if (ly < -rr || ly > 1 + rr) return false;
+            const half = 0.5 * (1 - ly);
+            return Math.abs(lx - 0.5) <= half + rr;
+        }
+        // ===== máscara de pixels: varre as células dentro do raio =====
+        const gx = lx * m.w, gy = ly * m.h;
+        const gr = Math.max(0.9, (r / size) * m.w);
+        const x0 = Math.max(0, Math.floor(gx - gr)), x1 = Math.min(m.w - 1, Math.ceil(gx + gr));
+        const y0 = Math.max(0, Math.floor(gy - gr)), y1 = Math.min(m.h - 1, Math.ceil(gy + gr));
+        const gr2 = gr * gr;
+        for (let yy = y0; yy <= y1; yy++) {
+            const row = yy * m.w;
+            for (let xx = x0; xx <= x1; xx++) {
+                if (!m.cells[row + xx]) continue;
+                const dx = (xx + 0.5) - gx, dy = (yy + 0.5) - gy;
+                if (dx * dx + dy * dy <= gr2) return true;
+            }
+        }
+        return false;
+    }
+};
+
 class Enemy {
     constructor(x, y, type) { this.reset(x, y, type); }
     
@@ -7755,7 +8580,7 @@ class Enemy {
         // [MIRA PREDITIVA] estimativa de velocidade (px/s) para antecipar o movimento
         this.estVX = 0; this.estVY = 0;
         this._velSampleAt = 0; this._velSampleX = x; this._velSampleY = y;
-        this.escalaVisual = window.isMobileDevice ? 2.05 : 1.8; // [v9] maior no celular
+        this.escalaVisual = window.isMobileDevice ? 2.55 : 1.8; // [v10] celular: OBJETOS MAIORES (não zoom de câmera)
                 this.trailHistory = [];
         this.trailTick = 0;
         
@@ -7890,8 +8715,12 @@ class Enemy {
                         game.createParticle(this.x + this.width/2, this.y + this.height, '#ffcc00', 3, 300, 0.3);
                     }
                 }
-                if (this.x < game.player.x + game.player.width && this.x + this.width > game.player.x &&
-                    this.y < game.player.y + game.player.height && this.y + this.height > game.player.y) {
+                // [v10] o corpo do kamikaze segue a SILHUETA do .png: encosta
+                // no mago só se a máscara de pixels realmente tocar ele
+                if (EnemyHitbox.hits(this,
+                        game.player.x + game.player.width / 2,
+                        game.player.y + game.player.height * 0.55,
+                        Math.max(15, game.player.width * 0.34))) {
                     let damaged = false;
                     if (Date.now() >= game.player.invulnUntil && Date.now() >= game.player.dashActiveUntil) {
                         game.player.takeDamage(game.player.maxHp * 0.25, false, true, 'kami');
@@ -8003,6 +8832,8 @@ class Enemy {
     shoot() {
         // [v9] ESPECTADOR: os inimigos nem te reconhecem — ninguém atira
         if (game.player.spectate) return;
+        // [v10] teto global de projéteis: com a tela cheia, espera a vez
+        if (game.bullets.length >= (game.maxBullets || 340)) return;
         const lead = Math.max(0, Math.min(1, (game.wave - 25) / 25));
         let alvoX = game.player.x + 15;
         const alvoY = game.player.y + 20;
@@ -8062,13 +8893,15 @@ class Enemy {
         if (this.dead) return;
         this.dead = true;
         const cx = this.x + this.width / 2, cy = this.y + this.height / 2;
-        // [v8] estilhaço SÓBRIO: as lascas continuam poligonais e na cor do
-        // inimigo, mas MENORES e menos brilhantes — destroço de nave, não
-        // confete. A tela volta a respirar quando vários morrem juntos.
+        // [v10] MORTE PROFISSIONAL — sem onda circular: 1) clarão curtíssimo
+        // de impacto, 2) FAGULHAS em risco (linhas rápidas que apagam),
+        // 3) lascas poligonais da casca e 4) brasas. Lê como nave sendo
+        // despedaçada, não como bolha de sabão.
         const palC = { triangulo: '#ff5a20', losango: '#3c96ff', redondo: '#3cdc50', miniboss: '#bf00ff', boss: '#bf00ff' };
         const shellC = this.isGolden ? '#ffd700' : (palC[this.type] || '#8f89ad');
-        game.spawnShockwave(cx, cy, this.isGolden ? 74 : 54, '#ffffff', 220, 2.6);
-        game.spawnShockwave(cx, cy, this.isGolden ? 62 : 44, shellC, 360, 2);
+        game.spawnDeathFlash(cx, cy, this.isGolden);
+        const nSpk = 6 + Math.floor(Math.random() * 3);
+        for (let s = 0; s < nSpk; s++) game.spawnDeathSpark(cx, cy, shellC);
         game.createDebris(cx, cy, '#262133', 4, 5.2, 3.8, 950);
         game.createDebris(cx, cy, shellC, 9, 4.2, 4.6, 820);
         if (this.isGolden) game.createDebris(cx, cy, '#ffd700', 4, 3.4, 4.8, 700);
@@ -8207,17 +9040,69 @@ class Enemy {
                 ctx.restore();
             }
 
-            // 5. Barra de HP
-            ctx.fillStyle = 'red'; ctx.fillRect(this.x, this.y - 8, this.width, 3);
-            let hpRatio = Math.max(0, Math.min(1, this.hp / this.maxHp));
-            ctx.fillStyle = this.isGolden ? '#ffd700' : 'green';
-            ctx.fillRect(this.x, this.y - 8, this.width * hpRatio, 3);
+            // 5. [v10] Barra de HP PREMIUM (movida pro fim do draw: aparece
+            // independente do sprite estar carregado)
+            this.drawHpBar(ctx);
         } else {
             let displayColor = (Date.now() - this.lastHitTime < 100) ? 'white' : (this.isGolden ? '#ffd700' : '#ccc');
             ctx.fillStyle = displayColor;
             ctx.beginPath(); ctx.moveTo(this.x, this.y); ctx.lineTo(this.x + this.width, this.y); ctx.lineTo(this.x + this.width / 2, this.y + this.height); ctx.fill();
             ctx.restore();
+            // [v10] barra também no fallback (sem sprite carregado)
+            this.drawHpBar(ctx);
         }
+    }
+
+    // [v10] BARRA DE HP PREMIUM: pílula arredondada com moldura e brilho, cor
+    // do tipo, só aparece quando está machucada e FADE depois de 1,6s sem
+    // tomar dano (com pop ao levar hit)
+    drawHpBar(ctx) {
+        let hpRatio = Math.max(0, Math.min(1, this.hp / this.maxHp));
+        const sinceHit = Date.now() - (this.lastHitTime || 0);
+        const barVis = hpRatio < 0.999 ? Math.max(0, 1 - Math.max(0, sinceHit - 1600) / 500) : 0;
+        if (barVis <= 0.02) return;
+        const tipoC = { triangulo: '#ff5a20', losango: '#3c96ff', redondo: '#3cdc50' };
+        let barC = this.isGolden ? '#ffd24d' : (this.kamikaze ? '#ff8855' : (tipoC[this.type] || '#9aa0c8'));
+        if (this.poisonActive) barC = '#3dff6e';
+        const bw = Math.max(32, this.width * (this.escalaVisual || 1.8) * 0.62);
+        const bx = this.x + this.width / 2 - bw / 2;
+        const by = this.y - 16;
+        const pop = sinceHit < 110 ? 1 + (1 - sinceHit / 110) * 0.22 : 1;
+        ctx.save();
+        ctx.globalAlpha = barVis;
+        ctx.translate(this.x + this.width / 2, by + 2.4);
+        ctx.scale(pop, pop);
+        ctx.translate(-(this.x + this.width / 2), -(by + 2.4));
+        const rr = (x, y, w2, h2, rad) => {
+            ctx.beginPath();
+            if (ctx.roundRect) ctx.roundRect(x, y, w2, h2, rad);
+            else ctx.rect(x, y, w2, h2);
+        };
+        // sombra projetada
+        ctx.fillStyle = 'rgba(0,0,0,0.42)';
+        rr(bx + 1, by + 2.2, bw, 4.8, 2.4); ctx.fill();
+        // fundo escuro
+        ctx.fillStyle = 'rgba(8,10,22,0.88)';
+        rr(bx, by, bw, 4.8, 2.4); ctx.fill();
+        // preenchimento com gradiente (topo mais claro)
+        if (hpRatio > 0.01) {
+            const fg2 = ctx.createLinearGradient(0, by, 0, by + 4.8);
+            fg2.addColorStop(0, '#ffffff');
+            fg2.addColorStop(0.25, barC);
+            fg2.addColorStop(1, barC);
+            ctx.fillStyle = fg2;
+            rr(bx, by, Math.max(3, bw * hpRatio), 4.8, 2.4); ctx.fill();
+        }
+        // brilho de vidro na parte de cima
+        ctx.globalAlpha = barVis * 0.5;
+        ctx.fillStyle = 'rgba(255,255,255,0.55)';
+        rr(bx + 1, by + 0.8, Math.max(2, bw * hpRatio - 2), 1.1, 0.55); ctx.fill();
+        // moldura fina
+        ctx.globalAlpha = barVis;
+        ctx.strokeStyle = 'rgba(255,255,255,0.30)';
+        ctx.lineWidth = 1;
+        rr(bx - 0.5, by - 0.5, bw + 1, 5.8, 2.9); ctx.stroke();
+        ctx.restore();
     }
 }
 
@@ -8225,7 +9110,7 @@ class Boss extends Enemy {
     constructor(x, y, isBigBoss) {
         super(x, y, isBigBoss ? 'boss' : 'miniboss');
         this.width = 69; this.height = 86; this.isBigBoss = isBigBoss; 
-        this.escalaVisual = window.isMobileDevice ? 2.25 : 2.0; // [v9] maior no celular
+        this.escalaVisual = window.isMobileDevice ? 2.5 : 2.0; // [v10] celular: boss maior também
         
         let hpBase = isBigBoss ? CONFIG.baseEnemyHP * 12 : CONFIG.baseEnemyHP * 7;
         let hpMult = 1 + (game.wave * 0.15) + Math.pow(game.wave / 10, 2); 
@@ -8297,9 +9182,11 @@ class Boss extends Enemy {
 
         let fireInterval = (1500 / (1 + prog * 1.2)) / timeWarpFactor;
         if (this.enraged) fireInterval *= 0.78; // [JUICE] furia: atira mais rapido
+        fireInterval = Math.max(560, fireInterval); // [v10] piso absoluto: nem na wave 9999 metralhadora
         let fireRateMod = 1.0;
         if (Date.now() < this.coldUntil) fireRateMod = Math.pow(0.8, this.coldStacks);
         fireInterval /= fireRateMod;
+        fireInterval = Math.max(480, fireInterval); // [v10] frio também respeita o piso
 
         this.currentBossFireInterval = fireInterval;
         
@@ -8320,6 +9207,8 @@ class Boss extends Enemy {
     bossAttack() {
         // [v9] ESPECTADOR: o chefe nem percebe você
         if (game.player.spectate) return;
+        // [v10] TETO GLOBAL DE PROJÉTEIS: acima disso o chefe segura a rajada
+        if (game.bullets.length >= (game.maxBullets || 340)) return;
         const centerX = this.x + this.width/2; const centerY = this.y + this.height/2;
         const lead = Math.max(0, Math.min(1, (game.wave - 25) / 25));
         let alvoX = game.player.x + 15 + game.player.vx * 85 * lead;
@@ -8335,6 +9224,7 @@ class Boss extends Enemy {
             const ringSpeed = projSpeed * 0.72;
             const ringOffset = Math.random() * Math.PI;
             for (let i = 0; i < ringCount; i++) {
+                if (i > 0 && game.bullets.length >= (game.maxBullets || 340)) break; // [v10] teto
                 const angle = ringOffset + (i / ringCount) * Math.PI * 2;
                 game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: ringSpeed, isBossAttack: true, rgbBoss: true }));
             }
@@ -8345,11 +9235,16 @@ class Boss extends Enemy {
         let shotCount = 4;
         if (game.wave >= 35) shotCount++;
         if (game.wave >= 100) shotCount++;
-        for (let w = 70; w <= game.wave; w += 50) shotCount++;
+        // [v10] A WAVE 2000 É O TETO DE DIFICULDADE: o bônus de projéteis por
+        // wave para de crescer dali (antes: wave 50000 = ~1000 tiros por rajada)
+        const capWave = Math.min(game.wave, 2000);
+        for (let w = 70; w <= capWave; w += 50) shotCount++;
         if (this.enraged) shotCount += 2; // [JUICE] furia: mais projeteis
+        shotCount = Math.min(shotCount, 44); // nunca mais que o teto da wave 2000
 
         const baseAngle = Math.atan2(alvoY - centerY, alvoX - centerX);
         for (let i = 0; i < shotCount; i++) {
+            if (i > 0 && game.bullets.length >= (game.maxBullets || 340)) break; // [v10] teto
             const angle = baseAngle + (i - (shotCount - 1) / 2) * 0.2;
             game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: projSpeed, isBossAttack: true, rgbBoss: true }));
         }
@@ -8390,41 +9285,121 @@ class Boss extends Enemy {
             let tamanhoVisual = this.width * this.escalaVisual;
             let offsetCentralizado = (tamanhoVisual - this.width) / 2;
             if (Date.now() - this.lastHitTime < 100 || Date.now() < this.colorUntil) ctx.globalAlpha = 0.5;
-            // [v9] AURA PREMIUM do chefe: brilho volumétrico pulsante + anéis
-            // rúnicos girando + faíscas orbitando (fica intenso na FÚRIA)
+            // [v10] AURA VIVA DO CHEFE — mesma linguagem do buraco negro:
+            // anel de RUNAS orbitando num plano elíptico, anel de ticks
+            // contra-rotando, arco-radar varrendo, halos-lente em cima/embaixo
+            // e faíscas com rastro. Na FÚRIA tudo acelera e esquenta.
             {
                 const tB = Date.now() / 1000;
                 const cx2 = this.x + this.width / 2, cy2 = this.y + this.height / 2;
                 const R2 = tamanhoVisual / 2;
+                const rage = this.enraged;
+                const spd = rage ? 1.9 : 1;
+                const colG = rage ? 'rgba(255,120,100,0.95)' : 'rgba(205,140,255,0.95)';
+                const colT = rage ? 'rgba(255,90,70,0.9)' : 'rgba(185,120,255,0.9)';
+                const colS = rage ? '#ff9a8a' : '#d9b3ff';
+
+                // 1) aura volumétrica pulsante (respiração do chefe)
                 ctx.save();
-                ctx.globalAlpha = (0.30 + Math.sin(tB * 2.2) * 0.10 + (this.enraged ? 0.14 : 0)) * (ctx.globalAlpha || 1);
+                ctx.globalAlpha = (0.30 + Math.sin(tB * 2.2) * 0.10 + (rage ? 0.14 : 0)) * (ctx.globalAlpha || 1);
                 const ad = tamanhoVisual * 2.15;
-                ctx.drawImage(BossAuraSprite.get(this.enraged), cx2 - ad / 2, cy2 - ad / 2, ad, ad);
+                ctx.drawImage(BossAuraSprite.get(rage), cx2 - ad / 2, cy2 - ad / 2, ad, ad);
                 ctx.restore();
-                for (let rI = 0; rI < 2; rI++) {
+
+                // 2) ANEL DE RUNAS externo (plano orbital elíptico, girando lento)
+                const gSz = (R2 + 48) * 2;
+                ctx.save();
+                ctx.translate(cx2, cy2);
+                ctx.rotate(tB * 0.55 * spd);
+                ctx.scale(1, 0.40);
+                ctx.globalAlpha = 0.55 + Math.sin(tB * 3.1) * 0.16;
+                ctx.drawImage(BossRings.ring('glyphs', colG), -gSz / 2, -gSz / 2, gSz, gSz);
+                ctx.restore();
+
+                // 2b) RUNA SENTINELA: uma runa brilhante corre pelo anel (o "hot
+                //     spot" kepleriano — como o plasma do buraco negro)
+                {
+                    const rA = R2 + 48;
+                    const sAng = tB * 1.35 * spd;
+                    const sx = cx2 + Math.cos(sAng) * rA;
+                    const sy = cy2 + Math.sin(sAng) * rA * 0.40;
                     ctx.save();
-                    ctx.translate(cx2, cy2);
-                    ctx.rotate((rI ? -1 : 1) * tB * (0.5 + rI * 0.35));
-                    ctx.globalAlpha = 0.28 + Math.sin(tB * 3 + rI) * 0.12;
-                    ctx.strokeStyle = this.enraged ? 'rgba(255,95,95,0.85)' : 'rgba(200,125,255,0.85)';
-                    ctx.lineWidth = 1.6;
-                    ctx.setLineDash([14, 9]);
-                    ctx.beginPath();
-                    ctx.ellipse(0, 0, R2 + 20 + rI * 15, (R2 + 20 + rI * 15) * 0.36, 0, 0, Math.PI * 2);
-                    ctx.stroke();
-                    ctx.setLineDash([]);
+                    ctx.globalCompositeOperation = 'lighter';
+                    const sz = 5 + Math.sin(tB * 6) * 1.5;
+                    const sg = ctx.createRadialGradient(sx, sy, 0.5, sx, sy, sz * 2.6);
+                    sg.addColorStop(0, rage ? 'rgba(255,235,225,0.95)' : 'rgba(240,225,255,0.95)');
+                    sg.addColorStop(0.4, rage ? 'rgba(255,120,90,0.5)' : 'rgba(190,130,255,0.5)');
+                    sg.addColorStop(1, 'rgba(150,80,255,0)');
+                    ctx.fillStyle = sg;
+                    ctx.beginPath(); ctx.arc(sx, sy, sz * 2.6, 0, Math.PI * 2); ctx.fill();
+                    // rastrozinho atrás dela
+                    for (let tr = 1; tr <= 3; tr++) {
+                        const ta = sAng - tr * 0.22;
+                        const tx = cx2 + Math.cos(ta) * rA, ty = cy2 + Math.sin(ta) * rA * 0.40;
+                        ctx.globalAlpha = 0.4 - tr * 0.11;
+                        ctx.fillStyle = colS;
+                        ctx.fillRect(tx - 1.5, ty - 1.5, 3, 3);
+                    }
                     ctx.restore();
                 }
-                for (let s = 0; s < 6; s++) {
-                    const sa = (s / 6) * Math.PI * 2 + tB * (1.1 + (s % 2) * 0.4);
-                    const sr = R2 + 28 + Math.sin(tB * 2 + s) * 7;
-                    const sx = cx2 + Math.cos(sa) * sr;
-                    const sy = cy2 + Math.sin(sa) * sr * 0.5;
-                    const ss = 1.6 + Math.sin(tB * 5 + s * 1.3) * 1.2;
+
+                // 3) ANEL DE TICKS interno (contra-rotação, mais rápido)
+                const tSz = (R2 + 26) * 2;
+                ctx.save();
+                ctx.translate(cx2, cy2);
+                ctx.rotate(-tB * 0.95 * spd);
+                ctx.scale(1, 0.40);
+                ctx.globalAlpha = 0.5 + Math.sin(tB * 4 + 1) * 0.12;
+                ctx.drawImage(BossRings.ring('ticks', colT), -tSz / 2, -tSz / 2, tSz, tSz);
+                ctx.restore();
+
+                // 4) ARCO-RADAR varrendo o plano (a leitura de "alvo travado")
+                {
+                    const rA = R2 + 34;
                     ctx.save();
-                    ctx.globalAlpha = 0.45 + Math.sin(tB * 4 + s) * 0.25;
-                    ctx.fillStyle = this.enraged ? '#ff9a8a' : '#d9b3ff';
+                    ctx.translate(cx2, cy2);
+                    ctx.scale(1, 0.40);
+                    ctx.rotate(tB * 1.7 * spd);
+                    ctx.lineCap = 'round';
+                    ctx.strokeStyle = rage ? 'rgba(255,205,195,0.85)' : 'rgba(232,208,255,0.85)';
+                    ctx.lineWidth = 3;
+                    ctx.beginPath(); ctx.arc(0, 0, rA, 0, 1.05); ctx.stroke();
+                    ctx.globalAlpha = 0.4; ctx.lineWidth = 2;
+                    ctx.beginPath(); ctx.arc(0, 0, rA, 1.05, 1.9); ctx.stroke();
+                    ctx.globalAlpha = 0.18; ctx.lineWidth = 1.4;
+                    ctx.beginPath(); ctx.arc(0, 0, rA, 1.9, 2.6); ctx.stroke();
+                    ctx.restore();
+                }
+
+                // 5) HALOS-LENTE: arcos grossos e suazes por cima e por baixo do
+                //    chefe (a luz "dobrando", como no horizonte do buraco negro)
+                ctx.save();
+                ctx.globalCompositeOperation = 'lighter';
+                ctx.lineCap = 'round';
+                const hw = R2 * 0.16 + Math.sin(tB * 2.6) * 2.5;
+                ctx.strokeStyle = rage ? 'rgba(255,120,90,0.30)' : 'rgba(200,140,255,0.28)';
+                ctx.lineWidth = hw;
+                ctx.beginPath(); ctx.arc(cx2, cy2, R2 + 15 + Math.sin(tB * 1.3) * 3, Math.PI + 0.45, Math.PI * 2 - 0.45); ctx.stroke();
+                ctx.globalAlpha = 0.55;
+                ctx.lineWidth = hw * 0.55;
+                ctx.beginPath(); ctx.arc(cx2, cy2, R2 + 24 + Math.cos(tB * 1.7) * 4, Math.PI + 0.7, Math.PI * 2 - 0.7); ctx.stroke();
+                ctx.restore();
+
+                // 6) FAÍSCAS orbitando com rastro (8, profundidade elíptica)
+                for (let s = 0; s < 8; s++) {
+                    const sa = (s / 8) * Math.PI * 2 + tB * (1.1 + (s % 2) * 0.45) * spd;
+                    const sr = R2 + 30 + Math.sin(tB * 2 + s) * 8;
+                    const sx = cx2 + Math.cos(sa) * sr;
+                    const sy = cy2 + Math.sin(sa) * sr * 0.42;
+                    const ss = 1.7 + Math.sin(tB * 5 + s * 1.3) * 1.3;
+                    ctx.save();
+                    ctx.globalAlpha = 0.5 + Math.sin(tB * 4 + s) * 0.28;
+                    ctx.fillStyle = colS;
                     ctx.fillRect(sx - ss / 2, sy - ss / 2, ss, ss);
+                    // rastro da fagulha
+                    const ta = sa - 0.16;
+                    ctx.globalAlpha *= 0.45;
+                    ctx.fillRect(cx2 + Math.cos(ta) * sr - ss * 0.3, cy2 + Math.sin(ta) * sr * 0.42 - ss * 0.3, ss * 0.6, ss * 0.6);
                     ctx.restore();
                 }
             }
@@ -9130,7 +10105,9 @@ class Projectile {
             for (let e of game.enemies) {
                 if (this.dead) break;
                 if (e.dead || e.y <= -20) continue;
-                if (!this.checkCollision(e)) continue;
+                // [v10] o tiro só acerta se tocar a SILHUETA do .png (as áreas
+                // transparentes do sprite são atravessadas de verdade)
+                if (!this.hitsEnemy(e)) continue;
 
                 if (this.isFragment) {
                     if (e.type === 'boss' || e.type === 'miniboss') { this.dead = true; break; }
@@ -9214,6 +10191,13 @@ class Projectile {
 
     checkCollision(rect) {
         return (this.x > rect.x && this.x < rect.x + rect.width && this.y > rect.y && this.y < rect.y + rect.height);
+    }
+
+    // [v10] colisão com inimigo pela SILHUETA do sprite (máscara de pixels
+    // do .png; fallback geométrico triângulo/losango/redondo)
+    hitsEnemy(e) {
+        const r = Math.max(2, this.radius * 0.85);
+        return EnemyHitbox.hits(e, this.x, this.y, r);
     }
 
     draw(ctx) {
@@ -9575,12 +10559,27 @@ function initGame() {
         const slot = document.getElementById('gallery-mobile-slot');
         if (wrap && slot && wrap.parentElement !== slot) slot.appendChild(wrap);
     }
+    // [v10] FINALE concluído na sessão passada? A conquista suprema GANÂNCIA
+    // MONSTRUOSA anuncia-se com fanfarra assim que o menu renasce (direto na
+    // fila do toast — ela já está desbloqueada, só falta o anúncio)
+    const pendingAch = localStorage.getItem('pendingAchToast');
+    if (pendingAch) {
+        localStorage.removeItem('pendingAchToast');
+        const pAch = ACHIEVEMENTS_DB.find(a => a.id === pendingAch);
+        if (pAch && game) {
+            setTimeout(() => {
+                game.achToastQueue.push(pAch);
+                game.processAchToastQueue();
+            }, 2600);
+        }
+    }
     requestAnimationFrame(() => game.loop());
 }
 
 function startGame() {
     audioManager.playWav('botton');
     audioManager.play('principal');
+    Haptics.unlock(); // [v10] vibração destravada NO TOQUE DE JOGAR (gesto garantido)
     const mm = document.getElementById('main-menu');
     if (mm.classList.contains('launching')) return; // já lançando
     // [v6] SEQUÊNCIA DE LANÇAMENTO: a interface despenca, o blur do cenário
@@ -9697,13 +10696,10 @@ function fitGameToScreen() {
     // entao nada mais fica cortado ou sai da tela em celular/PC
     const baseW = 1472, baseH = 690;
     const vp = getViewportSize();
+    // [v10] SEM ZOOM de câmera: a arena INTEIRA volta a caber na tela (chão,
+    // paredes laterais e informação completa visíveis). No celular, quem ficou
+    // maior foram os OBJETOS (inimigos, chefe, mago, projéteis) — não a lente.
     let scale = Math.min(vp.w / baseW, vp.h / baseH, 1);
-    // [v9] CELULAR EM PAISAGEM: ZOOM de ~18% — antes tudo ficava pequeno demais.
-    // As laterais do cenário sangram um pouquinho fora da tela (de propósito);
-    // o HUD essencial (HP, almas, pause) continua 100% visível no centro.
-    if (window.isMobileDevice && vp.w > vp.h && vp.h < 560) {
-        scale = Math.min(vp.h / baseH * 1.18, vp.w / baseW * 1.3, 1);
-    }
     const els = [document.getElementById('gameCanvas'), document.querySelector('.ui-layer')];
     els.forEach(el => {
         if (!el) return;
@@ -9930,7 +10926,7 @@ if (window.isMobileDevice) {
         // antes vazavam por cima do botao de tela cheia e do seletor de idioma)
         let _ctrlVis = null;
         window.syncControlsVisibility = function () {
-            const emJogo = window.controlsEditMode || (typeof game !== 'undefined' && game && game.state !== 'MENU' && game.state !== 'GAME_OVER');
+            const emJogo = window.controlsEditMode || (typeof game !== 'undefined' && game && game.state !== 'MENU' && game.state !== 'GAME_OVER' && game.state !== 'FINALE');
             if (emJogo === _ctrlVis) return; // so mexe no DOM quando muda
             _ctrlVis = emJogo;
             controls.style.display = emJogo ? 'block' : 'none';
@@ -10290,8 +11286,27 @@ function buildAchGallery() {
         nm.innerText = done ? ((currentLang === 'pt') ? a.name_pt : a.name_en) : '???';
         item.appendChild(cv);
         item.appendChild(nm);
+        // [v10] CLICAR na lápide mostra a descrição da conquista
+        item.onclick = () => {
+            audioManager.playWav('botton');
+            showAchDetail(a, done);
+        };
         gal.appendChild(item);
     });
+}
+
+// [v10] painel de detalhe da lápide clicada (nome + descrição, PT/EN ao vivo)
+function showAchDetail(a, done) {
+    const box = document.getElementById('ach-detail');
+    if (!box) return;
+    const nome = done ? ((currentLang === 'pt') ? a.name_pt : a.name_en)
+                      : (currentLang === 'pt' ? 'CONQUISTA BLOQUEADA' : 'LOCKED ACHIEVEMENT');
+    const desc = done ? ((currentLang === 'pt') ? a.desc_pt : a.desc_en)
+                      : (currentLang === 'pt' ? 'Continue jogando para erguer esta estátua.' : 'Keep playing to raise this statue.');
+    box.innerHTML = '<div class="ad-name">' + a.icon + ' ' + nome + '</div>' +
+        '<div class="ad-desc">' + desc + '</div>' +
+        '<div class="ad-hint">' + (currentLang === 'pt' ? '(toque em outra lápide para ver a dela)' : '(tap another statue to see its story)') + '</div>';
+    box.classList.remove('hidden');
 }
 
 function drawAchStatue(g, ach, done) {
@@ -10370,6 +11385,16 @@ function hubOpen(id) {
     if (el) { el.classList.remove('hidden'); el.classList.remove('closing'); }
 }
 
+// [v10] VOLTAR do painel de Pactos: fecha SÓ o painel — no celular volta
+// direto pro MENU INICIAL (antes reabria o hub do Santuário: bug corrigido)
+function sanctuaryBack() {
+    const el = document.getElementById('sanctuary-menu');
+    if (el && !el.classList.contains('hidden')) {
+        el.classList.add('closing');
+        setTimeout(() => { el.classList.add('hidden'); el.classList.remove('closing'); }, 200);
+    }
+}
+
 // [v8] TELA DE FIM DE RUN estilo arcade: dano por fonte + abates por tipo
 function drawGameOverChart(g) {
     const cv = document.getElementById('go-chart');
@@ -10428,6 +11453,765 @@ function buyMetaUpgrade(id) {
     audioManager.playWav('botton');
     buildSanctuaryUI();
 }
+
+/**
+ * ======================================================================
+ * [v10] FINALE DA WAVE 10.000 — "A GANÂNCIA DO MAGO FOI TANTA..."
+ * O fim majestoso do jogo: WAVE 10.000 sangrenta, o mundo congela, o mago
+ * fala num balão com letras datilografadas, o buraco negro engole o
+ * cenário inteiro (30s), zoom nas últimas palavras, risadas.mp3 (15s em
+ * loop), o mago é engolido numa espiral dramática, tela preta, frase
+ * final em vermelho escorrendo sangue, reset e a conquista suprema.
+ * ======================================================================
+ */
+
+// [v10] TEXTO SANGRENTO: letras vermelhas que escorrem e PINGAM sangue
+class BloodyText {
+    constructor(text, size, x, y) {
+        this.text = text; this.size = size; this.x = x; this.y = y;
+        this.born = Date.now();
+        this.drips = [];
+        this.drops = [];
+        this.tw = 10;
+    }
+    draw(g, alpha, jitter) {
+        const age = Date.now() - this.born;
+        g.save();
+        g.globalAlpha = alpha;
+        const jx = jitter ? (Math.random() - 0.5) * jitter : 0;
+        const jy = jitter ? (Math.random() - 0.5) * jitter : 0;
+        g.translate(jx, jy);
+        g.font = '900 ' + this.size + 'px "Press Start 2P", monospace';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        this.tw = Math.max(this.tw, g.measureText(this.text).width);
+        const grad = g.createLinearGradient(0, this.y - this.size * 0.6, 0, this.y + this.size * 0.6);
+        grad.addColorStop(0, '#e21616');
+        grad.addColorStop(0.45, '#a50a0a');
+        grad.addColorStop(1, '#6b0404');
+        g.lineJoin = 'round';
+        g.lineWidth = Math.max(3, this.size * 0.15);
+        g.strokeStyle = 'rgba(8,0,0,0.85)';
+        g.strokeText(this.text, this.x, this.y);
+        g.fillStyle = grad;
+        g.fillText(this.text, this.x, this.y);
+        // === ESCORROS: nascem com o tempo e descem das letras ===
+        if (this.drips.length < 15 && Math.random() < 0.10) {
+            this.drips.push({
+                fx: 0.06 + Math.random() * 0.88,
+                start: age,
+                maxLen: this.size * (0.7 + Math.random() * 2.6),
+                w: Math.max(1.7, this.size * (0.10 + Math.random() * 0.11)),
+                speed: 0.05 + Math.random() * 0.12
+            });
+        }
+        const y0 = this.y + this.size * 0.33;
+        for (let i = 0; i < this.drips.length; i++) {
+            const d = this.drips[i];
+            const t = Math.max(0, age - d.start) * d.speed;
+            const len = Math.min(d.maxLen, t);
+            if (len < 1.2) continue;
+            const dx = this.x + (d.fx - 0.5) * this.tw;
+            g.globalAlpha = alpha * 0.92;
+            const dg = g.createLinearGradient(0, y0, 0, y0 + len);
+            dg.addColorStop(0, '#8f0606');
+            dg.addColorStop(1, '#d40d0d');
+            g.fillStyle = dg;
+            g.beginPath();
+            g.moveTo(dx - d.w / 2, y0);
+            g.lineTo(dx + d.w / 2, y0);
+            g.lineTo(dx + d.w * 0.24, y0 + len);
+            g.arc(dx, y0 + len, d.w * 0.36, 0, Math.PI * 2);
+            g.closePath();
+            g.fill();
+            // esticou tudo? PINGA uma gota que cai de verdade
+            if (len >= d.maxLen && Math.random() < 0.045 && this.drops.length < 12) {
+                this.drops.push({ x: dx, y0: y0 + len, born: Date.now(), r: d.w * 0.42 });
+            }
+        }
+        // === GOTAS caindo (aceleração de gravidade) ===
+        for (let i = this.drops.length - 1; i >= 0; i--) {
+            const dp = this.drops[i];
+            const t = (Date.now() - dp.born) / 1000;
+            const dy = dp.y0 + 70 * t + 340 * t * t;
+            if (dy > this.y + this.size * 7 + 300) { this.drops.splice(i, 1); continue; }
+            g.globalAlpha = alpha * Math.max(0, 1 - t / 1.7);
+            g.fillStyle = '#b30808';
+            g.beginPath();
+            g.ellipse(dp.x, dy, dp.r, dp.r * 1.7, 0, 0, Math.PI * 2);
+            g.fill();
+        }
+        g.restore();
+    }
+}
+
+// [v10] wisp de névoa violeta do VAZIO (pré-renderizado)
+const FinaleVoid = {
+    _wisp: null,
+    wisp() {
+        if (this._wisp) return this._wisp;
+        const S = 300;
+        const c = document.createElement('canvas');
+        c.width = c.height = S;
+        const g = c.getContext('2d');
+        const grad = g.createRadialGradient(S / 2, S / 2, 4, S / 2, S / 2, S / 2);
+        grad.addColorStop(0, 'rgba(130,70,220,0.16)');
+        grad.addColorStop(0.5, 'rgba(90,45,180,0.07)');
+        grad.addColorStop(1, 'rgba(60,25,140,0)');
+        g.fillStyle = grad;
+        g.fillRect(0, 0, S, S);
+        this._wisp = c;
+        return c;
+    }
+};
+
+// ===== máquina de estados do fim do mundo (métodos no Game) =====
+Game.prototype.startFinale = function () {
+    if (this.finale || this.finaleDone || !this.player) return;
+    this.state = 'FINALE';
+    this.finaleDone = true;
+    document.body.classList.add('finale'); // HUD inteiro desliga (CSS)
+    // limpa a arena: nada de inimigos, tiros ou meteoros no fim do mundo
+    this.enemies.forEach(e => { e.dead = true; });
+    this.enemies = [];
+    this.enemiesToSpawn = 0;
+    this.clearAllBullets();
+    this.meteors = [];
+    this.isMeteorWave = false;
+    this.isGoldenWave = false;
+    this.flushSoulOrbs();
+    this.waveLock = false;
+    this.finaleHide = false;
+    // silêncio: a trilha para, só o rumble do apocalipse resta
+    try { if (audioManager.current) audioManager.current.pause(); } catch (e) { }
+    DynamicMusic.stop();
+    audioManager.startFinaleRumble(0.2);
+
+    const T = TEXTS[currentLang];
+    const now = Date.now();
+    const f = {
+        t0: now,
+        speed: (window.finaleDebugSpeed || 1), // hook de teste: acelera o fim
+        lines: [T.fLine1, T.fLine2, T.fLine3, T.fLine4, T.fLine5, T.fLine6],
+        speech: [],
+        titleEnd: 4600,
+        speechEnd: 0,
+        destroyDur: 30000,
+        zoom: 1, zoomX: this.width / 2, zoomY: this.height / 2,
+        zoomBase: 1,
+        islandR: Math.hypot(this.width, this.height),
+        Rf: 96,
+        edgeDark: 0,
+        debris: [], streaks: [],
+        lastBrickAt: 0, lastStreakAt: 0, lastRumbleAt: 0, lastRumble: -1,
+        swallow: null,
+        blackAlpha: 0,
+        laughOn: false,
+        flashUntil: 0,
+        ended: false,
+        wisps: []
+    };
+    // agenda das falas (typewriter): cada linha digita, segura e sai
+    let t = f.titleEnd + 500;
+    for (const txt of f.lines) {
+        const typeMs = 46 * txt.length;
+        f.speech.push({ text: txt, start: t, typeMs: typeMs, hold: 1050 });
+        t += typeMs + 1050 + 420;
+    }
+    f.speechEnd = t + 200;
+    // últimas palavras (com zoom)
+    const fw1 = 46 * T.fFinal1.length + 1250;
+    const fw2 = 30 * T.fFinal2.length + 1500;
+    f.words = [
+        { text: T.fFinal1, start: 0, typeMs: 46 * T.fFinal1.length, hold: 1250 },
+        { text: T.fFinal2, start: fw1, typeMs: 30 * T.fFinal2.length, hold: 1500 }
+    ];
+    f.wordsEnd = fw1 + fw2;
+    // névoas do vazio
+    for (let i = 0; i < 6; i++) {
+        f.wisps.push({ x: Math.random() * this.width, y: Math.random() * this.height,
+            vx: (Math.random() - 0.5) * 0.12, vy: (Math.random() - 0.5) * 0.12,
+            s: 220 + Math.random() * 260, a: 0.5 + Math.random() * 0.5 });
+    }
+    // texto sangrento do título e da frase final (em 2 linhas equilibradas)
+    f.bloodTitle = new BloodyText(T.wave10k, Math.min(58, Math.floor(this.width / 22)), this.width / 2, this.height * 0.30);
+    const splitMid = (txt) => {
+        const words = txt.split(' ');
+        let best = 1, bestD = 1e9;
+        for (let i = 1; i < words.length; i++) {
+            const a = words.slice(0, i).join(' ').length;
+            const b = words.slice(i).join(' ').length;
+            const d2 = Math.abs(a - b);
+            if (d2 < bestD) { bestD = d2; best = i; }
+        }
+        return [words.slice(0, best).join(' '), words.slice(best).join(' ')];
+    };
+    const eLines = splitMid(T.fEnding);
+    const eSize = Math.min(24, Math.floor(this.width / 56));
+    f.endingL1 = new BloodyText(eLines[0], eSize, this.width / 2, this.height * 0.42);
+    f.endingL2 = new BloodyText(eLines[1], eSize, this.width / 2, this.height * 0.42 + eSize * 2.3);
+    this.finale = f;
+    this.addShake(3);
+};
+
+// helpers de fase
+Game.prototype._finaleT = function () {
+    return (Date.now() - this.finale.t0) * (this.finale.speed || 1);
+};
+Game.prototype._finalePhase = function (e) {
+    const f = this.finale;
+    if (e < f.titleEnd) return 0;                      // WAVE 10.000 sangrenta
+    if (e < f.speechEnd) return 1;                     // falas do mago
+    if (e < f.speechEnd + f.destroyDur) return 2;      // destruição (30s)
+    if (e < f.speechEnd + f.destroyDur + f.wordsEnd + 800) return 3; // zoom + últimas palavras
+    if (e < f.speechEnd + f.destroyDur + f.wordsEnd + 800 + 1400) return 4; // risadas começam
+    if (e < f.speechEnd + f.destroyDur + f.wordsEnd + 800 + 1400 + 3800) return 5; // engolido
+    if (e < f.speechEnd + f.destroyDur + f.wordsEnd + 800 + 1400 + 3800 + 700) return 6; // preto
+    if (e < f.speechEnd + f.destroyDur + f.wordsEnd + 800 + 1400 + 3800 + 700 + 15000) return 7; // frase final
+    return 8;                                          // apagão + reset
+};
+
+Game.prototype.finaleTick = function () {
+    const f = this.finale;
+    if (!f || f.ended) return;
+    const e = this._finaleT();
+    const ph = this._finalePhase(e);
+    const p = this.player;
+    const now = Date.now();
+    if (ph !== f.lastPhase) {
+        // transições
+        if (ph === 4 && !f.laughOn) {
+            f.laughOn = true;
+            audioManager.startLaughs(); // risadas.mp3 (15s em loop) ou fallback procedural
+        }
+        if (ph === 5 && !f.swallow) {
+            // começa o engolido: espiral do mago até o centro do buraco
+            const cx = this.width / 2, cy = this.height * 0.47;
+            const px = p.x + p.width / 2, py = p.y + p.height / 2;
+            f.swallow = {
+                cx: cx, cy: cy,
+                r: Math.hypot(px - cx, py - cy),
+                ang: Math.atan2(py - cy, px - cx),
+                spin: 0, scale: 1, t0: now
+            };
+            this.finaleHide = true; // o mago agora é desenhado na mão (espiral)
+        }
+        if (ph === 8 && !f.resetDone) {
+            f.resetDone = true;
+            audioManager.stopLaughs();
+            audioManager.stopFinaleRumble();
+        }
+        f.lastPhase = ph;
+    }
+
+    const dtMs = Math.min(60, now - (f.lastTickAt || now));
+    f.lastTickAt = now;
+
+    // ===== rumble (throttle de 220ms) =====
+    const setRumble = (lv) => {
+        f.rumble = lv;
+        if (now - f.lastRumbleAt > 220) {
+            f.lastRumbleAt = now;
+            audioManager.setFinaleRumble(lv);
+        }
+    };
+
+    if (ph === 0) {
+        const k = e / f.titleEnd;
+        this.shake = 1.2 + Math.random() * 1.2 + k * 1.5;
+        setRumble(0.22 + 0.3 * k);
+        f.edgeDark = 0.12 * k;
+    } else if (ph === 1) {
+        const k = (e - f.titleEnd) / (f.speechEnd - f.titleEnd);
+        this.shake = 1.4 + Math.random() * 0.9;
+        setRumble(0.5 + 0.18 * k);
+        f.edgeDark = 0.12 + 0.3 * k;
+    } else if (ph === 2) {
+        // DESTRUIÇÃO: o vazio fecha das bordas pra dentro (cada vez mais rápido)
+        const k = Math.max(0, Math.min(1, (e - f.speechEnd) / f.destroyDur));
+        const kE = Math.pow(k, 1.65);
+        const R0 = Math.hypot(this.width, this.height);
+        f.islandR = R0 - (R0 - f.Rf) * kE;
+        this.shake = 2.2 + 7.5 * k + Math.random() * 1.5;
+        setRumble(0.55 + 0.45 * k);
+        f.edgeDark = 0.42;
+        this._finaleConsumeBuildings();
+        this._finaleSpawnBricks(now);
+        this._finaleSpawnStreak(now);
+    } else if (ph === 3) {
+        // ZOOM no mago + últimas palavras
+        const wE = e - f.speechEnd - f.destroyDur;
+        const zoomIn = Math.min(1, wE / 1300);
+        const zoomOutK = Math.max(0, Math.min(1, (wE - (f.wordsEnd - 500)) / 900));
+        const ease = 1 - Math.pow(1 - zoomIn, 3);
+        f.zoom = 1 + 1.18 * ease;
+        f.zoomX = p.x + p.width / 2;
+        f.zoomY = p.y + p.height / 2;
+        this.shake = 5.5 + Math.random() * 2 + (wE > f.wordsEnd - 600 ? 5 : 0);
+        setRumble(1.0);
+        f.edgeDark = 0.42;
+        f.islandR = f.Rf;
+    } else if (ph === 4) {
+        // risadas: zoom volta, SHAKE frenético
+        const k = Math.max(0, Math.min(1, (e - f.speechEnd - f.destroyDur - f.wordsEnd - 800) / 1400));
+        f.zoom = 2.18 - 1.18 * k;
+        f.zoomX = p.x + p.width / 2;
+        f.zoomY = p.y + p.height / 2;
+        this.shake = 11 + Math.random() * 5; // frenético
+        setRumble(1.0);
+        f.islandR = f.Rf - 20 * k;
+        this._finaleSpawnStreak(now);
+    } else if (ph === 5) {
+        // ENGOLIDO: espiral dramática pro centro do buraco negro
+        const s = f.swallow;
+        const k = Math.max(0, Math.min(1, (e - f.speechEnd - f.destroyDur - f.wordsEnd - 800 - 1400) / 3800));
+        const kE = k * k * (3 - 2 * k);
+        s.r = s.r * (1 - 0.0035 * (1 + k * 2.2) * dtMs / 4);  // raio fecha
+        if (s.r < 2) s.r = 2;
+        s.ang += (0.0026 + k * 0.011) * dtMs;                 // gira cada vez mais rápido
+        s.spin += (0.004 + k * 0.02) * dtMs;
+        s.scale = Math.max(0.04, 1 - kE * 0.97);
+        f.islandR = Math.max(14, f.Rf - 78 * kE);
+        this.shake = 9 + Math.random() * 6;
+        setRumble(1.0 - 0.75 * k);
+        // rastro do mago sendo espaguetificado
+        if (Math.random() < 0.7 && this.particles.length < this.particleCap) {
+            const mx = s.cx + Math.cos(s.ang) * s.r;
+            const my = s.cy + Math.sin(s.ang) * s.r;
+            const pr = ObjectPool.getParticle(mx, my, Math.random() < 0.5 ? '#b48aff' : '#efe6ff',
+                2 + Math.random() * 3, 460, 0);
+            pr.vx = (Math.random() - 0.5) * 0.8; pr.vy = (Math.random() - 0.5) * 0.8;
+            this.particles.push(pr);
+        }
+        this._finaleSpawnStreak(now);
+        if (k >= 0.985 && !f.swallowFlash) {
+            f.swallowFlash = true;
+            f.flashUntil = now + 420;
+        }
+    } else if (ph === 6) {
+        const k = Math.max(0, Math.min(1, (e - f.speechEnd - f.destroyDur - f.wordsEnd - 800 - 1400 - 3800) / 700));
+        f.blackAlpha = k;
+        this.shake = 4 + Math.random() * 3;
+        setRumble(0.25);
+    } else if (ph === 7) {
+        f.blackAlpha = 1;
+        this.shake = 0;
+        setRumble(0);
+        f.zoom = 1;
+    } else if (ph === 8) {
+        f.blackAlpha = 1;
+        this.shake = 0;
+        setRumble(0);
+        // o fim do fim: conquista suprema + reset pro menu (com toast após o reload)
+        const endK = e - (f.speechEnd + f.destroyDur + f.wordsEnd + 800 + 1400 + 3800 + 700 + 15000);
+        if (endK > 900 && !f.finalized) {
+            f.finalized = true;
+            f.ended = true;
+            this.unlockAchievement('greed_monstrous');
+            try { localStorage.setItem('pendingAchToast', 'greed_monstrous'); } catch (err) { }
+            setTimeout(() => location.reload(), 450);
+        }
+    }
+
+    // detritos do vazio e estrelas sugadas continuam se movendo
+    for (let i = f.debris.length - 1; i >= 0; i--) {
+        const d = f.debris[i];
+        d.x += d.vx * dtMs / 16; d.y += d.vy * dtMs / 16;
+        d.rot += d.vrot * dtMs / 16;
+        // espiral: puxa levemente pro centro do buraco
+        const dx = this.width / 2 - d.x, dy = this.height * 0.47 - d.y;
+        const dd = Math.hypot(dx, dy) || 1;
+        d.vx += (dx / dd) * 0.004 * dtMs / 16;
+        d.vy += (dy / dd) * 0.004 * dtMs / 16;
+        d.life -= dtMs;
+        if (d.life <= 0) f.debris.splice(i, 1);
+    }
+    for (let i = f.streaks.length - 1; i >= 0; i--) {
+        const s = f.streaks[i];
+        s.x += s.vx * dtMs / 16; s.y += s.vy * dtMs / 16;
+        s.life -= dtMs;
+        if (s.life <= 0) f.streaks.splice(i, 1);
+    }
+    for (const w of f.wisps) {
+        w.x += w.vx * dtMs / 16; w.y += w.vy * dtMs / 16;
+        if (w.x < -w.s) w.x = this.width; if (w.x > this.width + w.s) w.x = -w.s;
+        if (w.y < -w.s) w.y = this.height; if (w.y > this.height + w.s) w.y = -w.s;
+    }
+};
+
+// prédios da cidade sendo DEVORADOS quando a borda do vazio passa por eles
+Game.prototype._finaleConsumeBuildings = function () {
+    const f = this.finale;
+    if (!this.cityNear || !this.cityNear.buildings) return;
+    const p = this.player;
+    const pcx = p.x + p.width / 2, pcy = p.y + p.height / 2;
+    const offN = -64 - (pcx - this.width / 2) * 0.030;
+    const bs = this.cityNear.buildings;
+    for (let i = 0; i < bs.length; i++) {
+        const b = bs[i];
+        if (b._eaten) continue;
+        const sx = offN + b.x + b.w / 2;
+        const sy = b.top + 34;
+        if (Math.hypot(sx - pcx, sy - pcy) > f.islandR - 14) {
+            b._eaten = true;
+            // pedaços do prédio voando pro vazio (com janelas violeta acessas)
+            const n = 4 + Math.floor(Math.random() * 4);
+            for (let k = 0; k < n && f.debris.length < 90; k++) {
+                const dx = sx - pcx, dy = sy - pcy;
+                const dd = Math.hypot(dx, dy) || 1;
+                const ux = dx / dd, uy = dy / dd;
+                const sp = 1.4 + Math.random() * 2.4;
+                f.debris.push({
+                    x: sx + (Math.random() - 0.5) * b.w * 0.6, y: sy + (Math.random() - 0.5) * 40,
+                    vx: ux * sp + (Math.random() - 0.5) * 0.9,
+                    vy: uy * sp - Math.random() * 0.7,
+                    rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.09,
+                    w: 7 + Math.random() * 15, h: 5 + Math.random() * 10,
+                    lit: Math.random() < 0.4,
+                    color: ['#171021', '#050308', '#231a38'][Math.floor(Math.random() * 3)],
+                    life: 1700 + Math.random() * 1100
+                });
+            }
+        }
+    }
+};
+
+// tijolos do CHÃO arrancados quando a borda passa por eles
+Game.prototype._finaleSpawnBricks = function (now) {
+    const f = this.finale;
+    if (now - f.lastBrickAt < 620) return;
+    f.lastBrickAt = now;
+    const p = this.player;
+    const pcx = p.x + p.width / 2, pcy = p.y + p.height / 2;
+    const nB = 2 + Math.floor(Math.random() * 2);
+    for (let k = 0; k < nB && f.debris.length < 90; k++) {
+        const a = Math.random() * Math.PI * 2;
+        const bx = pcx + Math.cos(a) * f.islandR;
+        const by = pcy + Math.sin(a) * f.islandR;
+        if (by < 470 || by > this.height + 10) continue; // só na faixa do chão/plataformas
+        const dx = bx - pcx, dy = by - pcy;
+        const dd = Math.hypot(dx, dy) || 1;
+        const sp = 1.6 + Math.random() * 2.6;
+        f.debris.push({
+            x: bx, y: by,
+            vx: (dx / dd) * sp + (Math.random() - 0.5) * 0.8,
+            vy: (dy / dd) * sp - 1 - Math.random(),
+            rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.12,
+            w: 8 + Math.random() * 10, h: 4 + Math.random() * 5,
+            lit: Math.random() < 0.18,
+            color: ['#4a4258', '#332b44', '#262133'][Math.floor(Math.random() * 3)],
+            life: 1500 + Math.random() * 900
+        });
+    }
+};
+
+// estrelas distantes sendo SUGADAS pro buraco negro (riscos rápidos)
+Game.prototype._finaleSpawnStreak = function (now) {
+    const f = this.finale;
+    if (now - f.lastStreakAt < 110 || f.streaks.length > 26) return;
+    f.lastStreakAt = now;
+    const cx = this.width / 2, cy = this.height * 0.47;
+    const a = Math.random() * Math.PI * 2;
+    const d = 260 + Math.random() * 420;
+    const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d;
+    const dd = Math.hypot(cx - x, cy - y) || 1;
+    const sp = 7 + Math.random() * 9;
+    f.streaks.push({
+        x: x, y: y,
+        vx: (cx - x) / dd * sp, vy: (cy - y) / dd * sp,
+        life: 300 + Math.random() * 260, max: 560,
+        violet: Math.random() < 0.45
+    });
+};
+
+// ===== DESENHO do fim do mundo (overlay em espaço de tela) =====
+Game.prototype.drawFinale = function (g) {
+    const f = this.finale;
+    if (!f) return;
+    const e = this._finaleT();
+    const ph = this._finalePhase(e);
+    const T = TEXTS[currentLang];
+    const p = this.player;
+    // âncora da ILHA em espaço de TELA (acompanha o zoom das fases finais)
+    let pcx = p.x + p.width / 2, pcy = p.y + p.height / 2;
+    if (f.zoom && f.zoom > 1.05) {
+        pcx = this.width / 2 + (p.x + p.width / 2 - f.zoomX) * f.zoom;
+        pcy = this.height / 2 + (p.y + p.height / 2 - f.zoomY) * f.zoom;
+    }
+
+    // escurecimento das bordas crescendo (o vazio espiando)
+    if (f.edgeDark > 0.01 && ph < 6) {
+        const vg = g.createRadialGradient(this.width / 2, this.height / 2, this.height * 0.36,
+            this.width / 2, this.height / 2, Math.hypot(this.width, this.height) * 0.62);
+        vg.addColorStop(0, 'rgba(0,0,0,0)');
+        vg.addColorStop(1, 'rgba(2,1,6,' + f.edgeDark.toFixed(2) + ')');
+        g.fillStyle = vg;
+        g.fillRect(0, 0, this.width, this.height);
+    }
+
+    // ===== O VAZIO (a partir da destruição) =====
+    if (ph >= 2 && ph <= 5) {
+        const iR = f.islandR;
+        if (iR < 1650) {
+            // 1) tudo fora da ilha vira o buraco negro
+            g.save();
+            g.beginPath();
+            g.rect(0, 0, this.width, this.height);
+            g.arc(pcx, pcy, Math.max(2, iR), 0, Math.PI * 2, true);
+            g.clip('evenodd');
+            g.fillStyle = '#020207';
+            g.fillRect(0, 0, this.width, this.height);
+            g.globalCompositeOperation = 'lighter';
+            // névoas violetas respirando no vazio
+            for (const w of f.wisps) {
+                g.globalAlpha = 0.5 + Math.sin(e / 900 + w.s) * 0.25;
+                g.drawImage(FinaleVoid.wisp(), w.x - w.s / 2, w.y - w.s / 2, w.s, w.s);
+            }
+            // estrelas sugadas (riscos)
+            g.globalCompositeOperation = 'source-over';
+            for (const s of f.streaks) {
+                const k = Math.max(0, s.life / s.max);
+                g.globalAlpha = k * 0.8;
+                g.strokeStyle = s.violet ? '#b48aff' : '#e8e8ff';
+                g.lineWidth = 1.3;
+                g.beginPath();
+                g.moveTo(s.x, s.y);
+                g.lineTo(s.x - s.vx * 3.4, s.y - s.vy * 3.4);
+                g.stroke();
+            }
+            // O BURACO NEGRO gigante no centro (a boca de tudo)
+            const bh = this.blackHole;
+            if (bh) {
+                const cx = this.width / 2, cy = this.height * 0.47;
+                const t2 = Date.now() / 1000;
+                const R2 = 150 + Math.min(1, (e - f.speechEnd) / f.destroyDur) * 120;
+                // bruma
+                g.globalAlpha = 0.9;
+                g.drawImage(bh.haze, cx - R2 * 2.1, cy - R2 * 2.1, R2 * 4.2, R2 * 4.2);
+                // sombra (horizonte)
+                g.drawImage(bh.sprite, cx - R2 * 2.2, cy - R2 * 2.2, R2 * 4.4, R2 * 4.4);
+                // disco de acreção simplificado (elipses vivas)
+                g.globalCompositeOperation = 'lighter';
+                g.lineCap = 'round';
+                const diskE = [
+                    [R2 * 1.15, R2 * 0.22, 0.34, '#fff6e6', 0.30 + Math.sin(t2 * 2.2) * 0.08],
+                    [R2 * 1.45, R2 * 0.28, 0.22, '#ffd28e', 0.22 + Math.sin(t2 * 1.7) * 0.06],
+                    [R2 * 1.95, R2 * 0.36, 0.13, '#c95cff', 0.16 + Math.sin(t2 * 1.3) * 0.05]
+                ];
+                for (const d of diskE) {
+                    g.globalAlpha = d[4];
+                    g.strokeStyle = d[3];
+                    g.lineWidth = R2 * d[2];
+                    g.beginPath();
+                    g.ellipse(cx, cy + R2 * 0.22, d[0], d[1], 0, 0.02, Math.PI - 0.02);
+                    g.stroke();
+                }
+                // photon ring no topo
+                g.globalAlpha = 0.85;
+                g.strokeStyle = 'rgba(255,250,255,0.9)';
+                g.lineWidth = 2.6;
+                g.beginPath();
+                g.arc(cx, cy, (R2 + 2) * (1 + Math.sin(t2 * 0.6) * 0.008), Math.PI + 0.2, Math.PI * 2 - 0.2);
+                g.stroke();
+                g.globalAlpha = 1;
+            }
+            // pedaços de prédio/chão girando no vazio
+            for (const d of f.debris) {
+                const k = Math.min(1, d.life / 700);
+                g.save();
+                g.globalAlpha = k;
+                g.translate(d.x, d.y);
+                g.rotate(d.rot);
+                g.fillStyle = d.color;
+                g.fillRect(-d.w / 2, -d.h / 2, d.w, d.h);
+                if (d.lit) {
+                    g.fillStyle = 'rgba(190,150,255,0.75)';
+                    g.fillRect(-d.w / 2 + 1, -d.h / 2 + 1, Math.max(1.5, d.w * 0.3), Math.max(1, d.h * 0.4));
+                }
+                g.restore();
+            }
+            g.restore();
+
+            // 2) a BORDA da ilha: anel de acreção quente (a "boca" comendo)
+            const tB = Date.now() / 1000;
+            g.save();
+            g.globalCompositeOperation = 'lighter';
+            g.lineCap = 'round';
+            const pulse = 1 + Math.sin(tB * 5) * 0.012;
+            const rB = iR * pulse;
+            g.globalAlpha = 0.16 + Math.sin(tB * 3) * 0.05;
+            g.strokeStyle = '#a060ff';
+            g.lineWidth = 13;
+            g.beginPath(); g.arc(pcx, pcy, rB, 0, Math.PI * 2); g.stroke();
+            g.globalAlpha = 0.30 + Math.sin(tB * 4) * 0.08;
+            g.strokeStyle = '#ff9a4e';
+            g.lineWidth = 6;
+            g.beginPath(); g.arc(pcx, pcy, rB, 0, Math.PI * 2); g.stroke();
+            g.globalAlpha = 0.8;
+            g.strokeStyle = '#fff2dc';
+            g.lineWidth = 2.2;
+            g.beginPath(); g.arc(pcx, pcy, rB, 0, Math.PI * 2); g.stroke();
+            // pontos quentes orbitando a borda (keplerianos)
+            for (let h2 = 0; h2 < 3; h2++) {
+                const ha = tB * 1.6 + (h2 / 3) * Math.PI * 2;
+                const hx = pcx + Math.cos(ha) * rB, hy = pcy + Math.sin(ha) * rB;
+                g.globalAlpha = 0.9;
+                g.fillStyle = '#ffffff';
+                g.fillRect(hx - 2, hy - 2, 4, 4);
+                g.globalAlpha = 0.4;
+                g.fillStyle = '#ffcf9a';
+                g.fillRect(pcx + Math.cos(ha - 0.1) * rB - 1.5, pcy + Math.sin(ha - 0.1) * rB - 1.5, 3, 3);
+            }
+            g.restore();
+        }
+    }
+
+    // ===== WAVE 10.000 sangrenta =====
+    if (ph === 0) {
+        f.bloodTitle.draw(g, 1, 2.2);
+    }
+    // ===== balão de fala (typewriter) =====
+    if (ph === 1 || ph === 3) {
+        let line = null, typed = 0, fadeK = 1;
+        if (ph === 1) {
+            for (const s of f.speech) {
+                if (e >= s.start && e < s.start + s.typeMs + s.hold + 380) {
+                    line = s;
+                    const lt = e - s.start;
+                    typed = Math.floor(Math.min(s.text.length, lt / 46));
+                    if (lt > s.typeMs + s.hold) fadeK = Math.max(0, 1 - (lt - s.typeMs - s.hold) / 380);
+                    break;
+                }
+            }
+        } else {
+            const wE = e - f.speechEnd - f.destroyDur;
+            for (const s of f.words) {
+                if (wE >= s.start + 300 && wE < s.start + s.typeMs + s.hold + 300) {
+                    line = s;
+                    const lt = wE - s.start - 300;
+                    const spd = (s.text === T.fFinal2) ? 30 : 46;
+                    typed = Math.floor(Math.min(s.text.length, lt / spd));
+                    if (lt > s.typeMs + s.hold) fadeK = Math.max(0, 1 - (lt - s.typeMs - s.hold) / 380);
+                    break;
+                }
+            }
+        }
+        if (line && fadeK > 0.02) this._drawFinaleBubble(g, line.text, typed, fadeK);
+    }
+
+    // ===== o mago sendo engolido (espiral, por cima do vazio) =====
+    if (ph === 5 && f.swallow) {
+        const s = f.swallow;
+        const mx = s.cx + Math.cos(s.ang) * s.r;
+        const my = s.cy + Math.sin(s.ang) * s.r;
+        const img = ASSETS.images['mage' + p.charIndex];
+        g.save();
+        g.translate(mx, my);
+        g.rotate(s.spin);
+        g.scale(s.scale, s.scale);
+        // estica conforme chega perto do horizonte (espaguetificação!)
+        const stretch = 1 + Math.max(0, (1 - s.r / 260)) * 1.4;
+        g.scale(1, 1 / Math.max(1, stretch * 0.6));
+        if (img && img.complete && img.naturalHeight !== 0) {
+            const h2 = p.height, w2 = h2 * (img.naturalWidth / img.naturalHeight);
+            g.drawImage(img, -w2 / 2, -h2 / 2, w2, h2);
+        } else {
+            g.fillStyle = '#e8e8ec';
+            g.fillRect(-p.width / 2, -p.height / 2, p.width, p.height);
+        }
+        g.restore();
+    }
+
+    // clarão final do engolido
+    if (Date.now() < f.flashUntil) {
+        const k = (f.flashUntil - Date.now()) / 420;
+        g.save();
+        g.globalCompositeOperation = 'lighter';
+        g.fillStyle = 'rgba(210,170,255,' + (0.55 * k).toFixed(3) + ')';
+        g.fillRect(0, 0, this.width, this.height);
+        g.restore();
+    }
+
+    // ===== apagão + frase final sangrenta =====
+    if (f.blackAlpha > 0) {
+        g.fillStyle = 'rgba(0,0,0,' + f.blackAlpha.toFixed(3) + ')';
+        g.fillRect(0, 0, this.width, this.height);
+    }
+    if (ph === 7 || ph === 8) {
+        // zoom lento no texto (deriva de escala 1 -> 1.05)
+        const k = Math.max(0, Math.min(1, (e - f.speechEnd - f.destroyDur - f.wordsEnd - 800 - 1400 - 3800 - 700) / 15000));
+        g.save();
+        g.translate(this.width / 2, this.height / 2);
+        g.scale(1 + k * 0.05, 1 + k * 0.05);
+        g.translate(-this.width / 2, -this.height / 2);
+        f.endingL1.draw(g, 1, 0);
+        f.endingL2.draw(g, 1, 0);
+        g.restore();
+    }
+};
+
+// [v10] balão de fala do mago (letras datilografadas, cauda apontando pro herói)
+Game.prototype._drawFinaleBubble = function (g, text, typed, alpha) {
+    const p = this.player;
+    g.save();
+    g.globalAlpha = alpha;
+    const fs = 13;
+    g.font = fs + 'px "Press Start 2P", monospace';
+    g.textAlign = 'center';
+    g.textBaseline = 'middle';
+    const tw = g.measureText(text).width;
+    const bw = Math.min(tw + 46, this.width - 120);
+    // âncora: acompanha o ZOOM do finale (o mago pode estar ampliado no centro)
+    const f = this.finale;
+    let ax = p.x + p.width / 2, ay = p.y;
+    if (f && f.zoom && f.zoom > 1.05) {
+        ax = this.width / 2 + (p.x + p.width / 2 - f.zoomX) * f.zoom;
+        ay = this.height / 2 + (p.y - f.zoomY) * f.zoom;
+    }
+    const bx = Math.max(24 + bw / 2, Math.min(this.width - 24 - bw / 2, ax));
+    const by = Math.max(64, ay - 62 * (f && f.zoom ? f.zoom : 1));
+    // caixa chanfrada escura com borda branca
+    const cut = 9;
+    g.beginPath();
+    g.moveTo(bx - bw / 2 + cut, by - 21);
+    g.lineTo(bx + bw / 2 - cut, by - 21);
+    g.lineTo(bx + bw / 2, by - 21 + cut);
+    g.lineTo(bx + bw / 2, by + 21 - cut);
+    g.lineTo(bx + bw / 2 - cut, by + 21);
+    g.lineTo(bx - bw / 2 + cut, by + 21);
+    g.lineTo(bx - bw / 2, by + 21 - cut);
+    g.lineTo(bx - bw / 2, by - 21 + cut);
+    g.closePath();
+    g.fillStyle = 'rgba(6,6,12,0.93)';
+    g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.85)';
+    g.lineWidth = 2;
+    g.stroke();
+    // cauda apontando pra cabeça do mago
+    const tailX = Math.max(bx - bw / 2 + 16, Math.min(bx + bw / 2 - 16, ax));
+    g.beginPath();
+    g.moveTo(tailX - 8, by + 20);
+    g.lineTo(tailX + 8, by + 20);
+    g.lineTo(tailX, by + 40);
+    g.closePath();
+    g.fillStyle = 'rgba(6,6,12,0.93)';
+    g.fill();
+    g.strokeStyle = 'rgba(255,255,255,0.85)';
+    g.lineWidth = 2;
+    g.beginPath();
+    g.moveTo(tailX - 8, by + 21); g.lineTo(tailX, by + 40); g.lineTo(tailX + 8, by + 21);
+    g.stroke();
+    // texto digitado (cursor piscando)
+    const shown = text.substring(0, typed);
+    g.fillStyle = '#f4f4ff';
+    g.fillText(shown, bx, by + 1);
+    if (typed < text.length && Math.floor(Date.now() / 160) % 2 === 0) {
+        const cw = g.measureText(shown).width;
+        g.fillStyle = '#9fd0ff';
+        g.fillRect(bx - Math.min(tw, bw - 46) / 2 + cw + 4, by - 7, 8, 14);
+    }
+    g.restore();
+};
 
 window.onload = initGame;
 </script>
