@@ -457,7 +457,6 @@
             92% { clip-path: inset(70% 0 2% 0); transform: translate(2px, 0); }
             95%, 100% { clip-path: inset(0 0 100% 0); transform: none; }
         }
-        #menu-subtitle { font-size: clamp(8px, 1.5vw, 11px); letter-spacing: clamp(2px, 1.2vw, 6px); color: #9a9a9a; margin: 2px 0 clamp(8px, 1.8vh, 18px) 0; text-transform: uppercase; font-weight: 500; }
 
         /* ===== BOTOES HI-TECH (chanfro + glow) ===== */
         .btn { border: none; font-family: var(--f-body); font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
@@ -788,7 +787,6 @@
             #main-menu::before, #main-menu::after { display: none; }
             #main-menu > .lang-select { grid-column: 1 / -1; margin-bottom: 0; gap: 6px; }
             #main-menu > .game-title { grid-column: 1 / -1; font-size: clamp(15px, 4vw, 24px) !important; }
-            #main-menu > #menu-subtitle { grid-column: 1 / -1; margin: 0 0 2px; font-size: 8px; }
             /* PERSONAGENS na coluna 1, CAJADOS na coluna 2 (lado a lado) */
             #main-menu > p.menu-label:nth-of-type(1) { grid-area: 4 / 1; }
             #main-menu > #char-selection { grid-area: 5 / 1; margin-bottom: 0; }
@@ -820,6 +818,83 @@
         /* retrato baixo também compacta */
         @media (orientation: portrait) and (max-height: 700px) {
             #hero-preview { display: none; }
+        }
+    </style>
+
+    <style id="v7-juice">
+        /* ================= v7 — JUICE, CLIMA & GALERIA ================= */
+
+        /* [v7] SLIDER DE VOLUME premium: 0-100 suave, com o número na tela */
+        #vol-row { gap: 12px; }
+        #vol-value { font-family: var(--f-disp); font-weight: 700; font-size: 13px; color: #fff;
+            min-width: 54px; text-align: right; text-shadow: 0 0 8px rgba(255,255,255,0.35); }
+        #volume-slider { -webkit-appearance: none; appearance: none; width: 210px; height: 8px; border-radius: 2px;
+            background: linear-gradient(90deg, #fff 0%, #fff var(--fill, 50%), #262626 var(--fill, 50%), #262626 100%);
+            outline: none; cursor: pointer;
+            clip-path: polygon(4px 0, 100% 0, 100% calc(100% - 4px), calc(100% - 4px) 100%, 0 100%, 0 4px); }
+        #volume-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 20px; height: 20px;
+            background: #fff; border: 3px solid #0a0a0a; box-shadow: 0 0 0 1.5px #fff, 0 0 12px rgba(255,255,255,0.55);
+            cursor: grab; }
+        #volume-slider::-webkit-slider-thumb:active { cursor: grabbing; transform: scale(1.15); }
+        #volume-slider::-moz-range-thumb { width: 18px; height: 18px; border-radius: 0; background: #fff;
+            border: 3px solid #0a0a0a; box-shadow: 0 0 0 1.5px #fff; cursor: grab; }
+        #volume-slider::-moz-range-track { height: 8px; background: #262626; }
+        #volume-slider::-moz-range-progress { height: 8px; background: #fff; }
+
+        /* [v7] botões de EFEITOS SONOROS e MÚSICA nas configurações */
+        #audio-toggles { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 16px 0 2px; }
+        #audio-toggles .btn { font-size: clamp(9px, 1.5vw, 11px); padding: 10px 16px; }
+        #btn-sfx.off, #btn-music.off { color: #ff6b6b; box-shadow: inset 0 0 0 1.5px rgba(255,107,107,0.6); }
+        #btn-sfx.on, #btn-music.on { color: #7dffb0; box-shadow: inset 0 0 0 1.5px rgba(125,255,176,0.55); }
+
+        /* [v7] AURAS premium das caixinhas (amarela: Nômade + Glifo Solar;
+           azul: Arcanista + Condutor Arcano) — brilham MESMO selecionadas */
+        .char-aura { display: flex; }
+        .char-aura.gold { animation: auraGoldPulse 2.3s ease-in-out infinite; }
+        .char-aura.blue { animation: auraBluePulse 2.7s ease-in-out infinite; }
+        @keyframes auraGoldPulse {
+            0%, 100% { filter: drop-shadow(0 0 7px rgba(255,190,50,0.45)); }
+            50% { filter: drop-shadow(0 0 16px rgba(255,205,70,0.9)); }
+        }
+        @keyframes auraBluePulse {
+            0%, 100% { filter: drop-shadow(0 0 8px rgba(80,160,255,0.5)); }
+            50% { filter: drop-shadow(0 0 18px rgba(100,175,255,0.95)); }
+        }
+        /* entrada em cascata continua funcionando com os wrappers */
+        .char-select-container > .char-aura:nth-child(2) .char-card { animation-delay: 0.96s; }
+        .char-select-container > .char-aura:nth-child(3) .char-card { animation-delay: 1.02s; }
+
+        /* [v7] GALERIA de estátuas das conquistas (Santuário das Almas) */
+        #gallery-label { margin-top: 26px; }
+        #ach-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
+            gap: 10px; width: min(760px, 94vw); max-height: min(360px, 46dvh); overflow-y: auto;
+            padding: 4px 6px 8px 2px; }
+        .statue-item { display: flex; flex-direction: column; align-items: center; gap: 4px;
+            background: #07070a; padding: 8px 4px 7px;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            box-shadow: inset 0 0 0 1px #26262c; }
+        .statue-item canvas { width: 56px; height: 72px; }
+        .statue-item .st-name { font-size: 7px; color: #9a9a9a; text-align: center; line-height: 1.4; }
+        .statue-item.done { box-shadow: inset 0 0 0 1px rgba(255,215,0,0.4); }
+        .statue-item.done .st-name { color: #ffd700; }
+
+        /* [v7] tela de fim de run: causa da morte + gráficos arcade */
+        #go-cause { color: #ff9d9d; font-size: clamp(9px, 1.6vw, 11px); margin: 4px 0; }
+        #go-chart { width: min(680px, 92vw); height: auto; margin: 8px 0 4px;
+            border: 1px solid #2c2c34; background: #050507; }
+
+        /* [v7] contador de almas dá um bump quando a alma CHEGA */
+        #souls-text { display: inline-block; }
+        #souls-text.bump { animation: soulBump 0.28s cubic-bezier(0.2, 1.6, 0.4, 1); }
+        @keyframes soulBump { 0% { transform: scale(1); } 45% { transform: scale(1.4); color: #bfe1ff; } 100% { transform: scale(1); } }
+
+        /* [v7] PREVIEW do personagem: box menor, mais perto das caixinhas */
+        #hero-preview { right: clamp(24px, 11vw, 190px); bottom: 8vh; height: min(56vh, 350px); }
+        @media (max-width: 1080px) { #hero-preview { height: min(48vh, 300px); right: clamp(10px, 8vw, 120px); } }
+        @media (orientation: portrait) { #hero-preview { height: min(36vh, 240px); right: 6px; bottom: 8vh; } }
+        @media (orientation: portrait) and (max-height: 700px) { #hero-preview { display: none; } }
+        @media (orientation: landscape) and (max-height: 540px) {
+            #hero-preview { height: min(52vh, 235px); right: clamp(4px, 7vw, 110px); bottom: 1vh; }
         }
     </style>
 </head>
@@ -939,7 +1014,6 @@
             <button class="flag-btn" id="lang-en" onclick="audioManager.playWav('botton'); setLanguage('en')"><img src="https://flagcdn.com/w40/us.png" alt="US" class="flag-img">EN-US</button>
         </div>
         <h1 class="game-title" data-text="Archmage's Greed">Archmage's Greed</h1>
-        <p id="menu-subtitle">ROGUELIKE ARCANO &bull; INFINITO</p>
         <p class="menu-label">PERSONAGENS</p>
         <div class="char-select-container" id="char-selection"></div>
         <p class="menu-label">CAJADOS</p>
@@ -980,8 +1054,13 @@
         </div>
         <div id="vol-row">
             <button id="mute-btn" class="btn" onclick="audioManager.playWav('botton'); audioManager.toggleMute()" title="Som">🔊</button>
-            <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" oninput="audioManager.setVolume(this.value)">
+            <input type="range" id="volume-slider" min="0" max="100" step="1" value="50" oninput="setVolumeUI(this.value)">
+            <span id="vol-value">50%</span>
             <span id="vol-label">VOLUME</span>
+        </div>
+        <div id="audio-toggles">
+            <button class="btn" id="btn-sfx" onclick="audioManager.playWav('botton'); toggleSfx()"></button>
+            <button class="btn" id="btn-music" onclick="audioManager.playWav('botton'); toggleMusic()"></button>
         </div>
         <button class="btn" onclick="audioManager.playWav('botton'); toggleSettingsMenu()" style="margin-top:20px;">VOLTAR</button>
     </div>
@@ -1002,6 +1081,9 @@
         <h1 id="sanctuary-title" style="font-size:18px;">SANTUARIO DAS ALMAS</h1>
         <p style="font-size:9px; color:#888; max-width:700px; text-align:center; line-height:1.6; margin-bottom:15px;">Melhorias permanentes que valem para TODAS as suas futuras runs.</p>
         <div id="meta-list"></div>
+        <p class="menu-label" id="gallery-label">GALERIA DAS CONQUISTAS</p>
+        <p style="font-size:9px; color:#888; max-width:700px; text-align:center; line-height:1.6; margin:0 0 12px;" id="gallery-sub">Cada conquista ergue uma estátua aqui no santuário.</p>
+        <div id="ach-gallery"></div>
         <button class="btn" onclick="audioManager.playWav('botton'); toggleSimpleMenu('sanctuary-menu')" style="margin-top:15px;">VOLTAR</button>
     </div>
 
@@ -1036,6 +1118,8 @@
         <p>💀 Abates: <span id="go-kills">0</span></p>
         <p>⚔️ Dano causado: <span id="go-damage">0</span></p>
         <p><span id="stats-souls">Almas</span>: <span id="final-souls">0</span></p>
+        <p id="go-cause"></p>
+        <canvas id="go-chart" width="680" height="330"></canvas>
         <div id="go-perks"></div>
         <button class="btn" id="btn-menu" onclick="audioManager.playWav('botton'); returnToMenu()">MENU</button>
     </div>
@@ -1094,7 +1178,11 @@ const TEXTS = {
         bossName: "DEVORADOR DE ALMAS", miniName: "GUARDIÃO ARCANO", rage: "FÚRIA!",
         achTitle: "CONQUISTAS", sanctuaryTitle: "SANTUARIO DAS ALMAS", settings: "CONFIGURAÇÕES",
         back: "VOLTAR", maxLevel: "MAXIMO", noPerks: "Nenhum perk coletado",
-        howto: "COMO JOGAR", volume: "VOLUME", pauseCfg: "CONFIGURAÇÕES"
+        howto: "COMO JOGAR", volume: "VOLUME", pauseCfg: "CONFIGURAÇÕES",
+        sfxBtn: "EFEITOS SONOROS", musicBtn: "MÚSICA", onS: "LIGADO", offS: "DESLIGADO", onF: "LIGADA", offF: "DESLIGADA",
+        galleryTitle: "GALERIA DAS CONQUISTAS", gallerySub: "Cada conquista ergue uma estátua aqui no santuário.",
+        causeDeath: "CAUSA DA MORTE", dmgSrc: "DANO POR FONTE", killType: "ABATES POR TIPO",
+        causes: { bullet: "atingido por um projétil arcano", boss: "desintegrado pelo chefe", kami: "vítima de um kamikaze", meteor: "esmagado por um meteoro" }
     },
     en: {
         play: "PLAY", controls: "A/D or ← → to Move, Space/↑ to Jump, Mouse to Aim, F for Skill",
@@ -1110,7 +1198,11 @@ const TEXTS = {
         bossName: "SOUL DEVOURER", miniName: "ARCANE GUARDIAN", rage: "RAGE!",
         achTitle: "ACHIEVEMENTS", sanctuaryTitle: "SOUL SANCTUARY", settings: "SETTINGS",
         back: "BACK", maxLevel: "MAXED", noPerks: "No perks collected",
-        howto: "HOW TO PLAY", volume: "VOLUME", pauseCfg: "SETTINGS"
+        howto: "HOW TO PLAY", volume: "VOLUME", pauseCfg: "SETTINGS",
+        sfxBtn: "SOUND FX", musicBtn: "MUSIC", onS: "ON", offS: "OFF", onF: "ON", offF: "OFF",
+        galleryTitle: "ACHIEVEMENT GALLERY", gallerySub: "Every achievement raises a statue in this sanctuary.",
+        causeDeath: "CAUSE OF DEATH", dmgSrc: "DAMAGE BY SOURCE", killType: "KILLS BY TYPE",
+        causes: { bullet: "hit by an arcane bolt", boss: "disintegrated by the boss", kami: "kamikaze victim", meteor: "crushed by a meteor" }
     }
 };
 
@@ -1149,8 +1241,9 @@ function setLanguage(lang) {
     document.getElementById('ach-title').innerText = t.achTitle;
     document.getElementById('sanctuary-title').innerText = t.sanctuaryTitle;
     document.getElementById('toast-label').innerText = t.achToast;
-    const subEl = document.getElementById('menu-subtitle');
-    if (subEl) subEl.innerText = (lang === 'pt') ? 'ROGUELIKE ARCANO \u2022 INFINITO' : 'INFINITE ARCANE ROGUELIKE';
+    const gl2 = document.getElementById('gallery-label'); if (gl2) gl2.innerText = t.galleryTitle;
+    const gs2 = document.getElementById('gallery-sub'); if (gs2) gs2.innerText = t.gallerySub;
+    if (typeof updateAudioToggles === 'function') updateAudioToggles();
     const rotEl = document.getElementById('rotate-hint-text');
     if (rotEl) rotEl.innerText = (lang === 'pt') ? 'GIRE O APARELHO \u2014 MELHOR EM PAISAGEM' : 'ROTATE YOUR PHONE \u2014 BEST IN LANDSCAPE';
 }
@@ -1218,42 +1311,59 @@ ASSETS.audio.bossdefeat.src = 'Assets/bossdefeat.wav';
 const audioManager = {
     current: null, context: null, isMuted: false, 
     globalVolume: parseFloat(localStorage.getItem('gameVolume') !== null ? localStorage.getItem('gameVolume') : 0.5),
+    // [v7] a trilha NUNCA pode abafar os efeitos: música a ~45% do volume global
+    musicMult: 0.45,
+    musicOn: localStorage.getItem('musicOn') !== '0',
+    sfxOn: localStorage.getItem('sfxOn') !== '0',
     
     init() {
         if (!this.context) this.context = new (window.AudioContext || window.webkitAudioContext)();
         if (this.context.state === 'suspended') this.context.resume();
     },
+    musicVol() { return this.isMuted ? 0 : this.globalVolume * this.musicMult; },
+    sfxVol() { return this.isMuted ? 0 : this.globalVolume; },
     setVolume(val) {
         this.globalVolume = parseFloat(val);
         localStorage.setItem('gameVolume', this.globalVolume);
-        if (this.current) this.current.volume = this.globalVolume;
+        if (this.current) this.current.volume = this.musicVol();
     },
     toggleMute() {
         this.isMuted = !this.isMuted;
         document.getElementById('mute-btn').innerText = this.isMuted ? '🔇' : '🔊';
         ASSETS.audio.main.muted = this.isMuted; ASSETS.audio.principal.muted = this.isMuted; ASSETS.audio.boss.muted = this.isMuted;
+        if (this.current) this.current.volume = this.musicVol();
     },
     play(trackName) {
+        if (!this.musicOn) { this.init(); return; } // [v7] música desligada nas configs
         this.init();
         if (this.current === ASSETS.audio[trackName] && !this.current.paused) return;
         if (this.current) { this.current.pause(); this.current.currentTime = 0; }
         if (ASSETS.audio[trackName]) {
             this.current = ASSETS.audio[trackName];
-            this.current.volume = this.globalVolume;
+            this.current.volume = this.musicVol();
             this.current.play().catch(e => console.log("Aguardando interação..."));
         }
     },
+    // [v7] religar/desligar música em tempo real: retoma a trilha CERTA pro estado
+    refreshMusic() {
+        if (!this.musicOn) { if (this.current) this.current.pause(); return; }
+        let track = 'main';
+        if (typeof game !== 'undefined' && game && game.player) {
+            track = (game.state === 'PLAYING' || game.state === 'PAUSED') ? (game.isBossWave ? 'boss' : 'principal') : 'main';
+        }
+        this.play(track);
+    },
     playWav(trackName) {
-        if (this.isMuted) return;
+        if (this.isMuted || !this.sfxOn) return; // [v7] efeitos desligáveis
         this.init();
         if (ASSETS.audio[trackName]) {
             const snd = ASSETS.audio[trackName].cloneNode();
-            snd.volume = this.globalVolume;
+            snd.volume = this.sfxVol() * 0.9;
             snd.play().catch(e => {});
         }
     },
     playSfx(type) {
-        if (this.isMuted) return;
+        if (this.isMuted || !this.sfxOn) return; // [v7] efeitos desligáveis
         this.init();
         const ctx = this.context; const osc = ctx.createOscillator(); const gain = ctx.createGain();
         osc.connect(gain); gain.connect(ctx.destination);
@@ -1319,7 +1429,7 @@ const audioManager = {
         } else if (type === 'golden_alert') {
             osc.type = 'triangle'; osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(554, now + 0.2); osc.frequency.setValueAtTime(659, now + 0.4);
             gain.gain.setValueAtTime(0.12 * vol, now); gain.gain.linearRampToValueAtTime(0, now + 0.6); osc.start(now); osc.stop(now + 0.6);
-		} else if (type === 'wave_clear') {
+                } else if (type === 'wave_clear') {
             // [JUICE] jingle curto de wave concluida (3 notas subindo)
             osc.type = 'square'; osc.frequency.setValueAtTime(523, now);
             gain.gain.setValueAtTime(0.07 * vol, now); gain.gain.linearRampToValueAtTime(0, now + 0.12);
@@ -1346,7 +1456,7 @@ const audioManager = {
             br2.frequency.exponentialRampToValueAtTime(30, now + 0.5);
             bg2.gain.setValueAtTime(0.12 * vol, now + 0.05); bg2.gain.linearRampToValueAtTime(0, now + 0.55);
             br2.start(now + 0.05); br2.stop(now + 0.55);
-		} else if (type === 'enemy_die') {
+                } else if (type === 'enemy_die') {
             // Zap principal (BZZT descendente rápido estilo Atari)
             osc.type = 'square';
             osc.frequency.setValueAtTime((700 + Math.random() * 250) * pitch, now);
@@ -1435,9 +1545,69 @@ const audioManager = {
                 gn.gain.linearRampToValueAtTime(0, st + 0.36);
                 o.start(st); o.stop(st + 0.4);
             }
+        } else if (type === 'soul_pickup') {
+            // [v7] a alma CHEGANDO no mago: sino suave de duas notas
+            osc.type = 'sine'; osc.frequency.setValueAtTime(740, now);
+            osc.frequency.exponentialRampToValueAtTime(1180, now + 0.09);
+            gain.gain.setValueAtTime(0.10 * vol, now); gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+            osc.start(now); osc.stop(now + 0.18);
+            const so2 = ctx.createOscillator(); const sg2 = ctx.createGain();
+            so2.connect(sg2); sg2.connect(ctx.destination);
+            so2.type = 'sine'; so2.frequency.setValueAtTime(1480, now + 0.06);
+            sg2.gain.setValueAtTime(0.05 * vol, now + 0.06); sg2.gain.exponentialRampToValueAtTime(0.001, now + 0.22);
+            so2.start(now + 0.06); so2.stop(now + 0.22);
+        } else if (type === 'bg_boom') {
+            // [v7] estrondo DISTANTE (meteoro de cenário acertando a cidade)
+            osc.type = 'sawtooth'; osc.frequency.setValueAtTime(90, now);
+            osc.frequency.exponentialRampToValueAtTime(28, now + 0.7);
+            gain.gain.setValueAtTime(0.05 * vol, now); gain.gain.linearRampToValueAtTime(0, now + 0.7);
+            osc.start(now); osc.stop(now + 0.7);
         }
     }
 };
+
+// [v7] Botões de áudio nas CONFIGURAÇÕES: efeitos e música separados
+function toggleSfx() {
+    audioManager.sfxOn = !audioManager.sfxOn;
+    localStorage.setItem('sfxOn', audioManager.sfxOn ? '1' : '0');
+    updateAudioToggles();
+}
+function toggleMusic() {
+    audioManager.musicOn = !audioManager.musicOn;
+    localStorage.setItem('musicOn', audioManager.musicOn ? '1' : '0');
+    updateAudioToggles();
+    audioManager.refreshMusic();
+}
+function updateAudioToggles() {
+    const t = TEXTS[currentLang];
+    const bs = document.getElementById('btn-sfx');
+    const bm = document.getElementById('btn-music');
+    if (bs) {
+        bs.innerText = t.sfxBtn + ': ' + (audioManager.sfxOn ? t.onS : t.offS);
+        bs.className = 'btn ' + (audioManager.sfxOn ? 'on' : 'off');
+    }
+    if (bm) {
+        bm.innerText = t.musicBtn + ': ' + (audioManager.musicOn ? t.onF : t.offF);
+        bm.className = 'btn ' + (audioManager.musicOn ? 'on' : 'off');
+    }
+}
+// [v7] Slider de volume 0-100 SUAVE (sem trancos) com o número na tela
+function setVolumeUI(v) {
+    v = Math.max(0, Math.min(100, parseInt(v) || 0));
+    audioManager.setVolume(v / 100);
+    const sl = document.getElementById('volume-slider');
+    if (sl) sl.style.setProperty('--fill', v + '%');
+    const vv = document.getElementById('vol-value');
+    if (vv) vv.innerText = v + '%';
+}
+function initVolumeUI() {
+    const v = Math.round(audioManager.globalVolume * 100);
+    const sl = document.getElementById('volume-slider');
+    if (sl) { sl.value = v; sl.style.setProperty('--fill', v + '%'); }
+    const vv = document.getElementById('vol-value');
+    if (vv) vv.innerText = v + '%';
+    updateAudioToggles();
+}
 
 
 /**
@@ -1829,7 +1999,7 @@ class Game {
         this.patternSpawnIndex = 0;
         this.waveTotal = 0;
         this.upgradeChoices = 5;
-		this.streakCount = 0;
+                this.streakCount = 0;
         this.streakLastKill = 0;
         this.streakMultiplier = 1;
         this.paused = false;
@@ -1863,6 +2033,16 @@ class Game {
         this.floatingTexts = []; 
         
         this.simTime = 0; // [v5] relógio do MUNDO: só anda com o jogo rodando (pausa de verdade)
+
+        // [v7] run arcade: estatísticas de fim de run + causa da morte
+        this.runStats = { dmg: {}, kills: {} };
+        this.deathCause = null;
+        // [v7] almas que VOAM até o jogador (sucção)
+        this.soulOrbs = [];
+        // [v7] crateras dos kamikazes
+        this.kamiCraters = [];
+        // [v7] clima dinâmico (chuva de éter / tempestade com relâmpagos)
+        this.initWeather();
 
         // [PERFORMANCE] qualidade adaptativa (Perf ajusta esses valores em tempo real)
         this.particleCap = 900;
@@ -2230,7 +2410,7 @@ class Game {
                 if (typeof o[k] === 'number' && o[k] !== 0) o[k] += ms;
             }
         };
-        sh(this, ['lastSpawnTime', 'lastThunderTime', 'lastMeteorSpawn', 'meteorWaveStartTime', 'streakLastKill', 'showTeleportZonesUntil', '_bgMeteorNext']);
+        sh(this, ['lastSpawnTime', 'lastThunderTime', 'lastMeteorSpawn', 'meteorWaveStartTime', 'streakLastKill', 'showTeleportZonesUntil', '_bgMeteorNext', 'dmgFxUntil', 'dmgTiltUntil']);
         if (this.player) {
             sh(this.player, ['lastShot', 'invulnUntil', 'dashActiveUntil', 'dashCooldownUntil', 'hurtFlashUntil', 'healingFatigueUntil', 'muzzleFlashUntil', 'coyoteTimeUntil', 'jumpBufferUntil', 'laserCooldown', 'laserTimer', 'laserLastTick', 'teleportCooldown', 'manaShieldCooldown']);
             if (this.player.orb) this.player.orb.lastShot += ms;
@@ -2238,6 +2418,10 @@ class Game {
         const eKeys = ['lastShootTime', 'lastSummonTime', 'lastShieldTime', 'kamikazeTriggerAt', 'kamikazeAvisoAt', 'poisonEndTime', 'poisonLastTick', 'coldUntil', 'lastHitTime', 'colorUntil'];
         for (let i = 0; i < this.enemies.length; i++) sh(this.enemies[i], eKeys);
         for (let i = 0; i < this.meteors.length; i++) sh(this.meteors[i], ['timer']);
+        // [v7] sucata do kamikaze, crateras e almas voadoras também respeitam a pausa
+        if (this.groundJunk) for (let i = 0; i < this.groundJunk.length; i++) this.groundJunk[i].born += ms;
+        if (this.kamiCraters) for (let i = 0; i < this.kamiCraters.length; i++) this.kamiCraters[i].born += ms;
+        if (this.soulOrbs) for (let i = 0; i < this.soulOrbs.length; i++) { this.soulOrbs[i].born += ms; this.soulOrbs[i].seekAt += ms; }
         for (let i = 0; i < this.particles.length; i++) this.particles[i].spawnTime += ms;
         for (let i = 0; i < this.shockwaves.length; i++) this.shockwaves[i].spawnTime += ms;
         for (let i = 0; i < this.lightningEffects.length; i++) this.lightningEffects[i].spawnTime += ms;
@@ -2284,6 +2468,10 @@ class Game {
         this.luck = 1.0;
         this.kills = 0;
         this.damageDealt = 0;
+        this.runStats = { dmg: { shot: 0, orb: 0, thunder: 0, poison: 0, laser: 0, fragment: 0 }, kills: { triangulo: 0, losango: 0, redondo: 0, kamikaze: 0, golden: 0, boss: 0, miniboss: 0 } }; // [v7]
+        this.deathCause = null; // [v7]
+        this.soulOrbs = []; // [v7]
+        this.kamiCraters = []; // [v7]
         this.runStartTime = Date.now();
         this.meteorHitsThisRun = 0;
         if (this.player) { this.player.perfectRun = true; this.player.hurtThisWave = false; }
@@ -2296,7 +2484,7 @@ class Game {
         const isBoss = (this.wave % CONFIG.bossWaveInterval === 0 || this.wave % CONFIG.miniBossInterval === 0);
         this.isBossWave = isBoss;
         if (this.player) this.player.hurtThisWave = false;
-		this.streakCount = 0;
+                this.streakCount = 0;
         this.streakLastKill = 0;
         this.streakMultiplier = 1;
 
@@ -2463,11 +2651,14 @@ class Game {
                 this.createExplosion(e.x + e.width / 2, e.y + e.height / 2, 'white', 14, 6, 5, 1500);
             }
         });
-        if (!this.cinematicBoss.isBigBoss) this.souls += 3; else this.souls += 5;
+        // [v7] almas do chefe VOAM até o mago em enxame (chegam com som)
+        this.spawnSoulOrbs(cx, cy, this.cinematicBoss.isBigBoss ? 5 : 3);
         this.statBossKills++;
         localStorage.setItem('statBossKills', this.statBossKills);
-        this.statTotalSouls += (this.cinematicBoss.isBigBoss ? 5 : 3);
-        localStorage.setItem('statTotalSouls', this.statTotalSouls);
+        if (this.runStats) {
+            const bk = this.cinematicBoss.isBigBoss ? 'boss' : 'miniboss';
+            this.runStats.kills[bk] = (this.runStats.kills[bk] || 0) + 1;
+        }
         if (this.statBossKills >= 1) this.unlockAchievement('first_boss');
         if (this.statBossKills >= 10) this.unlockAchievement('boss_hunter');
         if (this.statBossKills >= 50) this.unlockAchievement('boss_50');
@@ -2517,6 +2708,7 @@ class Game {
         this.achToastQueue.push(ach);
         this.processAchToastQueue();
         audioManager.playSfx('ach');
+        if (typeof buildAchGallery === 'function') buildAchGallery(); // [v7] nova estátua no santuário
     }
 
     processAchToastQueue() {
@@ -2584,6 +2776,11 @@ class Game {
         document.getElementById('go-time').innerText = min + 'm ' + seg.toString().padStart(2, '0') + 's';
         document.getElementById('go-kills').innerText = this.kills;
         document.getElementById('go-damage').innerText = Math.round(this.damageDealt).toLocaleString('pt-BR');
+        // [v7] fim de run ARCADE: causa da morte + gráficos de dano/abates
+        this.flushSoulOrbs(); // almas em voo contam antes do fechamento
+        const causeKey = this.deathCause || 'bullet';
+        document.getElementById('go-cause').innerText = TEXTS[currentLang].causeDeath + ': ' + (TEXTS[currentLang].causes[causeKey] || TEXTS[currentLang].causes.bullet);
+        drawGameOverChart(this);
         const perkList = document.getElementById('go-perks');
         perkList.innerHTML = '';
         if (this.player) {
@@ -2706,33 +2903,39 @@ class Game {
 
     // [v6] KAMIKAZE estilhaçado no chão: engrenagens, chapas e parafusos da
     // nave ficam espalhados no local (gravidade, quique) e somem em 5s com fade
+    // [v6→v7] KAMIKAZE estilhaçado no chão: MUITA mais sucata visível
+    // (engrenagens grossas, chapas, parafusos) + craterinha queimada 4,5s
     spawnKamiCrash(x, gy) {
-        this.spawnShockwave(x, gy - 4, 70, '#ff8866', 360, 3);
-        this.createExplosion(x, gy - 8, '#ff8844', 16, 6, 5, 700);
+        this.spawnShockwave(x, gy - 4, 80, '#ff8866', 380, 3);
+        this.createExplosion(x, gy - 8, '#ff8844', 20, 7, 6, 700);
         this.addShake(6);
         this.hitStop(40);
         audioManager.playSfx('shatter');
         audioManager.playSfx('kami_boom');
         if (!this.groundJunk) this.groundJunk = [];
-        const kinds = ['gear', 'gear', 'plate', 'plate', 'bolt', 'rod'];
-        const NJ = 9 + Math.floor(Math.random() * 5);
+        const kinds = ['gear', 'gear', 'gear', 'gear', 'plate', 'plate', 'bolt', 'rod', 'bolt'];
+        const NJ = 17 + Math.floor(Math.random() * 7);
         for (let i = 0; i < NJ; i++) {
-            const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
-            const sp = 1.8 + Math.random() * 3.6;
+            const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
+            const sp = 2.0 + Math.random() * 4.2;
             this.groundJunk.push({
                 kind: kinds[Math.floor(Math.random() * kinds.length)],
-                x: x + (Math.random() - 0.5) * 14, y: gy - 6 - Math.random() * 8,
-                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.5,
-                gy: gy + 2 + Math.random() * 7,
+                x: x + (Math.random() - 0.5) * 16, y: gy - 6 - Math.random() * 10,
+                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.6,
+                gy: gy + 2 + Math.random() * 8,
                 rot: Math.random() * Math.PI * 2, vrot: (Math.random() - 0.5) * 0.5,
-                sz: 4.5 + Math.random() * 5,
+                sz: 6.5 + Math.random() * 6,
                 born: Date.now()
             });
         }
+        // [v7] CRATERINHA queimada no chão (4,5s e evapora)
+        if (!this.kamiCraters) this.kamiCraters = [];
+        this.kamiCraters.push({ x: x, y: gy, r: 13 + Math.random() * 9, born: Date.now(), dur: 4500,
+            seed: Math.random() * 6.28 });
         // fagulhas do estilhaço
-        for (let i = 0; i < 10; i++) {
-            this.createParticle(x + (Math.random() - 0.5) * 20, gy - Math.random() * 14,
-                Math.random() < 0.5 ? '#ffcc66' : '#99aaff', 2.5 + Math.random() * 3, 480, 1);
+        for (let i = 0; i < 14; i++) {
+            this.createParticle(x + (Math.random() - 0.5) * 24, gy - Math.random() * 16,
+                Math.random() < 0.5 ? '#ffcc66' : '#99aaff', 2.5 + Math.random() * 3.2, 520, 1.2);
         }
     }
 
@@ -2769,16 +2972,19 @@ class Game {
             ctx.rotate(j.rot);
             const s = j.sz;
             if (j.kind === 'gear') {
-                ctx.fillStyle = '#8b93a3';
-                for (let t = 0; t < 6; t++) { // dentes
-                    ctx.save(); ctx.rotate(t * Math.PI / 3);
-                    ctx.fillRect(-s * 0.16, -s * 0.62, s * 0.32, s * 0.26); ctx.restore();
+                ctx.fillStyle = '#aab6c8';
+                for (let t = 0; t < 8; t++) { // dentes (8 = engrenagem de verdade)
+                    ctx.save(); ctx.rotate(t * Math.PI / 4);
+                    ctx.fillRect(-s * 0.17, -s * 0.66, s * 0.34, s * 0.28); ctx.restore();
                 }
-                ctx.beginPath(); ctx.arc(0, 0, s * 0.48, 0, Math.PI * 2); ctx.fill();
-                ctx.fillStyle = '#c8d2de';
-                ctx.beginPath(); ctx.arc(-s * 0.12, -s * 0.14, s * 0.20, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 0, s * 0.50, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#dbe6f2';
+                ctx.beginPath(); ctx.arc(-s * 0.12, -s * 0.14, s * 0.22, 0, Math.PI * 2); ctx.fill();
                 ctx.fillStyle = '#0a0a10';
-                ctx.beginPath(); ctx.arc(0, 0, s * 0.16, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(0, 0, s * 0.17, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'rgba(255,255,255,0.35)';
+                ctx.lineWidth = 1;
+                ctx.beginPath(); ctx.arc(0, 0, s * 0.50, 0, Math.PI * 2); ctx.stroke();
             } else if (j.kind === 'plate') {
                 ctx.fillStyle = '#7d8494';
                 ctx.fillRect(-s * 0.5, -s * 0.34, s, s * 0.68);
@@ -2804,6 +3010,241 @@ class Game {
                 ctx.fillRect(-s * 0.55, -s * 0.10, s * 1.1, s * 0.07);
             }
             ctx.restore();
+        }
+    }
+
+    // [v7] crateras do kamikaze: marca queimada no chão que evapora em 4,5s
+    updateKamiCraters() {
+        if (!this.kamiCraters || !this.kamiCraters.length) return;
+        const now = Date.now();
+        for (let i = this.kamiCraters.length - 1; i >= 0; i--) {
+            if (now - this.kamiCraters[i].born > this.kamiCraters[i].dur) this.kamiCraters.splice(i, 1);
+        }
+    }
+
+    drawKamiCraters(ctx) {
+        if (!this.kamiCraters || !this.kamiCraters.length) return;
+        const now = Date.now();
+        for (let i = 0; i < this.kamiCraters.length; i++) {
+            const cr = this.kamiCraters[i];
+            const age = now - cr.born;
+            const a = age > cr.dur - 900 ? Math.max(0, 1 - (age - (cr.dur - 900)) / 900) : 1;
+            if (a <= 0) continue;
+            ctx.save();
+            ctx.globalAlpha = a;
+            // buraco queimado
+            const gg = ctx.createRadialGradient(cr.x, cr.y, 1, cr.x, cr.y, cr.r);
+            gg.addColorStop(0, 'rgba(5,3,8,0.85)');
+            gg.addColorStop(0.7, 'rgba(15,8,20,0.55)');
+            gg.addColorStop(1, 'rgba(20,10,28,0)');
+            ctx.fillStyle = gg;
+            ctx.beginPath(); ctx.ellipse(cr.x, cr.y, cr.r, cr.r * 0.34, 0, 0, Math.PI * 2); ctx.fill();
+            // borda rachada
+            ctx.strokeStyle = 'rgba(90,60,120,0.55)';
+            ctx.lineWidth = 1.4;
+            ctx.beginPath(); ctx.ellipse(cr.x, cr.y, cr.r * 0.92, cr.r * 0.30, 0, 0, Math.PI * 2); ctx.stroke();
+            // brasas apagando
+            const heat = Math.max(0, 1 - age / 1600);
+            if (heat > 0) {
+                ctx.globalAlpha = a * heat;
+                for (let k = 0; k < 5; k++) {
+                    const aa = cr.seed + k * 1.7;
+                    ctx.fillStyle = 'rgba(255,120,40,0.8)';
+                    ctx.fillRect(cr.x + Math.cos(aa) * cr.r * 0.5, cr.y + Math.sin(aa) * cr.r * 0.16, 2, 2);
+                }
+            }
+            ctx.restore();
+        }
+    }
+
+    // ===== [v7] CLIMA DINÂMICO: chuva de éter e tempestades com relâmpagos =====
+    initWeather() {
+        this.weather = {
+            mode: 'clear', until: performance.now() + 30000 + Math.random() * 30000,
+            drops: [], splashes: [], puddles: [], bolts: [],
+            flashUntil: 0, nextFlash: 0, wind: -0.04
+        };
+    }
+
+    updateWeather() {
+        if (!this.weather) this.initWeather();
+        const w = this.weather;
+        const nowMs = performance.now();
+        const dt = Math.min(50, nowMs - (this._wxT || nowMs)); this._wxT = nowMs;
+        const alive = !this.paused && this.state !== 'PAUSED';
+
+        // troca de clima (o menu também tem clima)
+        if (nowMs > w.until) {
+            const r = Math.random();
+            w.mode = r < 0.50 ? 'clear' : (r < 0.83 ? 'rain' : 'storm');
+            w.until = nowMs + (w.mode === 'clear' ? 55000 + Math.random() * 45000 : (w.mode === 'rain' ? 28000 + Math.random() * 30000 : 16000 + Math.random() * 16000));
+            w.wind = (Math.random() < 0.5 ? -1 : 1) * (0.02 + Math.random() * 0.05);
+        }
+
+        // gotas de éter
+        const target = w.mode === 'clear' ? 0 : (w.mode === 'rain' ? [64, 40, 22][Perf.level] : [100, 64, 36][Perf.level]);
+        if (alive && w.drops.length < target) {
+            for (let i = 0; i < 4 && w.drops.length < target; i++) {
+                w.drops.push({ x: Math.random() * this.width, y: -20 - Math.random() * 120, vy: 0.30 + Math.random() * 0.18, len: 10 + Math.random() * 9, a: 0.16 + Math.random() * 0.20 });
+            }
+        }
+        if (alive) {
+            for (let i = w.drops.length - 1; i >= 0; i--) {
+                const d = w.drops[i];
+                d.y += d.vy * dt;
+                d.x += w.wind * dt;
+                if (d.x < -10) d.x += this.width + 20;
+                const gy = this.groundBelow(d.x, 0);
+                const ground = (gy === null) ? this.height + 40 : gy;
+                if (d.y >= ground) {
+                    if (w.splashes.length < 40) w.splashes.push({ x: d.x, y: ground, born: nowMs });
+                    if (gy !== null && w.puddles.length < 10 && Math.random() < 0.06) {
+                        w.puddles.push({ x: d.x, y: ground, w: 6 + Math.random() * 8, a: 0.55 });
+                    }
+                    if (w.mode === 'clear' || w.drops.length > target) w.drops.splice(i, 1);
+                    else { d.y = -20 - Math.random() * 100; d.x = Math.random() * this.width; }
+                }
+            }
+            // poças: crescem na chuva, evaporam no tempo limpo
+            for (let i = w.puddles.length - 1; i >= 0; i--) {
+                const p = w.puddles[i];
+                if (w.mode !== 'clear') p.w = Math.min(44, p.w + 0.0022 * dt);
+                else { p.a -= 0.00012 * dt; p.w *= 0.9995; }
+                if (p.a <= 0.03 || p.w < 4) w.puddles.splice(i, 1);
+            }
+            for (let i = w.splashes.length - 1; i >= 0; i--) {
+                if (nowMs - w.splashes[i].born > 260) w.splashes.splice(i, 1);
+            }
+            // TEMPESTADE: relâmpagos que ILUMINAM a cidade em silhueta
+            if (w.mode === 'storm' && nowMs > (w.nextFlash || 0)) {
+                w.nextFlash = nowMs + 3800 + Math.random() * 6500;
+                w.flashUntil = nowMs + 260;
+                const bx = 120 + Math.random() * (this.width - 240);
+                const pts = [];
+                let lx = bx, ly = -10;
+                const segs = 8 + Math.floor(Math.random() * 4);
+                for (let i = 0; i <= segs; i++) {
+                    pts.push({ x: lx, y: ly });
+                    lx += (Math.random() - 0.5) * 70;
+                    ly += (430 + Math.random() * 60) / segs;
+                }
+                w.bolts.push({ pts: pts, born: nowMs, dur: 300 });
+                if (this.state === 'PLAYING') audioManager.playSfx('thunder');
+            }
+        }
+        for (let i = w.bolts.length - 1; i >= 0; i--) {
+            if (nowMs - w.bolts[i].born > w.bolts[i].dur) w.bolts.splice(i, 1);
+        }
+    }
+
+    drawWeather(g, back) {
+        if (!this.weather) return;
+        const w = this.weather;
+        const nowMs = performance.now();
+        const t = nowMs / 1000;
+        if (back) {
+            this.updateWeather();
+            // FLASH da tempestade: as RUÍNAS acendem em silhueta + o céu pisca
+            if (nowMs < (w.flashUntil || 0)) {
+                const k = (w.flashUntil - nowMs) / 260;
+                const ageF = nowMs - (w.flashUntil - 260);
+                const flick = ageF < 90 ? 1 : (Math.random() < 0.25 ? 0.4 : 0.8);
+                const pxP = (this.player && this.state !== 'MENU') ? (this.player.x + this.player.width / 2) : this.width / 2 + Math.sin(t * 0.06) * 240;
+                g.save();
+                g.globalCompositeOperation = 'lighter';
+                g.globalAlpha = 0.5 * k * flick;
+                g.filter = 'brightness(3)';
+                const offF = -64 - (pxP - this.width / 2) * 0.012;
+                const offN = -64 - (pxP - this.width / 2) * 0.030;
+                if (this.cityFar) g.drawImage(this.cityFar.canvas, offF, 0);
+                if (this.cityNear) g.drawImage(this.cityNear.canvas, offN, 0);
+                g.filter = 'none';
+                g.restore();
+                g.save();
+                g.globalAlpha = 0.10 * k * flick;
+                g.fillStyle = '#cfe0ff';
+                g.fillRect(0, 0, this.width, this.height);
+                g.restore();
+            }
+            return;
+        }
+        // gotas caindo
+        if (w.drops.length) {
+            g.save();
+            g.lineCap = 'round';
+            g.strokeStyle = 'rgba(150,215,255,1)';
+            for (let i = 0; i < w.drops.length; i++) {
+                const d = w.drops[i];
+                g.globalAlpha = d.a;
+                g.lineWidth = w.mode === 'storm' ? 1.8 : 1.3;
+                g.beginPath();
+                g.moveTo(d.x, d.y);
+                g.lineTo(d.x - w.wind * 26, d.y - d.len);
+                g.stroke();
+            }
+            g.restore();
+        }
+        // respingos
+        if (w.splashes.length) {
+            g.save();
+            g.strokeStyle = 'rgba(170,225,255,0.55)';
+            for (let i = 0; i < w.splashes.length; i++) {
+                const s = w.splashes[i];
+                const k = (nowMs - s.born) / 260;
+                g.globalAlpha = (1 - k) * 0.5;
+                g.lineWidth = 1;
+                g.beginPath();
+                g.ellipse(s.x, s.y, 2 + k * 7, (2 + k * 7) * 0.32, 0, 0, Math.PI * 2);
+                g.stroke();
+            }
+            g.restore();
+        }
+        // POÇAS de éter refletindo na plataforma
+        if (w.puddles.length) {
+            g.save();
+            for (let i = 0; i < w.puddles.length; i++) {
+                const p = w.puddles[i];
+                const h = p.w * 0.16;
+                const rg = g.createLinearGradient(0, p.y - h, 0, p.y + h);
+                rg.addColorStop(0, 'rgba(190,160,255,' + (p.a * 0.30).toFixed(2) + ')');
+                rg.addColorStop(0.6, 'rgba(140,190,255,' + (p.a * 0.20).toFixed(2) + ')');
+                rg.addColorStop(1, 'rgba(90,120,255,' + (p.a * 0.10).toFixed(2) + ')');
+                g.fillStyle = rg;
+                g.beginPath();
+                g.ellipse(p.x, p.y, p.w / 2, h, 0, 0, Math.PI * 2);
+                g.fill();
+                g.globalAlpha = p.a * (0.25 + Math.sin(t * 2.1 + p.x) * 0.15);
+                g.fillStyle = '#dce8ff';
+                g.beginPath();
+                g.ellipse(p.x + Math.sin(t * 0.8 + p.x * 0.05) * p.w * 0.14, p.y - h * 0.2, p.w * 0.16, h * 0.3, 0, 0, Math.PI * 2);
+                g.fill();
+                g.globalAlpha = 1;
+            }
+            g.restore();
+        }
+        // RELÂMPAGOS (raio jagged em 3 camadas)
+        if (w.bolts.length) {
+            for (let i = 0; i < w.bolts.length; i++) {
+                const b = w.bolts[i];
+                const k = Math.max(0, 1 - (nowMs - b.born) / b.dur);
+                if (k <= 0) continue;
+                const flick = (nowMs - b.born < 70) ? 1 : (Math.random() < 0.3 ? 0.45 : 0.85);
+                g.save();
+                g.globalAlpha = k * flick;
+                g.lineJoin = 'round';
+                const strokeB = (lw, col) => {
+                    g.strokeStyle = col; g.lineWidth = lw;
+                    g.beginPath();
+                    for (let j = 0; j < b.pts.length; j++) {
+                        if (j === 0) g.moveTo(b.pts[j].x, b.pts[j].y); else g.lineTo(b.pts[j].x, b.pts[j].y);
+                    }
+                    g.stroke();
+                };
+                strokeB(13, 'rgba(160,190,255,0.30)');
+                strokeB(5, '#dfe9ff');
+                strokeB(1.8, '#ffffff');
+                g.restore();
+            }
         }
     }
 
@@ -2841,6 +3282,95 @@ class Game {
         document.getElementById('souls-text').innerText = this.souls;
         document.getElementById('final-souls').innerText = this.souls;
         localStorage.setItem('savedSouls', this.souls);
+    }
+
+    // ===== [v7] SUCÇÃO DE ALMAS: as almas VOAM do inimigo até o mago =====
+    spawnSoulOrbs(x, y, n) {
+        n = Math.max(1, Math.min(8, n || 1));
+        if (!this.soulOrbs) this.soulOrbs = [];
+        for (let i = 0; i < n; i++) {
+            if (this.soulOrbs.length >= 26) { this.grantSoul(); continue; } // teto: conta na hora
+            this.soulOrbs.push({
+                x: x + (Math.random() - 0.5) * 26, y: y + (Math.random() - 0.5) * 26,
+                vx: (Math.random() - 0.5) * 2.6, vy: -1.8 - Math.random() * 1.6,
+                born: Date.now(), seekAt: Date.now() + 240 + i * 80,
+                trail: [], wob: Math.random() * 6.28
+            });
+        }
+    }
+
+    grantSoul() {
+        this.souls++;
+        this.statTotalSouls++;
+        localStorage.setItem('statTotalSouls', this.statTotalSouls);
+        this.checkSoulAchievement();
+        this.updateSoulsUI();
+        const el = document.getElementById('souls-text');
+        if (el) { el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+    }
+
+    updateSoulOrbs() {
+        if (!this.soulOrbs || !this.soulOrbs.length || !this.player) return;
+        const ts = window.timeScale || 1;
+        for (let i = this.soulOrbs.length - 1; i >= 0; i--) {
+            const o = this.soulOrbs[i];
+            if (Date.now() < o.seekAt) {
+                // estouro inicial: a alma sobe e flutua
+                o.vy += 0.006 * ts; o.vx *= 0.99;
+                o.x += o.vx * ts; o.y += o.vy * ts;
+            } else {
+                // SUCÇÃO: acelera forte na direção do mago (curva orgânica)
+                const px = this.player.x + this.player.width / 2;
+                const py = this.player.y + this.player.height / 2;
+                const dx = px - o.x, dy = py - o.y;
+                const d = Math.hypot(dx, dy) || 1;
+                o.vx += (dx / d) * 0.55 * ts; o.vy += (dy / d) * 0.55 * ts;
+                const sp = Math.hypot(o.vx, o.vy);
+                if (sp > 17) { o.vx *= 17 / sp; o.vy *= 17 / sp; }
+                o.x += o.vx * ts; o.y += o.vy * ts;
+                o.wob += 0.3 * ts;
+                if (d < 30) {
+                    // CHEGOU: conta, brilha e toca o sino
+                    this.grantSoul();
+                    audioManager.playSfx('soul_pickup');
+                    for (let k = 0; k < 5; k++) {
+                        this.createParticle(px + (Math.random() - 0.5) * 26, py - 10 + (Math.random() - 0.5) * 30,
+                            '#9fd0ff', 2 + Math.random() * 2.5, 380, 0.6);
+                    }
+                    this.soulOrbs.splice(i, 1);
+                    continue;
+                }
+            }
+            o.trail.push({ x: o.x, y: o.y });
+            if (o.trail.length > 7) o.trail.shift();
+        }
+    }
+
+    flushSoulOrbs() {
+        if (!this.soulOrbs) return;
+        for (let i = 0; i < this.soulOrbs.length; i++) this.grantSoul();
+        this.soulOrbs = [];
+    }
+
+    drawSoulOrbs(ctx) {
+        if (!this.soulOrbs || !this.soulOrbs.length) return;
+        const t = Date.now() / 1000;
+        for (let i = 0; i < this.soulOrbs.length; i++) {
+            const o = this.soulOrbs[i];
+            // rastro de bruma
+            for (let ti = 0; ti < o.trail.length; ti++) {
+                const k = (ti + 1) / o.trail.length;
+                ctx.save();
+                ctx.globalAlpha = k * 0.28;
+                const s = 16 * k;
+                ctx.drawImage(SoulOrbSprite.get(), o.trail[ti].x - s / 2, o.trail[ti].y - s * 0.575, s, s * 1.15);
+                ctx.restore();
+            }
+            const pulse = 1 + Math.sin(t * 6 + o.wob) * 0.12;
+            const s = 26 * pulse;
+            const wobX = Math.sin(o.wob) * 2.2;
+            ctx.drawImage(SoulOrbSprite.get(), o.x - s / 2 + wobX, o.y - s * 0.575, s, s * 1.15);
+        }
     }
 
     clearAllBullets() {
@@ -2911,7 +3441,7 @@ class Game {
                         const dist = Math.hypot(this.player.x + this.player.width/2 - m.x, 
                                                 this.player.y + this.player.height/2 - m.targetY);
                         if (dist < 70) {
-                            this.player.takeDamage(m.damage, false, true);
+                            this.player.takeDamage(m.damage, false, true, 'meteor');
                             this.meteorHitsThisRun++;
                         }
                     }
@@ -3162,7 +3692,10 @@ class Game {
                     ObjectPool.releaseEnemy(e);
                     this.kills++;
                     this.statTotalKills++;
-					// ===== STREAK SYSTEM =====
+                    // [v7] abates por tipo (tela de fim de run)
+                    const kt = e.kamikaze ? 'kamikaze' : (e.isGolden ? 'golden' : e.type);
+                    if (this.runStats) this.runStats.kills[kt] = (this.runStats.kills[kt] || 0) + 1;
+                                        // ===== STREAK SYSTEM =====
                     const agoraStreak = Date.now();
                     if (agoraStreak - this.streakLastKill < 4000) {
                         this.streakCount++;
@@ -3210,11 +3743,8 @@ class Game {
                 audioManager.playSfx('enemy_die');
                 const soulMult = e.isGolden ? 3 : 1;
                 if (Math.random() < Math.min(0.02, this.player.stats.soulChance * this.luck * soulMult)) {
-                    this.souls += Math.ceil(1 * this.streakMultiplier);
-                    this.statTotalSouls++;
-                    localStorage.setItem('statTotalSouls', this.statTotalSouls);
-                    this.checkSoulAchievement();
-                    this.updateSoulsUI();
+                    // [v7] a alma VOA do inimigo até o mago (sucção, com som na chegada)
+                    this.spawnSoulOrbs(e.x + e.width / 2, e.y + e.height / 2, Math.ceil(1 * this.streakMultiplier));
                 }
             }
         }
@@ -3228,6 +3758,8 @@ class Game {
             }
         }
         this.updateGroundJunk(); // [v6] peças do kamikaze no chão
+        this.updateKamiCraters(); // [v7] crateras do kamikaze
+        this.updateSoulOrbs(); // [v7] almas voando até o mago
 
         for (let i = this.lightningEffects.length - 1; i >= 0; i--) {
             let l = this.lightningEffects[i];
@@ -3252,7 +3784,7 @@ class Game {
         // Aviso de Kamikaze na tela
         const kamiAviso = this.enemies.some(e => e.kamikaze && e.kamikazeState === 'aviso');
         dom('kamikaze-warning').style.display = kamiAviso ? 'block' : 'none';
-		// ===== HUD DO STREAK =====
+                // ===== HUD DO STREAK =====
         const streakEl = document.getElementById('streak-display');
         if (this.streakCount >= 2 && Date.now() - this.streakLastKill < 4000) {
             streakEl.style.display = 'block';
@@ -3306,13 +3838,13 @@ class Game {
                                 if (hitCount >= 4) break;
                                 if (ne.type === 'boss' || ne.type === 'miniboss') {
                                     if (!bossHitThisCycle) {
-                                        ne.takeDamage(ne.maxHp * 0.07);
+                                        ne.takeDamage(ne.maxHp * 0.07, false, 'thunder');
                                         bossHitThisCycle = true;
                                         hitCount++;
                                         totalHitsThisCycle++;
                                     }
                                 } else {
-                                    ne.takeDamage(ne.maxHp * 0.12);
+                                    ne.takeDamage(ne.maxHp * 0.12, false, 'thunder');
                                     hitCount++;
                                     totalHitsThisCycle++;
                                 }
@@ -3323,7 +3855,7 @@ class Game {
                             let pct = tier === 1 ? 0.06 : 0.09;
                             let bossPct = tier === 1 ? 0.03 : 0.04;
                             let mult = isBossAlvo ? bossPct : pct;
-                            targetEnemy.takeDamage(targetEnemy.maxHp * mult);
+                            targetEnemy.takeDamage(targetEnemy.maxHp * mult, false, 'thunder');
                             totalHitsThisCycle++;
                         }
                     }
@@ -4042,6 +4574,7 @@ class Game {
         this.citySmoke = [];
         this.bgSmokePuffs = [];
         this.cityBurns = []; // crateras em brasa (glow permanente dos impactos)
+        this.bgFlashes = []; // [v7] clarão + anel de choque dos impactos de meteoro
         this._bgMeteorNext = performance.now() + 18000 + Math.random() * 14000; // o 1º vem logo; os próximos: 1-4 min
     }
 
@@ -4086,8 +4619,10 @@ class Game {
         // ---- disco de acreção: FAIXAS ORBITAIS (segmentos de arco) ----
         // cada elemento é um trecho CONTÍNUO de plasma, não um pontinho:
         // somados formam um disco denso, com velocidade kepleriana
+        // [v7] disco mais denso: 84 trechos de plasma (o movimento kepleriano
+        // da v7 precisa de massa pra LER como um fluido orbitando)
         const disk = [];
-        for (let i = 0; i < 64; i++) {
+        for (let i = 0; i < 84; i++) {
             const r = 1.10 + Math.pow(Math.random(), 1.5) * 1.55; // denso perto do horizonte
             disk.push({
                 r: r,
@@ -4097,7 +4632,7 @@ class Game {
                 lw: 3.5 + Math.random() * 5 + Math.max(0, 2.6 - r) * 2.8, // grosso perto
                 seed: Math.random() * 6.28,
                 jy: (Math.random() - 0.5) * 0.34,      // desalinho = GROSURA do halo
-                hot: Math.random() < 0.22              // hot spots ocasionais
+                hot: Math.random() < 0.26              // hot spots ocasionais
             });
         }
         // paleta TÉRMICA pré-computada: branco-quente -> âmbar -> laranja -> roxo
@@ -4121,8 +4656,19 @@ class Game {
             infall.push({ seed: i * 1.618 + Math.random() * 0.7, dur: 2.6 + Math.random() * 2.4, ph: Math.random() });
         }
 
+        // [v7] BLOOM: brilho volumétrico suave sobre o ápice do halo (Gargantua)
+        const BS = 300;
+        const bloomC = document.createElement('canvas'); bloomC.width = bloomC.height = BS;
+        const bg2 = bloomC.getContext('2d');
+        const blG = bg2.createRadialGradient(BS / 2, BS / 2, 4, BS / 2, BS / 2, BS / 2);
+        blG.addColorStop(0, 'rgba(255,244,224,0.55)');
+        blG.addColorStop(0.35, 'rgba(255,214,150,0.22)');
+        blG.addColorStop(0.7, 'rgba(190,120,255,0.10)');
+        blG.addColorStop(1, 'rgba(150,90,255,0)');
+        bg2.fillStyle = blG; bg2.fillRect(0, 0, BS, BS);
+
         this._bhLastT = performance.now();
-        return { x: bx, y: by, shadowR: R, sprite: sc, haze: hc, disk: disk, infall: infall };
+        return { x: bx, y: by, shadowR: R, sprite: sc, haze: hc, disk: disk, infall: infall, bloom: bloomC };
     }
 
     // [v5] METEORO DE FUNDO atinge uma construção: buraco irregular no canvas
@@ -4182,34 +4728,47 @@ class Game {
             if (this.citySmoke.length < 7) this.citySmoke.push({ cx: cx, cy: cy - 2, next: 0 });
             if (this.cityBurns.length < 10) this.cityBurns.push({ cx: cx, cy: cy, r: r * 1.15, ph: Math.random() * 6.28 });
         }
-        // [v6] TIJOLOS: a alvenaria do prédio se estilhaça — retângulos de pedra
-        // voando com gravidade, girando e quicando; some em fade (sutil)
-        if (this.bgBricks.length < 90) {
-            const NB = 15 + Math.floor(Math.random() * 7);
+        // [v7] FLASH + ONDA DE CHOQUE na tela: o impacto agora PESA
+        if (!this.bgFlashes) this.bgFlashes = [];
+        this.bgFlashes.push({ x: m.tx, y: m.ty, born: Date.now(), r: 46 + Math.random() * 18 });
+        this.addShake(2.5);
+        audioManager.playSfx('bg_boom'); // estrondo distante
+        // [v7] TIJOLOS: a alvenaria VOA — mais pedaços, maiores, quase metade em brasa
+        if (this.bgBricks.length < 110) {
+            const NB = 26 + Math.floor(Math.random() * 12);
             for (let i = 0; i < NB; i++) {
-                const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.7;
-                const sp = 0.05 + Math.random() * 0.16;
+                const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.9;
+                const sp = 0.06 + Math.random() * 0.20;
                 this.bgBricks.push({
-                    x: m.tx + (Math.random() - 0.5) * 8, y: m.ty + (Math.random() - 0.5) * 8,
+                    x: m.tx + (Math.random() - 0.5) * 10, y: m.ty + (Math.random() - 0.5) * 10,
                     vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
                     gy: this.height - 2 - Math.random() * 26, // chão da cidade
-                    rot: Math.random() * Math.PI * 2, vrot: (Math.random() - 0.5) * 0.02,
-                    w: 3 + Math.random() * 4.5, h: 2 + Math.random() * 3,
-                    life: 900 + Math.random() * 600,
+                    rot: Math.random() * Math.PI * 2, vrot: (Math.random() - 0.5) * 0.026,
+                    w: 4 + Math.random() * 6, h: 2.5 + Math.random() * 3.5,
+                    life: 1100 + Math.random() * 700,
+                    hot: Math.random() < 0.45,
                     color: ['#9c8db8', '#6b5d8e', '#433763', '#b7a9d6'][Math.floor(Math.random() * 4)]
                 });
             }
         }
+        // [v7] espirro grosso de fumaça de guerra no ponto do impacto
+        if (this.bgSmokePuffs && this.bgSmokePuffs.length < 40) {
+            for (let i = 0; i < 8; i++) {
+                this.bgSmokePuffs.push({ cx: m.tx + (Math.random() - 0.5) * 16, cy: m.ty,
+                    vx: (Math.random() - 0.5) * 0.02, vy: -(0.010 + Math.random() * 0.020),
+                    life: 2600 + Math.random() * 2200, max: 4800, size: 5 + Math.random() * 6 });
+            }
+        }
         // poeira/brasas curtas (o que sobra do impacto)
-        for (let i = 0; i < 8; i++) {
-            const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
-            const sp = 0.06 + Math.random() * 0.12;
+        for (let i = 0; i < 26; i++) {
+            const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.6;
+            const sp = 0.05 + Math.random() * 0.16;
             this.bgBits.push({
                 x: m.tx, y: m.ty,
                 vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
-                life: 550 + Math.random() * 550,
-                size: 1.5 + Math.random() * 2.4,
-                color: ['#8a7db0', '#3d3358', '#ff9a40', '#c9bce8'][Math.floor(Math.random() * 4)]
+                life: 550 + Math.random() * 650,
+                size: 1.5 + Math.random() * 2.6,
+                color: ['#ffd9a0', '#ff9a40', '#8a7db0', '#3d3358', '#c9bce8'][Math.floor(Math.random() * 5)]
             });
         }
     }
@@ -4293,6 +4852,12 @@ class Game {
             const heatOf = (p) => Math.max(0, 1 - (p.r - 1.10) / 1.55);
             const dopOf = (p) => 0.5 - 0.5 * Math.cos(p.a - Math.PI);
 
+            // [v7] MOVIMENTO KEPLERIANO de verdade: o plasma ORBITA — ferve colado
+            // no horizonte e arrasta lá fora. O disco agora FLUI (não é quadro parado)
+            if (this.state !== 'PAUSED' && !this.paused) {
+                for (let pi = 0; pi < passos.length; pi++) passos[pi].a += passos[pi].w * bDt * 1.5;
+            }
+
             // ===== LENTE GRAVITACIONAL — o disco de TRÁS é DOBRADO por cima
             // da sombra: mesma largura orbital (fundindo com o disco frontal
             // nas laterais) e altura comprimida junto ao photon ring. É a
@@ -4342,6 +4907,37 @@ class Game {
                 g.stroke();
                 g.restore();
             }
+            g.restore();
+
+            // [v7] A IMAGEM LENTEA DE BAIXO: a luz do disco de trás também dobra
+            // por BAIXO da sombra (a segunda dobra do Gargantua) — arco fino e quente
+            g.save();
+            g.translate(bx, by);
+            g.rotate(rot);
+            g.globalCompositeOperation = 'lighter';
+            g.lineCap = 'round';
+            for (let i = 0; i < Math.min(passos.length, lim); i++) {
+                const p = passos[i];
+                if (Math.sin(p.a) > -0.45) continue; // só o plasma que está atrás
+                const heat = heatOf(p), dop = dopOf(p);
+                const flick = 0.8 + Math.sin(bt * 2.2 + p.seed * 4) * 0.2;
+                const rx = p.r * R * 1.04;
+                const ry = R * (0.99 + (p.r - 1.10) * 0.030);
+                g.globalAlpha = Math.min(0.34, (0.08 + heat * 0.20 + dop * 0.10) * flick);
+                g.strokeStyle = cor(heat * 0.85, dop * 0.7);
+                g.lineWidth = p.lw * 0.45;
+                g.beginPath();
+                g.ellipse(0, R * 0.03, rx, ry, 0, Math.PI + 0.38, Math.PI * 2 - 0.38);
+                g.stroke();
+            }
+            g.restore();
+
+            // [v7] bloom volumétrico no ápice do halo (a luz "vaza" da lente)
+            g.save();
+            g.globalCompositeOperation = 'lighter';
+            g.globalAlpha = 0.55 + Math.sin(bt * 0.5) * 0.12;
+            const bs2 = R * 3.1;
+            g.drawImage(bh.bloom, bx - bs2 / 2, by - R * 1.05 - bs2 / 2, bs2, bs2);
             g.restore();
 
             // ===== a SOMBRA: horizonte de eventos, preto absoluto =====
@@ -4433,6 +5029,17 @@ class Game {
             }
             g.restore();
 
+            // [v7] aro interno QUENTE (ISCO): a borda do disco ferve colada na sombra
+            g.save();
+            g.translate(bx, by);
+            g.rotate(rot);
+            g.globalCompositeOperation = 'lighter';
+            g.strokeStyle = '#fff2d8';
+            g.globalAlpha = 0.40 + Math.sin(bt * 3.1) * 0.10;
+            g.lineWidth = 2.2;
+            g.beginPath(); g.ellipse(0, dyD, R * 1.14, R * 0.255, 0, 0.04, Math.PI - 0.04); g.stroke();
+            g.restore();
+
             // ===== HOT SPOTS correndo pelo photon ring — só no arco superior
             // (embaixo da sombra não há ring: o disco frontal cobre) =====
             for (let i = 0; i < 3; i++) {
@@ -4507,6 +5114,28 @@ class Game {
                     g.restore();
                 }
             }
+
+            // [v7] IMAGENS FANTASMA: perto do anel de Einstein cada estrela ganha
+            // um gêmeo deslocado do outro lado (lente gravitacional de verdade)
+            if (Perf.level === 0 && this.starTwinkle) {
+                for (let i = 1; i < this.starTwinkle.length; i += 4) {
+                    const st = this.starTwinkle[i];
+                    const dx = st.x - bx, dy = st.y - by;
+                    const d = Math.hypot(dx, dy);
+                    if (d > R * 2.7 || d < R * 1.30) continue;
+                    const rd = (R * R * 1.18) / d; // raio espelhado pela lente
+                    const gx2 = bx + (dx / d) * rd, gy2 = by + (dy / d) * rd;
+                    const tang = Math.atan2(dy, dx) + Math.PI / 2;
+                    const len = 4 + (rd / R) * 5;
+                    g.save();
+                    g.globalAlpha = 0.20 + Math.sin(bt * 1.4 + st.ph) * 0.09;
+                    g.translate(gx2, gy2);
+                    g.rotate(tang);
+                    g.fillStyle = st.violet ? '#caacff' : '#ffffff';
+                    g.fillRect(-len / 2, -0.5, len, 1);
+                    g.restore();
+                }
+            }
         }
 
 
@@ -4559,8 +5188,25 @@ class Game {
         const bgDt = Math.min(50, nowMs - (this._bgT || nowMs)); this._bgT = nowMs;
         const bgAlive = !this.paused && this.state !== 'PAUSED';
         if (this.cityNear && bgAlive && nowMs > (this._bgMeteorNext || Infinity) && this.bgMeteors.length < 2) {
-            this._bgMeteorNext = nowMs + 60000 + Math.random() * 180000; // [v6] 1 a 4 minutos
-            const cands = this.cityNear.buildings.filter(b => b.hits < 2);
+            this._bgMeteorNext = nowMs + 60000 + Math.random() * 180000; // 1 a 4 minutos
+            // [v7] só prédios VISÍVEIS: o impacto precisa aparecer na tela (nada
+            // de cair atrás do solo que tapa a cidade — sem efeito visual não vale)
+            const terrainTopAt = (x0, x1) => {
+                let top = this.height;
+                for (let bi = 0; bi < this.blocks.length; bi++) {
+                    const bl = this.blocks[bi];
+                    if (bl.x + bl.w < x0 || bl.x > x1) continue;
+                    top = Math.min(top, bl.y);
+                }
+                return top;
+            };
+            const cands = this.cityNear.buildings.filter(b => {
+                if (b.hits >= 2) return false;
+                const sx0 = b.x - 86, sx1 = b.x + b.w - 42; // faixa de tela com parallax
+                if (sx1 < 60 || sx0 > this.width - 60) return false; // fora da tela
+                const tTop = terrainTopAt(Math.max(0, sx0), Math.min(this.width, sx1));
+                return (b.top + b.hits * 14 + 30) < (tTop - 26); // zona de impacto 100% visível
+            });
             if (cands.length > 0) {
                 const b = cands[Math.floor(Math.random() * cands.length)];
                 const off = -64 - (px - this.width / 2) * 0.030;
@@ -4572,13 +5218,15 @@ class Game {
                 this.bgMeteors.push({
                     x: tx - (dirX / dl) * dist, y: ty - (1 / dl) * dist,
                     ux: dirX / dl, uy: 1 / dl,
-                    speed: 0.17 + Math.random() * 0.07, // [v6] um pouco mais lento: dá pra ACOMPANHAR com o olho
+                    speed: 0.19 + Math.random() * 0.07,
                     tx: tx, ty: ty, target: b, hit: false, trail: [],
                     rot: Math.random() * Math.PI * 2, vrot: (Math.random() - 0.5) * 0.011,
-                    sz: 8 + Math.random() * 3.5,
-                    verts: (() => { const v = []; for (let k = 0; k < 6; k++) { const aa = (k / 6) * Math.PI * 2 + Math.random() * 0.5; const rr = 0.62 + Math.random() * 0.38; v.push([Math.cos(aa) * rr, Math.sin(aa) * rr]); } return v; })(),
-                    sparkT: 0, smokeT: 0
+                    sz: 13 + Math.random() * 4.5, // [v7] BEM maior
+                    verts: (() => { const v = []; for (let k = 0; k < 7; k++) { const aa = (k / 7) * Math.PI * 2 + Math.random() * 0.5; const rr = 0.62 + Math.random() * 0.38; v.push([Math.cos(aa) * rr, Math.sin(aa) * rr]); } return v; })(),
+                    sparkT: 0, smokeT: 0, fireT: 0, firePix: null
                 });
+            } else {
+                this._bgMeteorNext = nowMs + 15000; // todos escondidos? tenta de novo logo
             }
         }
         for (let i = this.bgMeteors.length - 1; i >= 0; i--) {
@@ -4600,15 +5248,25 @@ class Game {
             if (m.hit && fadeHit <= 0) { this.bgMeteors.splice(i, 1); continue; }
             if (!m.hit) { m.rot += m.vrot * bgDt; }
             g.save();
-            // [v6] RASTRO DE FOGO de verdade: chama grossa grudada na pedra
-            // esfriando ao longo do rastro (branco -> laranja -> vermelho-rosa)
+            // [v7] RASTRO PIXELADO de fogo: blocos CHUNKY em grade de 3px, com
+            // rampa térmica (branco → amarelo → laranja → vermelho) e falhas de
+            // dithering — fogo 8-bit de verdade grudado na pedra
+            const pix = 3;
             for (let ti = 0; ti < m.trail.length; ti++) {
                 const tp = m.trail[ti];
-                const k = ti / m.trail.length;
-                const tsz = m.sz * (0.35 + k * 1.15);
-                g.globalAlpha = (0.16 + k * 0.42) * fadeHit;
-                g.fillStyle = k > 0.72 ? '#fff3de' : (k > 0.4 ? '#ffb45e' : '#ff6a3a');
-                g.fillRect(tp.x - tsz / 2, tp.y - tsz / 2, tsz, tsz);
+                const k = ti / m.trail.length; // 0 = longe (frio), 1 = perto da pedra
+                if (ti % 5 === 0 && k < 0.55) continue; // dithering: buracos no rastro
+                const tsz = Math.max(pix, Math.round((m.sz * (0.30 + k * 1.30)) / pix) * pix);
+                g.globalAlpha = (0.20 + k * 0.55) * fadeHit;
+                g.fillStyle = k > 0.78 ? '#fff6e0' : (k > 0.55 ? '#ffd23e' : (k > 0.3 ? '#ff8a2a' : '#d92b0c'));
+                const tpx = Math.round(tp.x / pix) * pix, tpy = Math.round(tp.y / pix) * pix;
+                g.fillRect(tpx - tsz / 2, tpy - tsz / 2, tsz, tsz);
+                // brasinha dupla em alguns pontos (chama viva tremulando)
+                if (k > 0.6 && ti % 2 === 0) {
+                    g.globalAlpha = (0.15 + k * 0.3) * fadeHit;
+                    g.fillStyle = '#ffb45e';
+                    g.fillRect(tpx - tsz / 2 - pix, tpy + tsz / 2, pix * 2, pix);
+                }
             }
             // fagulhas caindo do meteoro (vivas, pequenas)
             if (!m.hit && bgAlive) {
@@ -4623,16 +5281,28 @@ class Game {
                     });
                 }
             }
-            // CORPO: pedra POLIGONAL irregular em reentrada (não quadradinho)
+            // CORPO: pedra POLIGONAL GRANDE em reentrada — SEM círculo de glow:
+            // o fogo é uma CASCA PIXELADA de chamas tremulando em volta da rocha
             g.globalAlpha = fadeHit;
-            const glowR = m.sz * 2.6;
-            const mg = g.createRadialGradient(m.x, m.y, 1, m.x, m.y, glowR);
-            mg.addColorStop(0, 'rgba(255,240,210,0.85)');
-            mg.addColorStop(0.35, 'rgba(255,150,60,0.42)');
-            mg.addColorStop(1, 'rgba(255,90,30,0)');
-            g.fillStyle = mg;
-            g.beginPath(); g.arc(m.x, m.y, glowR, 0, Math.PI * 2); g.fill();
             g.translate(m.x, m.y);
+            m.fireT -= bgDt;
+            if (m.fireT <= 0) {
+                m.fireT = 55;
+                m.firePix = [];
+                for (let fi = 0; fi < 14; fi++) {
+                    const fa = (fi / 14) * Math.PI * 2 + Math.random() * 0.3;
+                    const fr = m.sz * (1.02 + Math.random() * 0.42);
+                    const fs = pix + Math.round(Math.random() * 2) * pix;
+                    m.firePix.push([Math.cos(fa) * fr, Math.sin(fa) * fr, fs,
+                        Math.random() < 0.3 ? '#fff6e0' : (Math.random() < 0.6 ? '#ffb45e' : '#ff7a26')]);
+                }
+            }
+            for (let fi = 0; fi < m.firePix.length; fi++) {
+                const fp = m.firePix[fi];
+                g.fillStyle = fp[3];
+                const fx2 = Math.round(fp[0] / pix) * pix, fy2 = Math.round(fp[1] / pix) * pix;
+                g.fillRect(fx2 - fp[2] / 2, fy2 - fp[2] / 2, fp[2], fp[2]);
+            }
             g.rotate(m.rot);
             // facetas da rocha: duas passadas (sombra + luz de entrada)
             g.fillStyle = '#4a3b52';
@@ -4644,15 +5314,19 @@ class Game {
             g.closePath(); g.fill();
             g.fillStyle = '#8d7a96';
             g.beginPath();
-            for (let vi = 0; vi < 4; vi++) {
+            for (let vi = 0; vi < 5; vi++) {
                 const vx = m.verts[vi][0] * m.sz * 0.62, vy = m.verts[vi][1] * m.sz * 0.62;
                 if (vi === 0) g.moveTo(vx, vy); else g.lineTo(vx, vy);
             }
             g.closePath(); g.fill();
+            // crateras escuras na pedra (textura lunar)
+            g.fillStyle = 'rgba(20,12,26,0.7)';
+            g.beginPath(); g.arc(-m.sz * 0.25, -m.sz * 0.1, m.sz * 0.16, 0, Math.PI * 2); g.fill();
+            g.beginPath(); g.arc(m.sz * 0.2, m.sz * 0.22, m.sz * 0.12, 0, Math.PI * 2); g.fill();
             // borda incandescente na face frontal (direção do movimento)
             g.rotate(-m.rot);
-            g.strokeStyle = 'rgba(255,220,170,0.9)';
-            g.lineWidth = 1.4;
+            g.strokeStyle = 'rgba(255,235,190,0.95)';
+            g.lineWidth = 2.2;
             g.beginPath();
             g.arc(0, 0, m.sz * 0.95, Math.atan2(m.uy, m.ux) - 1.15, Math.atan2(m.uy, m.ux) + 1.15);
             g.stroke();
@@ -4670,6 +5344,33 @@ class Game {
                     g.stroke();
                     g.restore();
                 }
+            }
+        }
+
+        // [v7] FLASH do impacto do meteoro: clarão quente + anel de choque duplo
+        if (this.bgFlashes && this.bgFlashes.length) {
+            for (let i = this.bgFlashes.length - 1; i >= 0; i--) {
+                const f = this.bgFlashes[i];
+                const age = Date.now() - f.born;
+                if (age > 650) { this.bgFlashes.splice(i, 1); continue; }
+                const k = 1 - age / 650;
+                g.save();
+                g.globalCompositeOperation = 'lighter';
+                const fg3 = g.createRadialGradient(f.x, f.y, 1, f.x, f.y, f.r * (2.4 - k));
+                fg3.addColorStop(0, 'rgba(255,244,214,' + (0.75 * k).toFixed(2) + ')');
+                fg3.addColorStop(0.4, 'rgba(255,150,60,' + (0.35 * k).toFixed(2) + ')');
+                fg3.addColorStop(1, 'rgba(255,90,30,0)');
+                g.fillStyle = fg3;
+                g.beginPath(); g.arc(f.x, f.y, f.r * (2.4 - k), 0, Math.PI * 2); g.fill();
+                g.globalAlpha = k * 0.7;
+                g.strokeStyle = '#ffd9a0';
+                g.lineWidth = 2.5;
+                g.beginPath(); g.arc(f.x, f.y, f.r * 0.3 + (1 - k) * f.r * 2.6, 0, Math.PI * 2); g.stroke();
+                g.globalAlpha = k * 0.4;
+                g.lineWidth = 1.5;
+                g.strokeStyle = '#ffcf9a';
+                g.beginPath(); g.arc(f.x, f.y, f.r * 0.15 + (1 - k) * f.r * 1.7, 0, Math.PI * 2); g.stroke();
+                g.restore();
             }
         }
 
@@ -4696,6 +5397,13 @@ class Game {
             g.fillRect(-bk.w / 2, -bk.h / 2, bk.w, bk.h);
             g.fillStyle = 'rgba(255,255,255,0.14)';
             g.fillRect(-bk.w / 2, -bk.h / 2, bk.w, 1);
+            if (bk.hot) { // [v7] tijolo em BRASA esfriando
+                const heat = Math.max(0, Math.min(1, (bk.life - 500) / 900));
+                if (heat > 0) {
+                    g.fillStyle = 'rgba(255,130,40,' + (heat * 0.75).toFixed(2) + ')';
+                    g.fillRect(-bk.w / 2, -bk.h / 2, bk.w, bk.h);
+                }
+            }
             g.restore();
         }
 
@@ -4771,6 +5479,7 @@ class Game {
                 g.drawImage(this.fogCanvas, fx, this.height - 168, w, 185);
             }
         }
+        this.drawWeather(g, true); // [v7] clima (fundo): relâmpagos iluminando as ruínas
         if (_warp) g.restore(); // [v6] fim do warp de lançamento
     }
 
@@ -4782,6 +5491,7 @@ class Game {
         this.updateBgDust();
         this.drawBgDust(ctx);
         if (this.terrainCanvas) ctx.drawImage(this.terrainCanvas, 0, 0);
+        this.drawWeather(ctx, false); // [v7] o clima vive no menu também
 
         if (!this.menuSparks) this.menuSparks = [];
         while (this.menuSparks.length < 14) {
@@ -4857,6 +5567,13 @@ class Game {
         if (this.shake > 0.5) {
             ctx.translate((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake);
         }
+        // [v7] TILT de câmera ao tomar dano (o golpe INCLINA o mundo)
+        if (Date.now() < (this.dmgTiltUntil || 0)) {
+            const k = (this.dmgTiltUntil - Date.now()) / 320;
+            ctx.translate(this.width / 2, this.height / 2);
+            ctx.rotate(0.035 * k * (this.dmgTiltDir || 1));
+            ctx.translate(-this.width / 2, -this.height / 2);
+        }
         this.drawBgDust(ctx); // [JUICE] poeira arcana de fundo
         if (this.state === 'BOSS_DEATH_CINEMATIC') {
             // [v4] camera: aproxima do chefe morrendo e, apos a detonacao, volta suave
@@ -4900,6 +5617,8 @@ class Game {
         }
 
         if (this.terrainCanvas) ctx.drawImage(this.terrainCanvas, 0, 0);
+        this.drawKamiCraters(ctx); // [v7] crateras do kamikaze
+        this.drawWeather(ctx, false); // [v7] chuva de éter, poças e relâmpagos
         this.drawShadows(ctx); // [v3] sombras 3D sob as entidades
         
         if (this.player && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
@@ -4923,6 +5642,7 @@ class Game {
         this.drawMeteors(ctx);
         this.bullets.forEach(b => b.draw(ctx));
         this.particles.forEach(p => p.draw(ctx));
+        this.drawSoulOrbs(ctx); // [v7] almas voando até o mago
         this.drawGroundJunk(ctx); // [v6] engrenagens do kamikaze no chão
         this.lightningEffects.forEach(l => l.draw(ctx));
         this.floatingTexts.forEach(t => t.draw(ctx));
@@ -4981,6 +5701,30 @@ class Game {
             ctx.save();
             ctx.globalAlpha = a;
             ctx.drawImage(VignetteSprite.get(), 0, 0, this.width, this.height);
+            ctx.restore();
+        }
+
+        // [v7] ABERRAÇÃO CROMÁTICA ao tomar dano: canais RGB dessincronizados
+        // por 2-3 quadros (o deslocamento some conforme o golpe "assenta")
+        if (Date.now() < (this.dmgFxUntil || 0)) {
+            const k = (this.dmgFxUntil - Date.now()) / 190;
+            const off = Math.max(1, Math.round(1 + 4 * k));
+            if (!this._fxA) {
+                this._fxA = document.createElement('canvas'); this._fxA.width = canvas.width; this._fxA.height = canvas.height;
+                this._fxB = document.createElement('canvas'); this._fxB.width = canvas.width; this._fxB.height = canvas.height;
+            }
+            const ga = this._fxA.getContext('2d'), gb = this._fxB.getContext('2d');
+            ga.globalCompositeOperation = 'source-over'; ga.clearRect(0, 0, canvas.width, canvas.height);
+            ga.drawImage(canvas, 0, 0);
+            ga.globalCompositeOperation = 'multiply'; ga.fillStyle = '#ff0000'; ga.fillRect(0, 0, canvas.width, canvas.height);
+            gb.globalCompositeOperation = 'source-over'; gb.clearRect(0, 0, canvas.width, canvas.height);
+            gb.drawImage(canvas, 0, 0);
+            gb.globalCompositeOperation = 'multiply'; gb.fillStyle = '#00ffff'; gb.fillRect(0, 0, canvas.width, canvas.height);
+            ctx.save();
+            ctx.globalCompositeOperation = 'source-over';
+            ctx.drawImage(this._fxA, -off, 0);
+            ctx.globalCompositeOperation = 'lighter';
+            ctx.drawImage(this._fxB, off, 0);
             ctx.restore();
         }
 
@@ -5285,9 +6029,10 @@ class CompanionOrb {
             if (tier === 1) { bulletStats.speed = 0.85; bulletStats.projSize = 2; bulletStats.pierce = 0; } 
             else if (tier === 2) { bulletStats.speed = 1.75; bulletStats.projSize = 4; bulletStats.pierce = 0; } 
             if (this.player.perks.cold) bulletStats.isCold = true;
+            bulletStats.srcTag = 'orb'; // [v7] dano do orbe (gráfico de fim de run)
             bulletStats.staffSkin = this.player.staffIndex;
             bulletStats.color = this.player.staffIndex === 2 ? '#ffcc33' : (this.player.staffIndex === 3 ? '#38b6ff' : 'white');
-			this.flashUntil = Date.now() + 200;
+                        this.flashUntil = Date.now() + 200;
             game.bullets.push(ObjectPool.getBullet(this.x, this.y, angle, dmg, true, bulletStats));
             audioManager.playSfx('shoot');
         }
@@ -5544,6 +6289,43 @@ const VignetteSprite = {
     }
 };
 
+/**
+ * [v7] ALMA VOADORA — mini sprite da alma que VOA até o mago (sucção)
+ */
+const SoulOrbSprite = {
+    _c: null,
+    get() {
+        if (this._c) return this._c;
+        const W = 40, H = 46, cx = W / 2;
+        const c = document.createElement('canvas'); c.width = W; c.height = H;
+        const g = c.getContext('2d');
+        const halo = g.createRadialGradient(cx, H * 0.42, 1, cx, H * 0.42, W * 0.65);
+        halo.addColorStop(0, 'rgba(150,210,255,0.75)');
+        halo.addColorStop(0.5, 'rgba(77,166,255,0.28)');
+        halo.addColorStop(1, 'rgba(77,166,255,0)');
+        g.fillStyle = halo; g.fillRect(0, 0, W, H);
+        const body = g.createLinearGradient(0, H * 0.18, 0, H * 0.94);
+        body.addColorStop(0, '#f2faff'); body.addColorStop(0.5, '#9fd0ff'); body.addColorStop(1, 'rgba(77,166,255,0.15)');
+        g.fillStyle = body;
+        g.beginPath();
+        g.moveTo(cx, H * 0.10);
+        g.bezierCurveTo(cx + 11, H * 0.24, cx + 13, H * 0.46, cx + 9, H * 0.66);
+        g.bezierCurveTo(cx + 8, H * 0.82, cx + 5, H * 0.92, cx, H * 0.95);
+        g.bezierCurveTo(cx - 5, H * 0.92, cx - 8, H * 0.82, cx - 9, H * 0.66);
+        g.bezierCurveTo(cx - 13, H * 0.46, cx - 11, H * 0.24, cx, H * 0.10);
+        g.closePath(); g.fill();
+        const core = g.createRadialGradient(cx, H * 0.38, 1, cx, H * 0.38, W * 0.26);
+        core.addColorStop(0, 'rgba(255,255,255,0.95)'); core.addColorStop(1, 'rgba(210,235,255,0)');
+        g.fillStyle = core;
+        g.beginPath(); g.arc(cx, H * 0.38, W * 0.26, 0, Math.PI * 2); g.fill();
+        g.fillStyle = '#0b1626';
+        g.beginPath(); g.ellipse(cx - 4, H * 0.38, 1.5, 2.3, -0.15, 0, Math.PI * 2); g.fill();
+        g.beginPath(); g.ellipse(cx + 4, H * 0.38, 1.5, 2.3, 0.15, 0, Math.PI * 2); g.fill();
+        this._c = c;
+        return c;
+    }
+};
+
 class Player {
     constructor(x, y, charIndex, staffIndex = 1) {
         this.x = x; this.y = y; this.width = 62; this.height = 83; 
@@ -5556,7 +6338,7 @@ class Player {
         this.manaShieldReady = false; this.manaShieldCooldown = 0;
         this.dashActiveUntil = 0; this.dashCooldownUntil = 0; this.dashDirection = 1; this.dashTickCounter = 0;
         this.squashY = 1; this.hurtFlashUntil = 0; this.hurtThisWave = false;
-		this.coyoteTimeUntil = 0;
+                this.coyoteTimeUntil = 0;
         this.jumpBufferUntil = 0;
         this.perfectRun = true;
         this.orb = new CompanionOrb(this); this.lastShot = 0; this.facing = 1; this.invulnUntil = 0;
@@ -5637,7 +6419,7 @@ class Player {
                     else if (tier === 2) pct = isBoss ? 0.03 : 0.07;
                     else if (tier >= 3) pct = isBoss ? 0.04 : 0.10;
                     let dmg = e.maxHp * pct;
-                    e.takeDamage(dmg);
+                    e.takeDamage(dmg, false, 'laser');
                 }
             }
         });
@@ -5862,7 +6644,7 @@ class Player {
                 game.createParticle(this.x + this.width / 2 + (Math.random() - 0.5) * 40, this.y + this.height - 5, 'rgba(210,210,210,0.5)', 3 + Math.random() * 3, 320, 0.45);
             }
         }
-		// Coyote time: acabou de sair do chão
+                // Coyote time: acabou de sair do chão
         if (estavaNoAr === false && !this.grounded) {
             this.coyoteTimeUntil = Date.now() + 150;
         }
@@ -5938,7 +6720,7 @@ class Player {
             game.unlockAchievement('crit_first');
         }
 
-        let bulletStats = { ...this.stats, speed: 1.75, homingTier: this.perks.homing, isCold: this.perks.cold, execute: this.perks.execute, bouncing: this.perks.bouncing, chainTier: this.perks.chainLightning };
+        let bulletStats = { ...this.stats, speed: 1.75, homingTier: this.perks.homing, isCold: this.perks.cold, execute: this.perks.execute, bouncing: this.perks.bouncing, chainTier: this.perks.chainLightning, srcTag: 'shot' };
         if (this.perks.homing > 0) bulletStats.aimTarget = this.findAimTarget(angle);
         bulletStats.staffSkin = this.staffIndex;
         bulletStats.color = this.staffIndex === 2 ? '#ffcc33' : (this.staffIndex === 3 ? '#38b6ff' : 'white');
@@ -5958,7 +6740,7 @@ class Player {
         audioManager.playSfx('shoot');
     }
 
-    takeDamage(amount, isBossAttack = false, kamikazeHit = false) {
+    takeDamage(amount, isBossAttack = false, kamikazeHit = false, cause = null) {
         if (game.state === 'BOSS_DEATH_CINEMATIC') return;
         if (Date.now() < this.invulnUntil) return;
         if (Date.now() < this.dashActiveUntil) return;
@@ -5998,6 +6780,12 @@ class Player {
         this.hurtThisWave = true;
         this.perfectRun = false;
         this.hurtFlashUntil = Date.now() + 400;
+        
+        // [v7] O DANO SE SENTE: aberração cromática + tilt de câmera + vinheta
+        game.dmgFxUntil = Date.now() + 190;
+        game.dmgTiltUntil = Date.now() + 320;
+        game.dmgTiltDir = (this.x + this.width / 2 < game.width / 2) ? 1 : -1;
+        if (cause) game.deathCause = cause;
         
         this.healingFatigueUntil = Date.now() + 4000;
         game.addShake(9);
@@ -6140,7 +6928,7 @@ class Enemy {
         this.estVX = 0; this.estVY = 0;
         this._velSampleAt = 0; this._velSampleX = x; this._velSampleY = y;
         this.escalaVisual = 1.8; 
-		this.trailHistory = [];
+                this.trailHistory = [];
         this.trailTick = 0;
         
         let hpBaseBruto = CONFIG.baseEnemyHP;
@@ -6175,7 +6963,7 @@ class Enemy {
         
         this.lastHitTime = 0; this.coldStacks = 0; this.coldUntil = 0; this.lastHitDamage = 0;
         this.lastShootTime = Date.now() - 2000 + Math.random() * 500;
-		this.isChargingShot = false;
+                this.isChargingShot = false;
         this.currentShootInterval = 2300;
         
         this.poisonStacks = 0;
@@ -6208,6 +6996,8 @@ class Enemy {
                 else pctPerTick = isBossAlvo ? 0.02 : 0.08;
                 let dmg = this.maxHp * pctPerTick;
                 this.hp -= dmg;
+                game.damageDealt = (game.damageDealt || 0) + dmg;
+                if (game.runStats) game.runStats.dmg.poison = (game.runStats.dmg.poison || 0) + dmg;
                 game.addFloatingText(this.x, this.y, Math.round(dmg), "#00ff00");
                 if (this.hp <= 0) this.die();
             }
@@ -6270,7 +7060,7 @@ class Enemy {
                     this.y < game.player.y + game.player.height && this.y + this.height > game.player.y) {
                     let damaged = false;
                     if (Date.now() >= game.player.invulnUntil && Date.now() >= game.player.dashActiveUntil) {
-                        game.player.takeDamage(game.player.maxHp * 0.25, false, true);
+                        game.player.takeDamage(game.player.maxHp * 0.25, false, true, 'kami');
                         damaged = true;
                     }
                     if (!damaged) {
@@ -6389,12 +7179,14 @@ class Enemy {
         game.bullets.push(ObjectPool.getBullet(this.x + 15, this.y + 15, angle, this.damage, false, { speed: this.isGolden ? 1.4 : 1.0, color: bulletColor, isBossAttack: isBossAtk }));
     }
 
-    takeDamage(amount, isCrit = false) {
+    takeDamage(amount, isCrit = false, srcTag = null) {
         if (game.state === 'BOSS_DEATH_CINEMATIC') return;
         if (this.shieldActive) {
             game.addFloatingText(this.x + this.width/2, this.y - 10, TEXTS[currentLang].blocked, "#4dff4d");
             return;
         }
+        // [v7] dano por FONTE (gráfico da tela de fim de run)
+        if (srcTag && game.runStats) game.runStats.dmg[srcTag] = (game.runStats.dmg[srcTag] || 0) + amount;
 
         if (game.player.perks.execute && (this.hp / this.maxHp) < 0.15 && this.type !== 'boss' && this.type !== 'miniboss') {
             amount *= 2; game.createParticle(this.x, this.y, 'red', 5);
@@ -6428,23 +7220,30 @@ class Enemy {
     die() {
         if (this.dead) return;
         this.dead = true;
-        const deathColor = this.isGolden ? '#ffd700' : 'white';
-        // [JUICE] anel de choque na morte
-        game.spawnShockwave(this.x + this.width / 2, this.y + this.height / 2, this.isGolden ? 70 : 46, deathColor, 320, 2.5);
-        // [v5] detritos de verdade: lascas irregulares girando + poeira residual
-        game.createDebris(this.x + this.width / 2, this.y + this.height / 2, '#565073', 9, 6, 4.4, 950);
-        game.createDebris(this.x + this.width / 2, this.y + this.height / 2, deathColor, 5, 4.2, 5.8, 640);
-        for (let i = 0; i < 4; i++) game.createParticle(this.x + 15, this.y + 15, deathColor, 6);
-        if (this.isGolden) {
-            for (let i = 0; i < 4; i++) game.createParticle(this.x + 15, this.y + 15, '#ffaa00', 8);
+        const cx = this.x + this.width / 2, cy = this.y + this.height / 2;
+        // [v7] cada inimigo estilhaça na SUA cor — lascas SÓLIDAS pra todo lado
+        // (casca escura grossa + fragmentos coloridos + faíscas quentes)
+        const palC = { triangulo: '#ff5a20', losango: '#3c96ff', redondo: '#3cdc50', miniboss: '#bf00ff', boss: '#bf00ff' };
+        const shellC = this.isGolden ? '#ffd700' : (palC[this.type] || '#8f89ad');
+        // flash duplo do estouro
+        game.spawnShockwave(cx, cy, this.isGolden ? 82 : 58, '#ffffff', 240, 3.2);
+        game.spawnShockwave(cx, cy, this.isGolden ? 74 : 48, shellC, 400, 2.4);
+        // FRAGMENTOS de verdade: pedaços grandes girando, com brasa e gravidade
+        game.createDebris(cx, cy, '#262133', 7, 9.5, 4.6, 1150);
+        game.createDebris(cx, cy, shellC, 15, 7, 6.6, 1000);
+        if (this.isGolden) game.createDebris(cx, cy, '#ffd700', 6, 5.5, 7.4, 800);
+        for (let i = 0; i < 7; i++) {
+            game.createParticle(cx + (Math.random() - 0.5) * 18, cy + (Math.random() - 0.5) * 18,
+                Math.random() < 0.5 ? '#ffe9b0' : shellC, 2.2 + Math.random() * 2.4, 420, 1.6);
         }
         if (game.player.perks.fragmentation) {
-            // [v6] EXPLOSÃO RADIAL COMPLETA: 9 destroços em TODAS as direções
-            const NF = 9;
+            // [v7] EXPLOSÃO RADIAL COMPLETA: 12 destroços em TODAS as direções,
+            // velocidades variadas (uns voam longe, outros estouram perto)
+            const NF = 12;
             for (let i = 0; i < NF; i++) {
                 let ang = (i / NF) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
-                game.bullets.push(ObjectPool.getBullet(this.x + this.width / 2, this.y + this.height / 2, ang, 0, true,
-                    { speed: 1.7 + Math.random() * 0.9, projSize: 4, isFragment: true }));
+                game.bullets.push(ObjectPool.getBullet(cx, cy, ang, 0, true,
+                    { speed: 1.5 + Math.random() * 1.5, projSize: 5, isFragment: true }));
             }
         }
 
@@ -6733,7 +7532,7 @@ class Boss extends Enemy {
             let tamanhoVisual = this.width * this.escalaVisual;
             let offsetCentralizado = (tamanhoVisual - this.width) / 2;
             if (Date.now() - this.lastHitTime < 100 || Date.now() < this.colorUntil) ctx.globalAlpha = 0.5;
-			// Telegraph do boss (anel duplo pulsante)
+                        // Telegraph do boss (anel duplo pulsante)
             if (this.isChargingShot) {
                 const interval = this.currentBossFireInterval || 1500;
                 const timeSinceShot = Date.now() - this.lastShootTime;
@@ -6855,123 +7654,228 @@ const BulletSprites = {
 const StaffBulletSprites = {
     _sun: null, _orb: null, _ring: null,
 
+    // [v7] GLIFO SOLAR — um SOL de verdade: corona em camadas, cruz de flare,
+    // raios duplos com gradiente, anel de transição, fotosfera com granulação.
+    // Nível premium: cada projétil é um sol minúsculo.
     sun() {
         if (this._sun) return this._sun;
-        const size = 96, cx = size / 2;
+        const size = 128, cx = size / 2;
         const c = document.createElement('canvas');
         c.width = c.height = size;
         const g = c.getContext('2d');
 
-        let halo = g.createRadialGradient(cx, cx, 2, cx, cx, cx);
-        halo.addColorStop(0, 'rgba(255,250,210,0.55)');
-        halo.addColorStop(0.4, 'rgba(255,190,0,0.28)');
-        halo.addColorStop(1, 'rgba(255,150,0,0)');
+        // corona externa (halo quente respirando)
+        let halo = g.createRadialGradient(cx, cx, 8, cx, cx, 62);
+        halo.addColorStop(0, 'rgba(255,248,214,0.65)');
+        halo.addColorStop(0.35, 'rgba(255,196,40,0.30)');
+        halo.addColorStop(0.7, 'rgba(255,140,10,0.12)');
+        halo.addColorStop(1, 'rgba(255,120,0,0)');
         g.fillStyle = halo;
         g.fillRect(0, 0, size, size);
 
-        for (let i = 0; i < 12; i++) {
-            const a = i * Math.PI / 6;
-            const longo = i % 2 === 0;
-            const r1 = longo ? 17 : 15;
-            const r2 = longo ? 45 : 30;
-            const w = longo ? 0.14 : 0.09;
-            g.fillStyle = longo ? 'rgba(255,200,30,0.95)' : 'rgba(255,235,140,0.9)';
+        // cruz de flare (4 pontas longas e finas)
+        g.fillStyle = 'rgba(255,236,170,0.5)';
+        for (let i = 0; i < 4; i++) {
+            const a = i * Math.PI / 2 + 0.08;
             g.beginPath();
-            g.moveTo(cx + Math.cos(a - w) * r1, cx + Math.sin(a - w) * r1);
-            g.lineTo(cx + Math.cos(a) * r2, cx + Math.sin(a) * r2);
-            g.lineTo(cx + Math.cos(a + w) * r1, cx + Math.sin(a + w) * r1);
+            g.moveTo(cx + Math.cos(a - 0.055) * 10, cx + Math.sin(a - 0.055) * 10);
+            g.lineTo(cx + Math.cos(a) * 61, cx + Math.sin(a) * 61);
+            g.lineTo(cx + Math.cos(a + 0.055) * 10, cx + Math.sin(a + 0.055) * 10);
             g.closePath();
             g.fill();
         }
 
-        let nucleo = g.createRadialGradient(cx, cx, 1, cx, cx, 20);
+        // raios LONGOS (8) com gradiente por raio (quente na base, esvaindo na ponta)
+        for (let i = 0; i < 8; i++) {
+            const a = i * Math.PI / 4;
+            const rg = g.createLinearGradient(cx + Math.cos(a) * 16, cx + Math.sin(a) * 16, cx + Math.cos(a) * 52, cx + Math.sin(a) * 52);
+            rg.addColorStop(0, 'rgba(255,214,80,0.95)');
+            rg.addColorStop(1, 'rgba(255,150,20,0)');
+            g.fillStyle = rg;
+            g.beginPath();
+            g.moveTo(cx + Math.cos(a - 0.13) * 17, cx + Math.sin(a - 0.13) * 17);
+            g.lineTo(cx + Math.cos(a) * 52, cx + Math.sin(a) * 52);
+            g.lineTo(cx + Math.cos(a + 0.13) * 17, cx + Math.sin(a + 0.13) * 17);
+            g.closePath();
+            g.fill();
+        }
+        // raios CURTOS intercalados (8) — segunda coroa de espinhos
+        g.fillStyle = 'rgba(255,240,160,0.85)';
+        for (let i = 0; i < 8; i++) {
+            const a = (i + 0.5) * Math.PI / 4;
+            g.beginPath();
+            g.moveTo(cx + Math.cos(a - 0.09) * 17, cx + Math.sin(a - 0.09) * 17);
+            g.lineTo(cx + Math.cos(a) * 34, cx + Math.sin(a) * 34);
+            g.lineTo(cx + Math.cos(a + 0.09) * 17, cx + Math.sin(a + 0.09) * 17);
+            g.closePath();
+            g.fill();
+        }
+
+        // anel de transição (cromosfera)
+        g.strokeStyle = 'rgba(255,220,120,0.55)';
+        g.lineWidth = 1.6;
+        g.beginPath(); g.arc(cx, cx, 21, 0, Math.PI * 2); g.stroke();
+
+        // fotosfera (a "superfície" do sol)
+        let nucleo = g.createRadialGradient(cx - 3, cx - 3, 1, cx, cx, 19);
         nucleo.addColorStop(0, '#ffffff');
-        nucleo.addColorStop(0.45, '#ffe680');
-        nucleo.addColorStop(0.75, '#ffb400');
-        nucleo.addColorStop(1, 'rgba(255,150,0,0)');
+        nucleo.addColorStop(0.3, '#fff3b0');
+        nucleo.addColorStop(0.65, '#ffc23a');
+        nucleo.addColorStop(1, 'rgba(255,140,10,0)');
         g.fillStyle = nucleo;
-        g.beginPath();
-        g.arc(cx, cx, 20, 0, Math.PI * 2);
-        g.fill();
+        g.beginPath(); g.arc(cx, cx, 19, 0, Math.PI * 2); g.fill();
+
+        // granulação (células de convecção na fotosfera)
+        for (let i = 0; i < 16; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const r = 4 + Math.random() * 11;
+            g.fillStyle = 'rgba(255,255,235,' + (0.25 + Math.random() * 0.4).toFixed(2) + ')';
+            g.beginPath();
+            g.arc(cx + Math.cos(a) * r, cx + Math.sin(a) * r, 0.8 + Math.random() * 1.4, 0, Math.PI * 2);
+            g.fill();
+        }
 
         this._sun = c;
         return c;
     },
 
+    // [v7] CONDUTOR ARCANO — núcleo de plasma com GALÁXIA interna (braços
+    // espirais), arcos de energia, bolhas ascendentes e reflexo de vidro.
+    // Ainda mais premium que o sol.
     orb() {
         if (this._orb) return this._orb;
-        const size = 96, cx = size / 2;
+        const size = 128, cx = size / 2;
         const c = document.createElement('canvas');
         c.width = c.height = size;
         const g = c.getContext('2d');
 
-        let aura = g.createRadialGradient(cx, cx, 2, cx, cx, cx);
-        aura.addColorStop(0, 'rgba(235,250,255,0.9)');
-        aura.addColorStop(0.25, 'rgba(90,190,255,0.5)');
-        aura.addColorStop(0.6, 'rgba(30,90,255,0.25)');
-        aura.addColorStop(1, 'rgba(0,40,180,0)');
+        // aura externa em 4 camadas
+        let aura = g.createRadialGradient(cx, cx, 4, cx, cx, 62);
+        aura.addColorStop(0, 'rgba(235,250,255,0.95)');
+        aura.addColorStop(0.22, 'rgba(120,205,255,0.55)');
+        aura.addColorStop(0.5, 'rgba(40,110,255,0.28)');
+        aura.addColorStop(0.78, 'rgba(20,60,220,0.12)');
+        aura.addColorStop(1, 'rgba(0,30,180,0)');
         g.fillStyle = aura;
         g.fillRect(0, 0, size, size);
 
-        let nucleo = g.createRadialGradient(cx, cx, 1, cx, cx, 26);
+        // corpo de plasma
+        let nucleo = g.createRadialGradient(cx - 4, cx - 4, 2, cx, cx, 30);
         nucleo.addColorStop(0, '#ffffff');
-        nucleo.addColorStop(0.3, '#b8f0ff');
-        nucleo.addColorStop(0.65, '#2e8bff');
-        nucleo.addColorStop(1, 'rgba(40,100,255,0)');
+        nucleo.addColorStop(0.22, '#d8f4ff');
+        nucleo.addColorStop(0.5, '#52b8ff');
+        nucleo.addColorStop(0.8, '#1c5df0');
+        nucleo.addColorStop(1, 'rgba(20,60,200,0)');
         g.fillStyle = nucleo;
-        g.beginPath();
-        g.arc(cx, cx, 26, 0, Math.PI * 2);
-        g.fill();
+        g.beginPath(); g.arc(cx, cx, 30, 0, Math.PI * 2); g.fill();
 
+        // GALÁXIA interna: dois braços espirais de energia
+        g.save();
+        g.translate(cx, cx);
+        g.rotate(0.6);
+        for (let arm = 0; arm < 2; arm++) {
+            g.strokeStyle = 'rgba(220,245,255,0.55)';
+            g.lineWidth = 2;
+            g.beginPath();
+            for (let s = 0; s <= 16; s++) {
+                const aa = arm * Math.PI + s * 0.22;
+                const rr = 2 + s * 1.15;
+                const px = Math.cos(aa) * rr, py = Math.sin(aa) * rr * 0.8;
+                if (s === 0) g.moveTo(px, py); else g.lineTo(px, py);
+            }
+            g.stroke();
+        }
+        g.restore();
+
+        // arcos de energia cruzando o núcleo
         g.strokeStyle = 'rgba(255,255,255,0.75)';
-        g.lineWidth = 1.5;
+        g.lineWidth = 1.2;
         for (let i = 0; i < 3; i++) {
             const a = i * 2.1;
             g.beginPath();
             g.moveTo(cx + Math.cos(a) * 4, cx + Math.sin(a) * 4);
-            g.lineTo(cx + Math.cos(a + 0.5) * 16, cx + Math.sin(a + 0.5) * 16);
+            g.lineTo(cx + Math.cos(a + 0.55) * 17, cx + Math.sin(a + 0.55) * 17);
             g.stroke();
         }
+
+        // bolhas de plasma subindo
+        for (let i = 0; i < 9; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const r = 5 + Math.random() * 15;
+            g.fillStyle = 'rgba(200,240,255,' + (0.2 + Math.random() * 0.3).toFixed(2) + ')';
+            g.beginPath();
+            g.arc(cx + Math.cos(a) * r, cx + Math.sin(a) * r, 0.9 + Math.random() * 1.5, 0, Math.PI * 2);
+            g.fill();
+        }
+
+        // reflexo especular duplo (vidro)
+        g.fillStyle = 'rgba(255,255,255,0.75)';
+        g.beginPath(); g.ellipse(cx - 8, cx - 10, 5.5, 3.2, -0.5, 0, Math.PI * 2); g.fill();
+        g.fillStyle = 'rgba(200,235,255,0.3)';
+        g.beginPath(); g.ellipse(cx + 7, cx + 8, 3, 1.8, 0.5, 0, Math.PI * 2); g.fill();
 
         this._orb = c;
         return c;
     },
 
+    // [v7] anel do Condutor: HEXAGRAMA rúnico com selos de poder nos vértices
     ring() {
         if (this._ring) return this._ring;
-        const size = 128, cx = size / 2, r = 54;
+        const size = 140, cx = size / 2, r = 56;
         const c = document.createElement('canvas');
         c.width = c.height = size;
         const g = c.getContext('2d');
 
-        g.strokeStyle = 'rgba(130,225,255,0.9)';
-        g.lineWidth = 3;
-        g.beginPath();
+        // halo suave do anel
+        const rg0 = g.createRadialGradient(cx, cx, r - 12, cx, cx, r + 14);
+        rg0.addColorStop(0, 'rgba(80,180,255,0)');
+        rg0.addColorStop(0.5, 'rgba(90,190,255,0.16)');
+        rg0.addColorStop(1, 'rgba(80,180,255,0)');
+        g.fillStyle = rg0;
+        g.fillRect(0, 0, size, size);
+
+        // hexagrama: dois triângulos sobrepostos
+        g.strokeStyle = 'rgba(130,225,255,0.95)';
+        g.lineWidth = 2.4;
+        g.lineJoin = 'round';
+        const tri = (off) => {
+            g.beginPath();
+            for (let i = 0; i < 3; i++) {
+                const a = -Math.PI / 2 + off + i * 2 * Math.PI / 3;
+                const x = cx + Math.cos(a) * r, y = cx + Math.sin(a) * r;
+                if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
+            }
+            g.closePath();
+            g.stroke();
+        };
+        tri(0);
+        tri(Math.PI);
+        // círculo interno
+        g.strokeStyle = 'rgba(130,225,255,0.4)';
+        g.lineWidth = 1.4;
+        g.beginPath(); g.arc(cx, cx, 32, 0, Math.PI * 2); g.stroke();
+
+        // SELOS nos 6 vértices: brilho + glifo rúnico
         for (let i = 0; i < 6; i++) {
             const a = -Math.PI / 2 + i * Math.PI / 3;
             const x = cx + Math.cos(a) * r, y = cx + Math.sin(a) * r;
-            if (i === 0) g.moveTo(x, y); else g.lineTo(x, y);
-        }
-        g.closePath();
-        g.stroke();
-
-        g.strokeStyle = 'rgba(130,225,255,0.35)';
-        g.lineWidth = 1.5;
-        g.beginPath();
-        g.arc(cx, cx, 30, 0, Math.PI * 2);
-        g.stroke();
-
-        for (let i = 0; i < 6; i++) {
-            const a = -Math.PI / 2 + i * Math.PI / 3;
-            const x = cx + Math.cos(a) * r, y = cx + Math.sin(a) * r;
-            let dot = g.createRadialGradient(x, y, 0, x, y, 8);
+            let dot = g.createRadialGradient(x, y, 0, x, y, 10);
             dot.addColorStop(0, '#ffffff');
-            dot.addColorStop(0.4, '#5ec8ff');
+            dot.addColorStop(0.35, '#6ecdff');
             dot.addColorStop(1, 'rgba(0,150,255,0)');
             g.fillStyle = dot;
+            g.beginPath(); g.arc(x, y, 10, 0, Math.PI * 2); g.fill();
+            g.strokeStyle = 'rgba(230,248,255,0.95)';
+            g.lineWidth = 1.4;
+            g.save();
+            g.translate(x, y);
+            g.rotate(a + Math.PI / 2);
             g.beginPath();
-            g.arc(x, y, 8, 0, Math.PI * 2);
-            g.fill();
+            if (i % 3 === 0) { g.moveTo(-3, 3); g.lineTo(0, -3); g.lineTo(3, 3); }
+            else if (i % 3 === 1) { g.moveTo(-2.5, -3); g.lineTo(-2.5, 3); g.moveTo(2.5, -3); g.lineTo(2.5, 3); g.moveTo(-2.5, 0); g.lineTo(2.5, 0); }
+            else { g.moveTo(0, -3.5); g.lineTo(0, 3.5); g.moveTo(-2.5, -1); g.lineTo(2.5, 1); }
+            g.stroke();
+            g.restore();
         }
 
         this._ring = c;
@@ -7171,6 +8075,7 @@ class Projectile {
         this.isHomingActive = false; this.target = null;
         this.aimTarget = stats.aimTarget || null;
         this.isCrit = stats.isCritShot || false;
+        this.srcTag = stats.srcTag || null; // [v7] fonte do dano (gráfico de fim de run)
         
         if (this.isPlayer && this.homingTier > 0) {
             let chance = this.homingTier === 1 ? 0.7 : (this.homingTier === 2 ? 0.8 : 1.00);
@@ -7288,12 +8193,12 @@ class Projectile {
 
                 if (this.isFragment) {
                     if (e.type === 'boss' || e.type === 'miniboss') { this.dead = true; break; }
-                    e.takeDamage(e.maxHp * (0.10 + Math.random() * 0.25)); this.dead = true; break;
+                    e.takeDamage(e.maxHp * (0.10 + Math.random() * 0.25), false, 'fragment'); this.dead = true; break;
                 }
 
                 if (this.isCrit) game.hitStop(20);
                 game.spawnHitSparks(this.x, this.y, this.isCrit ? '#ffd700' : 'white'); // [JUICE]
-                e.takeDamage(this.damage, this.isCrit); if (this.isCold) e.applyCold();
+                e.takeDamage(this.damage, this.isCrit, this.srcTag || 'shot'); if (this.isCold) e.applyCold();
 
                 if (this.chainTier > 0 && !this.hasChained) {
                     let chainChance = this.chainTier === 1 ? 0.3 : (this.chainTier === 2 ? 0.5 : 1.0);
@@ -7318,7 +8223,7 @@ class Projectile {
                 if (this.pierce > 0) this.pierce--; else { this.dead = true; break; }
             }
         } else {
-            if (this.checkCollision(game.player)) { game.player.takeDamage(this.damage, this.isBossAttack); this.dead = true; }
+            if (this.checkCollision(game.player)) { game.player.takeDamage(this.damage, this.isBossAttack, false, this.isBossAttack ? 'boss' : 'bullet'); this.dead = true; }
         }
     }
 
@@ -7393,7 +8298,7 @@ class Projectile {
     }
 
     draw(ctx) {
-        if (this.history.length > 1) {
+        if (this.history.length > 1 && !this.isFragment) { // [v7] fragmento não é "bolinha com rastro"
             ctx.save();
             ctx.lineCap = 'round'; ctx.lineJoin = 'round';
             for (let i = 0; i < this.history.length - 1; i++) {
@@ -7417,16 +8322,16 @@ class Projectile {
         let pulse = 1 + Math.sin(Date.now() / 90 + this.x * 0.05) * 0.10;
 
         if (this.isPlayer && this.staffSkin === 2) {
-            let d = this.radius * 5.2 * pulse;
+            let d = this.radius * 6.4 * pulse;
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(Date.now() / 260);
             ctx.drawImage(StaffBulletSprites.sun(), -d / 2, -d / 2, d, d);
             ctx.restore();
         } else if (this.isPlayer && this.staffSkin === 3) {
-            let d = this.radius * 4.8 * pulse;
+            let d = this.radius * 5.6 * pulse;
             ctx.drawImage(StaffBulletSprites.orb(), this.x - d / 2, this.y - d / 2, d, d);
-            let rd = this.radius * 7.2;
+            let rd = this.radius * 8.6;
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(-Date.now() / 300);
@@ -7492,6 +8397,8 @@ class Particle {
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(this.rot);
+            // [v7] fragmento SÓLIDO: face + aresta clara + brasa inicial esfriando
+            const heat = Math.max(0, 1 - (Date.now() - this.spawnTime) / 260);
             ctx.fillStyle = this.color;
             ctx.beginPath();
             for (let i = 0; i < this.verts.length; i++) {
@@ -7500,6 +8407,13 @@ class Particle {
             }
             ctx.closePath();
             ctx.fill();
+            ctx.strokeStyle = 'rgba(255,255,255,0.30)';
+            ctx.lineWidth = 1;
+            ctx.stroke();
+            if (heat > 0) {
+                ctx.fillStyle = 'rgba(255,210,140,' + (heat * 0.55).toFixed(2) + ')';
+                ctx.fill();
+            }
             ctx.restore();
         } else { ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size); }
     }
@@ -7652,19 +8566,25 @@ function initGame() {
         const fsBtn = document.getElementById('fullscreen-btn');
         if (fsBtn) fsBtn.style.display = 'none';
     }
-    document.getElementById('volume-slider').value = audioManager.globalVolume; 
+    initVolumeUI(); // [v7] slider 0-100 com número na tela
     audioManager.play('main');
     
     const select = document.getElementById('char-selection');
-    const chars = [{ id: 1, name: 'Default', cost: 0 }, { id: 2, name: 'Nomad', cost: 100 }, { id: 3, name: 'Arcanist', cost: 200 }];
+    // [v7] nomes traduzidos: Barba Branca / Nômade / Arcanista
+    const chars = [
+        { id: 1, name_pt: 'Barba Branca', name_en: 'White Beard', cost: 0, aura: null },
+        { id: 2, name_pt: 'Nômade', name_en: 'Nomad', cost: 100, aura: 'gold' },
+        { id: 3, name_pt: 'Arcanista', name_en: 'Arcanist', cost: 200, aura: 'blue' }
+    ];
     const unlockedData = JSON.parse(localStorage.getItem('unlockedChars') || '[1]');
     
     chars.forEach((c, index) => {
         const isUnlocked = unlockedData.includes(c.id); const el = document.createElement('div');
         el.className = `char-card ${isUnlocked ? '' : 'char-locked'}`; if (index === 0) el.classList.add('selected');
+        const cName = (currentLang === 'pt') ? c.name_pt : c.name_en;
         
         el.innerHTML = `<img src="Assets/mage${c.id}.png" onerror="this.style.display='none';this.parentElement.classList.add('img-missing')" style="width:64px;height:64px;display:block;margin:0 auto;object-fit:contain;" alt="Mage ${c.id}">
-            <p>${c.name}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px" title="${c.cost} Souls">${c.cost} &#9671;</p>` : ''}`;
+            <p>${cName}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px" title="${c.cost} Souls">${c.cost} &#9671;</p>` : ''}`;
             
         el.onclick = () => {
             audioManager.playWav('botton'); 
@@ -7672,21 +8592,28 @@ function initGame() {
             if (isUnlocked) { document.querySelectorAll('#char-selection .char-card').forEach(x => x.classList.remove('selected')); el.classList.add('selected'); window.selectedChar = c.id; } 
             else {
                 if (game.souls >= c.cost) {
-                    if (confirm(`Comprar ${c.name} por ${c.cost} almas?`)) {
+                    if (confirm((currentLang === 'pt' ? 'Comprar ' : 'Buy ') + cName + (currentLang === 'pt' ? ' por ' : ' for ') + c.cost + (currentLang === 'pt' ? ' almas?' : ' souls?'))) {
                         game.souls -= c.cost; game.updateSoulsUI(); unlockedData.push(c.id); localStorage.setItem('unlockedChars', JSON.stringify(unlockedData)); location.reload();
                     }
                 }
             }
         };
-        select.appendChild(el);
+        // [v7] AURA premium: Nômade (amarela) e Arcanista (azul) brilham sempre
+        if (c.aura) {
+            const wrap = document.createElement('div');
+            wrap.className = 'char-aura ' + c.aura;
+            wrap.appendChild(el);
+            select.appendChild(wrap);
+        } else select.appendChild(el);
     });
     window.selectedChar = 1;
 
     const staffSelect = document.getElementById('staff-selection');
+    // [v7] cajados traduzidos: Simples Eficaz / Glifo Solar / Condutor Arcano
     const staffs = [
-        { id: 1, name: 'Default', cost: 0 },
-        { id: 2, name: 'Solar Glyph', cost: 100 },
-        { id: 3, name: 'Arcane Flow', cost: 180 }
+        { id: 1, name_pt: 'Simples Eficaz', name_en: 'Simply Effective', cost: 0, aura: null },
+        { id: 2, name_pt: 'Glifo Solar', name_en: 'Solar Glyph', cost: 100, aura: 'gold' },
+        { id: 3, name_pt: 'Condutor Arcano', name_en: 'Arcane Flow', cost: 180, aura: 'blue' }
     ];
     const unlockedStaffs = JSON.parse(localStorage.getItem('unlockedStaffs') || '[1]');
     window.selectedStaff = parseInt(localStorage.getItem('selectedStaff') || '1');
@@ -7694,9 +8621,10 @@ function initGame() {
     staffs.forEach((s) => {
         const isUnlocked = unlockedStaffs.includes(s.id); const el = document.createElement('div');
         el.className = `char-card ${isUnlocked ? '' : 'char-locked'}`; if (window.selectedStaff === s.id) el.classList.add('selected');
+        const sName = (currentLang === 'pt') ? s.name_pt : s.name_en;
         
         el.innerHTML = `<img src="Assets/cajado${s.id}.png" onerror="this.style.display='none';this.parentElement.classList.add('img-missing')" style="width:44px;height:84px;display:block;margin:0 auto;object-fit:contain;" alt="Cajado ${s.id}">
-            <p>${s.name}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px" title="${s.cost} Souls">${s.cost} &#9671;</p>` : ''}`;
+            <p>${sName}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px" title="${s.cost} Souls">${s.cost} &#9671;</p>` : ''}`;
             
         el.onclick = () => {
             audioManager.playWav('botton'); 
@@ -7704,13 +8632,19 @@ function initGame() {
             if (isUnlocked) { document.querySelectorAll('#staff-selection .char-card').forEach(x => x.classList.remove('selected')); el.classList.add('selected'); window.selectedStaff = s.id; localStorage.setItem('selectedStaff', s.id); } 
             else {
                 if (game.souls >= s.cost) {
-                    if (confirm(`Comprar ${s.name} por ${s.cost} almas?`)) {
+                    if (confirm((currentLang === 'pt' ? 'Comprar ' : 'Buy ') + sName + (currentLang === 'pt' ? ' por ' : ' for ') + s.cost + (currentLang === 'pt' ? ' almas?' : ' souls?'))) {
                         game.souls -= s.cost; game.updateSoulsUI(); unlockedStaffs.push(s.id); localStorage.setItem('unlockedStaffs', JSON.stringify(unlockedStaffs)); location.reload();
                     }
                 }
             }
         };
-        staffSelect.appendChild(el);
+        // [v7] AURA premium: Glifo Solar (amarela) e Condutor Arcano (azul)
+        if (s.aura) {
+            const wrap = document.createElement('div');
+            wrap.className = 'char-aura ' + s.aura;
+            wrap.appendChild(el);
+            staffSelect.appendChild(wrap);
+        } else staffSelect.appendChild(el);
     });
 
     buildAchievementsUI();
@@ -8273,7 +9207,7 @@ function buildHowTo() {
         const charIdx = window.selectedChar || 1;
         const staffIdx = window.selectedStaff || 1;
         const bob = Math.sin(t * 1.4) * 7;
-        const gx = W * 0.52, gy = H - 30;
+        const gx = W * 0.50, gy = H - 26;
         // sombra + pedestal de luz
         g.save();
         g.globalAlpha = 0.30;
@@ -8285,14 +9219,15 @@ function buildHowTo() {
         ped.addColorStop(1, 'rgba(255,255,255,0)');
         g.fillStyle = ped;
         g.beginPath(); g.ellipse(gx, gy + 5, 115, 26, 0, 0, Math.PI * 2); g.fill();
-        // o MAGO (grande!)
-        const heroH = 300, heroW = heroH * (62 / 83);
-        const py = gy - heroH + bob * 0.4;
+        // o MAGO (grande e PROPORCIONAL: usa o aspecto REAL da arte, sem esticar)
+        const heroH = 265;
         const img = ASSETS.images['mage' + charIdx];
+        const heroW = (img && img.complete && img.naturalHeight !== 0) ? heroH * (img.naturalWidth / img.naturalHeight) : heroH * (62 / 83);
+        const py = gy - heroH + bob * 0.4;
         if (img && img.complete && img.naturalHeight !== 0) {
-            g.drawImage(img, gx - heroW / 2 - heroW * 0.10, py, heroW, heroH);
+            g.drawImage(img, gx - heroW / 2, py, heroW, heroH);
         } else {
-            drawFallbackMage(gx - heroW * 0.10, py, heroH);
+            drawFallbackMage(gx, py, heroH);
         }
         // cajado segurado (balançando de leve)
         const ang = -Math.PI / 2 + Math.sin(t * 0.55) * 0.13;
@@ -8426,6 +9361,125 @@ function buildSanctuaryUI() {
             <span class="meta-buy">${botao}</span>`;
         list.appendChild(div);
     });
+    buildAchGallery(); // [v7] estátuas das conquistas
+}
+
+// [v7] GALERIA: cada conquista desbloqueada ergue uma ESTÁTUA no santuário
+function buildAchGallery() {
+    const gal = document.getElementById('ach-gallery');
+    if (!gal || !game) return;
+    gal.innerHTML = '';
+    ACHIEVEMENTS_DB.forEach(a => {
+        const done = game.achUnlocked.includes(a.id);
+        const item = document.createElement('div');
+        item.className = 'statue-item' + (done ? ' done' : '');
+        const cv = document.createElement('canvas');
+        cv.width = 56; cv.height = 72;
+        drawAchStatue(cv.getContext('2d'), a, done);
+        const nm = document.createElement('span');
+        nm.className = 'st-name';
+        nm.innerText = done ? ((currentLang === 'pt') ? a.name_pt : a.name_en) : '???';
+        item.appendChild(cv);
+        item.appendChild(nm);
+        gal.appendChild(item);
+    });
+}
+
+function drawAchStatue(g, ach, done) {
+    const W = 56, H = 72;
+    g.clearRect(0, 0, W, H);
+    // pedestal de pedra (2 degraus)
+    g.fillStyle = done ? '#3a3644' : '#181820';
+    g.fillRect(6, H - 12, W - 12, 5);
+    g.fillRect(10, H - 16, W - 20, 4);
+    g.fillStyle = done ? '#555062' : '#22222c';
+    g.fillRect(6, H - 12, W - 12, 2);
+    // corpo da estátua: lápide/obelisco arqueado
+    const bodyG = g.createLinearGradient(0, 8, 0, H - 16);
+    if (done) { bodyG.addColorStop(0, '#8d86a8'); bodyG.addColorStop(1, '#4c4763'); }
+    else { bodyG.addColorStop(0, '#232330'); bodyG.addColorStop(1, '#121218'); }
+    g.fillStyle = bodyG;
+    g.beginPath();
+    g.moveTo(W / 2 - 11, H - 16);
+    g.lineTo(W / 2 - 11, 20);
+    g.quadraticCurveTo(W / 2 - 11, 8, W / 2, 8);
+    g.quadraticCurveTo(W / 2 + 11, 8, W / 2 + 11, 20);
+    g.lineTo(W / 2 + 11, H - 16);
+    g.closePath();
+    g.fill();
+    g.strokeStyle = done ? 'rgba(255,215,0,0.55)' : 'rgba(255,255,255,0.10)';
+    g.lineWidth = 1.2;
+    g.stroke();
+    if (done) {
+        // placa com o ÍCONE da conquista
+        g.fillStyle = '#0c0a14';
+        g.fillRect(W / 2 - 9, 22, 18, 18);
+        g.strokeStyle = 'rgba(255,215,0,0.5)';
+        g.lineWidth = 1;
+        g.strokeRect(W / 2 - 9, 22, 18, 18);
+        g.font = '12px "Press Start 2P", sans-serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText(ach.icon, W / 2, 31.5);
+        // chama d'alma no topo (sempre acesa)
+        const fl = 0.6 + Math.sin(Date.now() / 300 + ach.id.length) * 0.25;
+        const fg2 = g.createRadialGradient(W / 2, 12, 1, W / 2, 12, 10);
+        fg2.addColorStop(0, 'rgba(190,225,255,' + (0.75 * fl).toFixed(2) + ')');
+        fg2.addColorStop(1, 'rgba(120,180,255,0)');
+        g.fillStyle = fg2;
+        g.beginPath(); g.arc(W / 2, 12, 10, 0, Math.PI * 2); g.fill();
+    } else {
+        // silhueta: interrogação
+        g.fillStyle = '#33333f';
+        g.font = '13px "Press Start 2P", sans-serif';
+        g.textAlign = 'center';
+        g.textBaseline = 'middle';
+        g.fillText('?', W / 2, 31);
+    }
+}
+
+// [v7] TELA DE FIM DE RUN estilo arcade: dano por fonte + abates por tipo
+function drawGameOverChart(g) {
+    const cv = document.getElementById('go-chart');
+    if (!cv) return;
+    const ctx = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    ctx.clearRect(0, 0, W, H);
+    const t = TEXTS[currentLang];
+    const isPt = currentLang === 'pt';
+    ctx.textBaseline = 'top';
+    ctx.font = '9px "Press Start 2P"';
+
+    const dmgLabels = { shot: isPt ? 'Cajado' : 'Staff', orb: isPt ? 'Orbe' : 'Orb', thunder: isPt ? 'Raio' : 'Bolt', poison: isPt ? 'Veneno' : 'Poison', laser: 'Laser', fragment: isPt ? 'Fragm.' : 'Frag.' };
+    const dmgColors = { shot: '#ffffff', orb: '#4da6ff', thunder: '#bfe0ff', poison: '#3dff6e', laser: '#ff4d6d', fragment: '#ff9a40' };
+    const killLabels = { triangulo: isPt ? 'Triângulo' : 'Triangle', losango: isPt ? 'Losango' : 'Diamond', redondo: isPt ? 'Redondo' : 'Round', kamikaze: 'Kamikaze', golden: isPt ? 'Dourado' : 'Golden', boss: isPt ? 'Chefe' : 'Boss', miniboss: isPt ? 'Mini' : 'Mini' };
+    const killColors = { triangulo: '#ff5a20', losango: '#3c96ff', redondo: '#3cdc50', kamikaze: '#ff2222', golden: '#ffd700', boss: '#bf00ff', miniboss: '#a040ff' };
+
+    const colW = (W - 60) / 2;
+    const drawBars = (x0, title, data, labels, colors) => {
+        ctx.font = '9px "Press Start 2P"';
+        ctx.fillStyle = '#fff';
+        ctx.fillText(title, x0, 8);
+        const entries = Object.entries(data).filter(e2 => e2[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 7);
+        if (!entries.length) { ctx.fillStyle = '#666'; ctx.fillText(isPt ? 'nada aqui...' : 'nothing here...', x0, 36); return; }
+        const maxV = entries[0][1];
+        let y = 36;
+        for (const [k, v] of entries) {
+            ctx.fillStyle = '#9a9a9a';
+            ctx.fillText(labels[k] || k, x0, y + 1);
+            const barX = x0 + 108;
+            const barW = Math.max(2, (colW - 150) * (v / maxV));
+            ctx.fillStyle = colors[k] || '#fff';
+            ctx.fillRect(barX, y, barW, 9);
+            ctx.fillStyle = '#fff';
+            const txt = v >= 1000 ? (v / 1000).toFixed(1) + 'k' : String(Math.round(v));
+            ctx.fillText(txt, barX + barW + 6, y + 1);
+            y += 22;
+            if (y > H - 20) break;
+        }
+    };
+    drawBars(20, t.dmgSrc, (g.runStats && g.runStats.dmg) || {}, dmgLabels, dmgColors);
+    drawBars(40 + colW, t.killType, (g.runStats && g.runStats.kills) || {}, killLabels, killColors);
 }
 
 function buyMetaUpgrade(id) {
