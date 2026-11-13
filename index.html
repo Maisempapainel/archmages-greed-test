@@ -38,7 +38,6 @@
             background-color: #000;
             border: 2px solid #333;
             box-shadow: 0 0 30px rgba(255, 255, 255, 0.05);
-            will-change: transform;
             touch-action: none;
         }
 
@@ -48,7 +47,6 @@
             pointer-events: none;
             width: 1472px; 
             height: 690px;
-            will-change: transform;
         }
 
         #hud-top-left {
@@ -364,7 +362,7 @@
 
         /* Toast de Conquista */
         #ach-toast {
-            position: absolute; top: 65px; right: 20px;
+            position: absolute; top: 112px; right: 20px;
             background: linear-gradient(135deg, rgba(60,50,0,0.95), rgba(30,25,0,0.95));
             border: 2px solid #ffd700; border-left: 4px solid #ffd700;
             padding: 12px 18px; display: flex; align-items: center; gap: 12px;
@@ -406,8 +404,284 @@
             .upgrade-card { flex-shrink: 0; min-height: 150px; }
         }
     </style>
+
+    <style id="v3-theme">
+        /* ================= TEMA v3 — HI-TECH P&B ================= */
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@500;700;900&family=Chakra+Petch:wght@400;500;600;700&display=swap');
+
+        :root {
+            --f-disp: 'Orbitron', 'Press Start 2P', monospace;
+            --f-body: 'Chakra Petch', 'Press Start 2P', monospace;
+            --f-pixel: 'Press Start 2P', monospace;
+        }
+        body { font-family: var(--f-body); }
+
+        /* ===== CAMADA CRT (scanlines + vinheta) ===== */
+        #crt-fx { position: fixed; inset: 0; z-index: 9998; pointer-events: none;
+            background: repeating-linear-gradient(0deg, rgba(0,0,0,0.5) 0 1px, transparent 1px 3px); opacity: 0.5; }
+        #crt-vig { position: fixed; inset: 0; z-index: 9997; pointer-events: none;
+            background: radial-gradient(ellipse at center, transparent 55%, rgba(0,0,0,0.45) 100%); }
+
+        /* ===== ENTRADA DAS TELAS ===== */
+        .menu-screen { animation: menuIn 0.3s ease-out;
+            background: linear-gradient(180deg, rgba(0,0,0,0.95) 0%, rgba(0,0,0,0.66) 26%, rgba(0,0,0,0.66) 74%, rgba(0,0,0,0.95) 100%); }
+        @keyframes menuIn { from { opacity: 0; transform: scale(0.982); } to { opacity: 1; transform: scale(1); } }
+        #pause-menu { background: rgba(3,3,6,0.6); }
+        #boss-confirm-menu { background: rgba(3,3,6,0.78); }
+        #game-over-menu { background: rgba(7,1,1,0.88); }
+        #upgrade-menu { background: rgba(1,1,3,0.9); }
+        #settings-menu, #achievements-menu, #sanctuary-menu { background: rgba(0,0,0,0.92); }
+
+        /* ===== TIPOGRAFIA ===== */
+        .menu-screen h1 { font-family: var(--f-disp); font-weight: 900; letter-spacing: 3px; text-transform: uppercase; }
+        .menu-screen h2 { font-family: var(--f-disp); font-weight: 700; letter-spacing: 2px; }
+        .menu-label { font-family: var(--f-body); font-weight: 600; letter-spacing: 4px; text-transform: uppercase; font-size: clamp(9px, 1.5vw, 11px); color: #787878; }
+        #controls-hint, #mobile-hint, #audio-hint { font-family: var(--f-body); letter-spacing: 1px; }
+
+        /* ===== TITULO COM GLITCH ===== */
+        .game-title { font-family: var(--f-disp) !important; font-weight: 900; font-size: clamp(19px, 5.4vw, 52px) !important; letter-spacing: clamp(1px, 0.6vw, 4px); margin-bottom: 2px !important; position: relative; white-space: nowrap; }
+        .game-title::before, .game-title::after { content: attr(data-text); position: absolute; left: 0; top: 0; width: 100%; height: 100%; pointer-events: none; }
+        .game-title::before { color: #8f8f8f; z-index: -1; animation: v3gl1 3.8s infinite steps(1); }
+        .game-title::after { color: #f4f4f4; z-index: -2; animation: v3gl2 3.8s infinite steps(1); }
+        @keyframes v3gl1 {
+            0%, 86% { clip-path: inset(0 0 100% 0); transform: none; }
+            87% { clip-path: inset(8% 0 58% 0); transform: translate(-3px, 1px); }
+            90% { clip-path: inset(58% 0 6% 0); transform: translate(3px, -1px); }
+            93% { clip-path: inset(32% 0 38% 0); transform: translate(-2px, 0); }
+            96%, 100% { clip-path: inset(0 0 100% 0); transform: none; }
+        }
+        @keyframes v3gl2 {
+            0%, 85% { clip-path: inset(0 0 100% 0); transform: none; }
+            86.5% { clip-path: inset(42% 0 22% 0); transform: translate(3px, -1px); }
+            89% { clip-path: inset(4% 0 76% 0); transform: translate(-3px, 1px); }
+            92% { clip-path: inset(70% 0 2% 0); transform: translate(2px, 0); }
+            95%, 100% { clip-path: inset(0 0 100% 0); transform: none; }
+        }
+        #menu-subtitle { font-size: clamp(8px, 1.5vw, 11px); letter-spacing: clamp(2px, 1.2vw, 6px); color: #9a9a9a; margin: 2px 0 clamp(8px, 1.8vh, 18px) 0; text-transform: uppercase; font-weight: 500; }
+
+        /* ===== BOTOES HI-TECH (chanfro + glow) ===== */
+        .btn { border: none; font-family: var(--f-body); font-weight: 700; text-transform: uppercase; letter-spacing: 2px;
+            background: #070707; color: #fff;
+            clip-path: polygon(11px 0, 100% 0, 100% calc(100% - 11px), calc(100% - 11px) 100%, 0 100%, 0 11px);
+            box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.72);
+            filter: drop-shadow(0 0 5px rgba(255,255,255,0.14));
+            transition: background 0.15s, color 0.15s, filter 0.18s, transform 0.09s; }
+        .btn:hover { background: #fff; color: #000; filter: drop-shadow(0 0 14px rgba(255,255,255,0.6)); box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.95); }
+        .btn:active { transform: scale(0.96); }
+        .btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        #btn-play { font-family: var(--f-disp) !important; font-weight: 900; letter-spacing: 5px;
+            font-size: clamp(13px, 2.4vw, 19px) !important;
+            padding: clamp(14px, 2.6vh, 18px) clamp(30px, 6vw, 52px) !important; }
+        @keyframes playGlow { 0%, 100% { filter: drop-shadow(0 0 6px rgba(255,255,255,0.28)); } 50% { filter: drop-shadow(0 0 22px rgba(255,255,255,0.72)); } }
+
+        #fullscreen-btn { border: none; background: #0a0a0a;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            box-shadow: inset 0 0 0 1.5px #666; }
+        #fullscreen-btn:hover { box-shadow: inset 0 0 0 1.5px #fff; filter: drop-shadow(0 0 10px rgba(255,255,255,0.35)); }
+
+        .flag-btn { border: none; font-family: var(--f-body); font-weight: 600;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            box-shadow: inset 0 0 0 1.5px #555; background: #060606; }
+        .flag-btn.active { box-shadow: inset 0 0 0 2px #fff; filter: drop-shadow(0 0 8px rgba(255,255,255,0.3)); }
+
+        /* ===== CARDS (personagens/cajados) ===== */
+        .char-card { border: none; background: #060606;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            box-shadow: inset 0 0 0 1.5px #444; }
+        .char-card:hover { transform: translateY(-3px); box-shadow: inset 0 0 0 1.5px #ddd; }
+        .char-card.selected { box-shadow: inset 0 0 0 2px #fff; filter: drop-shadow(0 0 12px rgba(255,255,255,0.28)); background: #101010; }
+        .char-card.img-missing::before { content: '\25C8'; display: block; font-size: 34px; color: #3d3d3d; margin: 14px auto 4px auto; width: 64px; text-align: center; }
+        .char-card.img-missing img { display: none; }
+
+        /* ===== CARTAS DE PERK ===== */
+        .upgrade-card { border: none; background: #050505;
+            clip-path: polygon(13px 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%, 0 13px);
+            box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.85); }
+        .upgrade-card:hover { transform: translateY(-6px) scale(1.03); }
+        .rarity-common    { box-shadow: inset 0 0 0 1.5px #fff; color: #fff; filter: drop-shadow(0 0 6px rgba(255,255,255,0.18)); }
+        .rarity-uncommon  { box-shadow: inset 0 0 0 1.5px #4dff4d; color: #4dff4d; filter: drop-shadow(0 0 7px rgba(77,255,77,0.30)); }
+        .rarity-epic      { box-shadow: inset 0 0 0 1.5px #bf00ff; color: #bf00ff; filter: drop-shadow(0 0 8px rgba(191,0,255,0.32)); }
+        .rarity-legendary { box-shadow: inset 0 0 0 1.5px #ffd700; color: #ffd700; filter: drop-shadow(0 0 12px rgba(255,215,0,0.50)); }
+        .card-tier { font-family: var(--f-disp); font-weight: 700; letter-spacing: 2px; }
+        .card-title { font-family: var(--f-body); font-weight: 700; }
+        .card-desc { font-family: var(--f-body); font-size: clamp(9px, 1.4vw, 11px); line-height: 1.55; color: #b5b5b5; }
+        #upgrade-container.choosing .upgrade-card:not(.picked) { opacity: 0.12; transform: scale(0.94); transition: opacity 0.3s, transform 0.3s; pointer-events: none; }
+        .upgrade-card.picked { animation: cardPicked 0.46s cubic-bezier(0.2, 0.9, 0.3, 1) forwards; }
+        @keyframes cardPicked {
+            0% { transform: scale(1); filter: brightness(1); }
+            30% { transform: scale(1.14); filter: brightness(2.4) drop-shadow(0 0 26px rgba(255,255,255,0.9)); }
+            100% { transform: scale(0.92); filter: brightness(2.8); opacity: 0; }
+        }
+        #timer-bar-container { clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
+            background: #161616; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35); }
+        #wave-complete-text { font-size: clamp(15px, 3vw, 24px); letter-spacing: 4px; text-shadow: 0 0 18px rgba(255,255,255,0.4); }
+
+        /* ===== HUD ===== */
+        #hud-top-left { font-family: var(--f-body); font-weight: 600; font-size: 14px; letter-spacing: 1px; }
+        #hud-top-left > div:first-child { text-shadow: 0 0 8px rgba(255,255,255,0.35); }
+        .bar-container { clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
+            border: none; background: #141414; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5); height: 12px; }
+        #souls-container { font-family: var(--f-disp); font-weight: 700; font-size: 13px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(77,166,255,0.55); }
+        #wave-display { font-family: var(--f-disp); font-weight: 900; letter-spacing: 8px; font-size: clamp(26px, 5vw, 46px); }
+        #pause-btn-ingame, #perk-list-btn, #stats-btn { font-family: var(--f-body); font-weight: 700; letter-spacing: 1px;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            border: none; box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.7); background: #050505; }
+        #laser-ui, #teleport-ui, #dash-ui { border-radius: 0;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+
+        /* ===== PAUSE / DESISTIR ===== */
+        #pause-menu { animation: pauseOpen 0.32s cubic-bezier(0.2, 0.9, 0.3, 1); }
+        @keyframes pauseOpen { from { clip-path: inset(47% 0 47% 0); opacity: 0.35; } to { clip-path: inset(0 0 0 0); opacity: 1; } }
+        #pause-menu h1 { animation: riseIn 0.34s 0.05s backwards; }
+        #pause-menu .btn { animation: riseIn 0.34s backwards; }
+        #pause-menu .btn:nth-of-type(1) { animation-delay: 0.1s; }
+        #pause-menu .btn:nth-of-type(2) { animation-delay: 0.18s; }
+        @keyframes riseIn { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: none; } }
+        #pause-menu.closing { animation: pauseClose 0.2s ease-in forwards; }
+        @keyframes pauseClose { from { clip-path: inset(0 0 0 0); opacity: 1; } to { clip-path: inset(47% 0 47% 0); opacity: 0; } }
+        #pause-menu.giving-up { animation: giveUpFall 1.25s ease-in forwards !important; }
+        @keyframes giveUpFall {
+            0% { transform: none; opacity: 1; }
+            100% { transform: translateY(46px) rotate(-2.5deg) scale(0.96); opacity: 0.05; filter: grayscale(1); }
+        }
+        #giveup-overlay { position: fixed; inset: 0; z-index: 20000; pointer-events: none; opacity: 0;
+            transition: opacity 1.15s ease-in;
+            background: radial-gradient(ellipse at center, rgba(90,0,0,0.35) 0%, rgba(0,0,0,0.92) 78%); }
+        body.quitting #gameCanvas { filter: grayscale(1) brightness(0.5); transition: filter 1.2s; }
+
+        /* ===== AVISO DE ROTACAO ===== */
+        #rotate-hint { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0.94); z-index: 15000;
+            pointer-events: none; opacity: 0; transition: opacity 0.35s, transform 0.35s;
+            background: rgba(5,5,5,0.97); color: #fff; font-family: var(--f-body); font-weight: 600;
+            letter-spacing: 1.5px; font-size: clamp(10px, 2.4vw, 12px); padding: 10px 18px;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            box-shadow: inset 0 0 0 1.5px rgba(255,255,255,0.7), 0 0 24px rgba(0,0,0,0.6);
+            display: flex; align-items: center; gap: 10px; }
+        #rotate-hint.show { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+        #rotate-hint .rot-ico { display: inline-block; font-size: 20px; animation: rotSpin 2.4s ease-in-out infinite; }
+        @keyframes rotSpin { 0%, 20% { transform: rotate(0deg); } 55%, 75% { transform: rotate(90deg); } 100% { transform: rotate(90deg); } }
+
+        /* ===== CONTROLES MOBILE ===== */
+        #joy-base, #aim-base { background: rgba(255,255,255,0.05); border: 2px solid rgba(255,255,255,0.30); box-shadow: inset 0 0 22px rgba(255,255,255,0.06); }
+        #joy-knob, #aim-knob { background: rgba(255,255,255,0.22); border: 2px solid rgba(255,255,255,0.6); box-shadow: 0 0 14px rgba(255,255,255,0.25); }
+        #jump-btn { border-radius: 0; background: rgba(77,166,255,0.16); border: 2px solid rgba(77,166,255,0.75);
+            font-family: var(--f-disp); font-weight: 700; letter-spacing: 1px;
+            clip-path: polygon(14px 0, 100% 0, 100% calc(100% - 14px), calc(100% - 14px) 100%, 0 100%, 0 14px);
+            box-shadow: 0 0 16px rgba(77,166,255,0.28); }
+        #jump-btn:active { background: rgba(77,166,255,0.45); }
+        #ce-toolbar { clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); }
+
+        /* ===== PAINEL / MODAIS ===== */
+        #perk-modal { border: none;
+            clip-path: polygon(16px 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%, 0 16px);
+            box-shadow: inset 0 0 0 2px rgba(255,255,255,0.85); }
+        #perk-modal h3 { font-family: var(--f-disp); letter-spacing: 3px; }
+        .perk-entry { font-family: var(--f-body); }
+        .perk-entry .header span:first-child { font-weight: 600; }
+        #stats-panel { border: none;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            box-shadow: inset 0 0 0 1.5px #555; font-family: var(--f-body); font-size: 12px; }
+        #stats-panel h3 { font-family: var(--f-disp); }
+        .ach-item, .meta-item { border: none;
+            clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+            box-shadow: inset 0 0 0 1px #333; }
+        .ach-name, .meta-name { font-family: var(--f-body); font-weight: 700; }
+        .ach-desc, .meta-desc { font-family: var(--f-body); font-size: 11px; }
+        #ach-toast { clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); }
+        #audio-controls { border: none;
+            clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+            background: rgba(4,4,4,0.8); box-shadow: inset 0 0 0 1px #2a2a2a; }
+    </style>
+
+    <style id="v3-mobile-hud">
+        /* ===== HUD ADAPTADO AO CELULAR (o PULAR vive no canto direito superior) ===== */
+        body.mobile #hud-top-right {
+            position: absolute; top: 12px; right: auto; left: 50%;
+            transform: translateX(-50%);
+            flex-direction: row; align-items: center; gap: 14px;
+            background: rgba(0,0,0,0.5); padding: 6px 14px;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+        }
+        body.mobile #pause-btn-ingame { padding: 6px 12px; font-size: 11px; margin: 0; }
+        body.mobile #souls-container { font-size: 11px; }
+        body.mobile #perk-list-btn { left: calc(50% - 105px) !important; bottom: 10px !important; padding: 8px 12px !important; }
+        body.mobile #stats-btn { left: calc(50% + 12px) !important; bottom: 10px !important; padding: 8px 12px !important; }
+    </style>
+
+    <style id="v4-cosmos">
+        /* ================= v4 — COSMOS & TRANSIÇÕES ================= */
+
+        /* Boot: o jogo SEMPRE nasce do preto (transicao seca nunca mais) */
+        #boot-black { position: fixed; inset: 0; background: #000; z-index: 30000; pointer-events: none; opacity: 1; transition: opacity 0.55s ease; }
+
+        /* Desistir: apos a queda, o preto absoluto engole a tela antes do menu */
+        #giveup-black { position: fixed; inset: 0; background: #000; z-index: 20001; pointer-events: none; opacity: 0; transition: opacity 0.95s ease; }
+
+        /* ===== ENTRADA 3D DO MENU PRINCIPAL (botões e letras subindo) ===== */
+        #main-menu { perspective: 1000px; }
+        #main-menu > * { animation: menuRise 0.7s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+        #main-menu > #fullscreen-btn { animation: fsFade 0.6s 0.55s backwards; }
+        #main-menu > .game-title { animation: titleGlow 3.2s ease-in-out infinite; }
+        #main-menu > #btn-play { animation: menuRise 0.7s 0.95s cubic-bezier(0.16, 1, 0.3, 1) backwards, playGlow 2.2s ease-in-out 1.7s infinite; }
+        #main-menu > *:nth-child(2) { animation-delay: 0.06s; }
+        #main-menu > *:nth-child(4) { animation-delay: 0.52s; }
+        #main-menu > *:nth-child(5) { animation-delay: 0.60s; }
+        #main-menu > *:nth-child(6) { animation-delay: 0.66s; }
+        #main-menu > *:nth-child(7) { animation-delay: 0.76s; }
+        #main-menu > *:nth-child(8) { animation-delay: 0.82s; }
+        #main-menu > *:nth-child(10) { animation-delay: 1.05s; }
+        #main-menu > *:nth-child(11) { animation-delay: 1.10s; }
+        #main-menu > *:nth-child(12), #main-menu > *:nth-child(13) { animation-delay: 1.18s; }
+        #main-menu > *:nth-child(14) { animation-delay: 1.26s; }
+        .char-select-container .char-card { animation: menuRise 0.55s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+        .char-select-container .char-card:nth-child(1) { animation-delay: 0.74s; }
+        .char-select-container .char-card:nth-child(2) { animation-delay: 0.80s; }
+        .char-select-container .char-card:nth-child(3) { animation-delay: 0.86s; }
+        #staff-selection .char-card:nth-child(1) { animation-delay: 0.90s; }
+        #staff-selection .char-card:nth-child(2) { animation-delay: 0.96s; }
+        #staff-selection .char-card:nth-child(3) { animation-delay: 1.02s; }
+        @keyframes menuRise {
+            from { opacity: 0; transform: translateY(36px) rotateX(-10deg); }
+            to { opacity: 1; transform: none; }
+        }
+        @keyframes fsFade { from { opacity: 0; } to { opacity: 1; } }
+
+        /* Titulo: cada LETRA sobe girando em 3D */
+        .game-title { perspective: 700px; }
+        .game-title span { display: inline-block; transform-origin: 50% 100%; animation: letterRise 0.8s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+        @keyframes letterRise {
+            from { opacity: 0; transform: translateY(56px) rotateX(-75deg); }
+            55% { opacity: 1; }
+            to { opacity: 1; transform: none; }
+        }
+        /* o glitch so liga depois que a entrada termina */
+        .game-title::before, .game-title::after { animation-play-state: paused; }
+        body.menu-ready .game-title::before, body.menu-ready .game-title::after { animation-play-state: running; }
+
+        /* ===== SUBMENUS (config/conquistas/santuario): entrada em cascata + saida ===== */
+        #settings-menu > *, #achievements-menu > *, #sanctuary-menu > * { animation: menuRise 0.5s cubic-bezier(0.16, 1, 0.3, 1) backwards; }
+        #settings-menu > *:nth-child(2), #achievements-menu > *:nth-child(2), #sanctuary-menu > *:nth-child(2) { animation-delay: 0.05s; }
+        #settings-menu > *:nth-child(3), #achievements-menu > *:nth-child(3), #sanctuary-menu > *:nth-child(3) { animation-delay: 0.11s; }
+        #settings-menu > *:nth-child(4), #achievements-menu > *:nth-child(4), #sanctuary-menu > *:nth-child(4) { animation-delay: 0.17s; }
+        #settings-menu.closing, #achievements-menu.closing, #sanctuary-menu.closing { animation: menuOut 0.22s ease-in forwards; }
+        @keyframes menuOut { to { opacity: 0; transform: scale(0.985) translateY(12px); } }
+
+        /* ===== MODAL DE PERKS: abre/fecha com vida ===== */
+        #perk-modal { animation: modalIn 0.3s cubic-bezier(0.2, 1, 0.3, 1); }
+        #perk-modal.closing { animation: modalOut 0.18s ease-in forwards; }
+        @keyframes modalIn { from { opacity: 0; transform: translate(-50%, -46%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
+        @keyframes modalOut { from { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: 0; transform: translate(-50%, -55%) scale(0.93); } }
+    </style>
 </head>
 <body>
+
+<div id="crt-fx"></div>
+<div id="crt-vig"></div>
+<div id="giveup-overlay"></div>
+<div id="giveup-black"></div>
+<div id="boot-black"></div>
+<div id="rotate-hint"><span class="rot-ico">&#10227;</span><span id="rotate-hint-text">GIRE O APARELHO &mdash; MELHOR EM PAISAGEM</span></div>
 
 <div id="game-container">
     <div id="fade-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; background:black; opacity:0; pointer-events:none; z-index:9999;"></div>
@@ -513,7 +787,8 @@
             <button class="flag-btn active" id="lang-pt" onclick="audioManager.playWav('botton'); setLanguage('pt')"><img src="https://flagcdn.com/w40/br.png" alt="BR" class="flag-img">PT-BR</button>
             <button class="flag-btn" id="lang-en" onclick="audioManager.playWav('botton'); setLanguage('en')"><img src="https://flagcdn.com/w40/us.png" alt="US" class="flag-img">EN-US</button>
         </div>
-        <h1 class="game-title">Archmage's Greed</h1>
+        <h1 class="game-title" data-text="Archmage's Greed">Archmage's Greed</h1>
+        <p id="menu-subtitle">ROGUELIKE ARCANO &bull; INFINITO</p>
         <p class="menu-label">PERSONAGENS</p>
         <div class="char-select-container" id="char-selection"></div>
         <p class="menu-label">CAJADOS</p>
@@ -578,7 +853,7 @@
     <div id="pause-menu" class="menu-screen hidden" style="background: rgba(0,0,0,0.8);">
         <h1 id="pause-title">PAUSADO</h1>
         <button class="btn" id="btn-resume" onclick="audioManager.playWav('botton'); game.togglePause()">CONTINUAR</button>
-        <button class="btn" id="btn-giveup" onclick="audioManager.playWav('botton'); returnToMenu()" style="border-color: red; color: red;">DESISTIR</button>
+        <button class="btn" id="btn-giveup" onclick="confirmGiveUp()" style="color:#ff5555; box-shadow: inset 0 0 0 1.5px rgba(255,85,85,0.75);">DESISTIR</button>
     </div>
 
     <div id="game-over-menu" class="menu-screen hidden">
@@ -690,9 +965,15 @@ function setLanguage(lang) {
     document.getElementById('mana-shield-indicator').innerText = t.shield;
     document.getElementById('phoenix-indicator').innerText = t.phoenix;
     document.getElementById('souls-label').innerText = t.souls;
+    const jumpBtnEl = document.getElementById('jump-btn');
+    if (jumpBtnEl) jumpBtnEl.innerText = (lang === 'pt') ? 'PULAR' : 'JUMP';
     document.getElementById('ach-title').innerText = t.achTitle;
     document.getElementById('sanctuary-title').innerText = t.sanctuaryTitle;
     document.getElementById('toast-label').innerText = t.achToast;
+    const subEl = document.getElementById('menu-subtitle');
+    if (subEl) subEl.innerText = (lang === 'pt') ? 'ROGUELIKE ARCANO \u2022 INFINITO' : 'INFINITE ARCANE ROGUELIKE';
+    const rotEl = document.getElementById('rotate-hint-text');
+    if (rotEl) rotEl.innerText = (lang === 'pt') ? 'GIRE O APARELHO \u2014 MELHOR EM PAISAGEM' : 'ROTATE YOUR PHONE \u2014 BEST IN LANDSCAPE';
 }
 
 /**
@@ -932,6 +1213,49 @@ const audioManager = {
             gain3.gain.setValueAtTime(0.10 * vol, now);
             gain3.gain.linearRampToValueAtTime(0, now + 0.05);
             osc3.start(now); osc3.stop(now + 0.05);
+        } else if (type === 'pause') {
+            // [v3] pausa: dois tons descendo (desligando)
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(560, now);
+            osc.frequency.setValueAtTime(370, now + 0.1);
+            gain.gain.setValueAtTime(0.06 * vol, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        } else if (type === 'unpause') {
+            // [v3] despausa: dois tons subindo (ligando)
+            osc.type = 'square';
+            osc.frequency.setValueAtTime(370, now);
+            osc.frequency.setValueAtTime(560, now + 0.1);
+            gain.gain.setValueAtTime(0.06 * vol, now);
+            gain.gain.linearRampToValueAtTime(0, now + 0.2);
+            osc.start(now); osc.stop(now + 0.2);
+        } else if (type === 'perk_pick') {
+            // [v3] perk escolhido: arpejo magico ascendente brilhante
+            const pnotes = [523, 659, 784, 1046, 1318];
+            for (let i = 0; i < pnotes.length; i++) {
+                const o = ctx.createOscillator(); const gn = ctx.createGain();
+                o.connect(gn); gn.connect(ctx.destination);
+                o.type = 'triangle';
+                o.frequency.setValueAtTime(pnotes[i], now + i * 0.055);
+                gn.gain.setValueAtTime(0.07 * vol, now + i * 0.055);
+                gn.gain.exponentialRampToValueAtTime(0.001, now + i * 0.055 + 0.16);
+                o.start(now + i * 0.055); o.stop(now + i * 0.055 + 0.18);
+            }
+        } else if (type === 'giveup') {
+            // [v3] desistir: acorde triste descendente (wah-wah-waah)
+            const gnotes = [392, 311, 247];
+            for (let i = 0; i < gnotes.length; i++) {
+                const st = now + i * 0.36;
+                const o = ctx.createOscillator(); const gn = ctx.createGain();
+                o.connect(gn); gn.connect(ctx.destination);
+                o.type = 'sawtooth';
+                o.frequency.setValueAtTime(gnotes[i], st);
+                o.frequency.exponentialRampToValueAtTime(gnotes[i] * 0.88, st + 0.34);
+                gn.gain.setValueAtTime(0.0001, st);
+                gn.gain.linearRampToValueAtTime(0.12 * vol, st + 0.04);
+                gn.gain.linearRampToValueAtTime(0, st + 0.36);
+                o.start(st); o.stop(st + 0.4);
+            }
         }
     }
 };
@@ -1237,8 +1561,9 @@ const BgGlow = {
 };
 
 const canvas = document.getElementById('gameCanvas');
-// [PERFORMANCE] alpha:false + desynchronized: rasterizacao mais rapida (fundo sempre preenchido)
-const ctx = canvas.getContext('2d', { alpha: false, desynchronized: true });
+// [FIX v3] alpha:false acelera a rasterizacao; o hint 'desynchronized' foi REMOVIDO
+// porque causava flickering/tearing (tela 'defeituosa') em GPUs de celular.
+const ctx = canvas.getContext('2d', { alpha: false });
 
 let game;
 
@@ -1255,22 +1580,20 @@ function togglePerkModal() {
     if (modal.classList.contains('hidden')) {
         updatePerkListUI();
         modal.classList.remove('hidden');
+        modal.classList.remove('closing'); // [v4] reabre com animacao
         if (game && game.state === 'PLAYING' && !game.paused) {
             game.paused = true;
             game.perkModalPaused = true;
-            if (game.player && !game.player.manaShieldReady && game.player.perks.manaShield) {
-                game.manaShieldPausedTime = game.player.manaShieldCooldown - Date.now();
-            }
+            game.trackPauseStart(); // [FIX v4]
         }
     } else {
-        modal.classList.add('hidden');
+        modal.classList.add('closing'); // [v4] fecha com animacao
         if (game && game.perkModalPaused) {
             game.perkModalPaused = false;
             game.paused = false;
-            if (game.player && !game.player.manaShieldReady && game.player.perks.manaShield) {
-                game.player.manaShieldCooldown = Date.now() + game.manaShieldPausedTime;
-            }
+            game.resumeFromFreeze(); // [FIX v4]
         }
+        setTimeout(() => { modal.classList.add('hidden'); modal.classList.remove('closing'); }, 170);
     }
 }
 
@@ -1397,6 +1720,7 @@ class Game {
         this.loopBound = this.loop.bind(this);
 
         this.buildTerrainCanvas();
+        this.buildBackdrop(); // [v3] cenario de fundo pre-renderizado
         this.initInput();
         this.updateSoulsUI();
     }
@@ -1595,22 +1919,66 @@ class Game {
         }
     }
 
+    // ===== [FIX v4] PAUSA DE VERDADE =====
+    // Nada "carrega por baixo" enquanto o jogo esta pausado: ao voltar, TODOS os
+    // timers (tiros inimigos, invocacoes, escudos, veneno, recargas, efeitos)
+    // sao empurrados pelo tempo exato que ficou congelado. Despausar depois de
+    // 5 minutos nao solta mais uma rajada de projeteis acumulada.
+    trackPauseStart() {
+        if (!this._freezeAt) this._freezeAt = Date.now();
+    }
+
+    resumeFromFreeze() {
+        if (!this._freezeAt) return;
+        const ms = Date.now() - this._freezeAt;
+        this._freezeAt = 0;
+        if (ms > 0) this.shiftAllTimers(ms);
+    }
+
+    shiftAllTimers(ms) {
+        const sh = (o, keys) => {
+            if (!o) return;
+            for (let i = 0; i < keys.length; i++) {
+                const k = keys[i];
+                if (typeof o[k] === 'number' && o[k] !== 0) o[k] += ms;
+            }
+        };
+        sh(this, ['lastSpawnTime', 'lastThunderTime', 'lastMeteorSpawn', 'meteorWaveStartTime', 'streakLastKill', 'showTeleportZonesUntil']);
+        if (this.player) {
+            sh(this.player, ['lastShot', 'invulnUntil', 'dashActiveUntil', 'dashCooldownUntil', 'hurtFlashUntil', 'healingFatigueUntil', 'muzzleFlashUntil', 'coyoteTimeUntil', 'jumpBufferUntil', 'laserCooldown', 'laserTimer', 'laserLastTick', 'teleportCooldown', 'manaShieldCooldown']);
+            if (this.player.orb) this.player.orb.lastShot += ms;
+        }
+        const eKeys = ['lastShootTime', 'lastSummonTime', 'lastShieldTime', 'kamikazeTriggerAt', 'kamikazeAvisoAt', 'poisonEndTime', 'poisonLastTick', 'coldUntil', 'lastHitTime', 'colorUntil'];
+        for (let i = 0; i < this.enemies.length; i++) sh(this.enemies[i], eKeys);
+        for (let i = 0; i < this.meteors.length; i++) sh(this.meteors[i], ['timer']);
+        for (let i = 0; i < this.particles.length; i++) this.particles[i].spawnTime += ms;
+        for (let i = 0; i < this.shockwaves.length; i++) this.shockwaves[i].spawnTime += ms;
+        for (let i = 0; i < this.lightningEffects.length; i++) this.lightningEffects[i].spawnTime += ms;
+        for (let i = 0; i < this.floatingTexts.length; i++) this.floatingTexts[i].spawnTime += ms;
+        this.hitStopUntil += ms;
+    }
+
     togglePause() {
         if (this.state !== 'PLAYING' && this.state !== 'PAUSED') return;
+        const menu = document.getElementById('pause-menu');
         if (this.state === 'PLAYING') {
             this.state = 'PAUSED';
             this.paused = true;
-            document.getElementById('pause-menu').classList.remove('hidden');
-            if (this.player && !this.player.manaShieldReady && this.player.perks.manaShield) {
-                this.manaShieldPausedTime = this.player.manaShieldCooldown - Date.now();
-            }
+            this.trackPauseStart(); // [FIX v4] congela TODOS os timers
+            audioManager.playSfx('pause'); // [v3] som de pausa
+            clearTimeout(this._pauseHideTO);
+            menu.classList.remove('hidden');
+            menu.classList.remove('closing'); // reinicia a animacao de abertura (wipe)
         } else {
             this.state = 'PLAYING';
             this.paused = false;
-            document.getElementById('pause-menu').classList.add('hidden');
-            if (this.player && !this.player.manaShieldReady && this.player.perks.manaShield) {
-                this.player.manaShieldCooldown = Date.now() + this.manaShieldPausedTime;
-            }
+            this.resumeFromFreeze(); // [FIX v4] nada acumulado dispara de uma vez
+            audioManager.playSfx('unpause'); // [v3] som de despausa
+            menu.classList.add('closing'); // [v3] fechamento animado (wipe reverso)
+            this._pauseHideTO = setTimeout(() => {
+                menu.classList.add('hidden');
+                menu.classList.remove('closing');
+            }, 190);
         }
     }
 
@@ -1619,6 +1987,7 @@ class Game {
         this.paused = false;
         this.player = new Player(this.width / 2, this.height - 150, charIndex, window.selectedStaff || 1);
         this.bullets = []; this.enemies = []; this.particles = []; this.lightningEffects = []; this.floatingTexts = [];
+        this.cinematicShards = []; // [v4]
         this.meteors = [];
         this.wave = 1;
         this.luck = 1.0;
@@ -1671,6 +2040,7 @@ class Game {
 
         if (isBoss) {
             this.state = 'BOSS_CONFIRM';
+            this.trackPauseStart(); // [FIX v4]
             const title = (this.wave % CONFIG.bossWaveInterval === 0) ? TEXTS[currentLang].bossWave : TEXTS[currentLang].miniBoss;
             document.getElementById('boss-wave-title').innerText = title;
             document.getElementById('boss-wave-title').style.color = (this.wave % CONFIG.bossWaveInterval === 0) ? 'red' : '#bf00ff';
@@ -1695,6 +2065,7 @@ class Game {
 
     triggerConfirmedBossWave() {
         this.state = 'PLAYING';
+        this.resumeFromFreeze(); // [FIX v4]
         audioManager.play('boss');
         this.enemiesToSpawn = 0; 
         this.spawnBoss(this.wave % CONFIG.bossWaveInterval === 0);
@@ -1710,13 +2081,24 @@ class Game {
         this.cinematicBoss = boss;
         this.cinematicStartTime = Date.now();
         this.cinematicExplosionDone = false;
+        this.cinematicShards = [];
+        this.cinematicFlashUntil = Date.now() + 300;
+        this._cineBoomAt = 0;
+        // [v4] fases da morte: golpe final -> desestabilizacao -> implosao -> DETONACAO
+        boss._cinematic = true;
+        boss._cineJitter = 0;
+        boss._cineScale = 1;
+        boss._cineGlitch = 1;
+        this.addShake(9);
         
         if (audioManager.current) audioManager.current.pause();
         audioManager.playWav('bossdefeat');
+        audioManager.playSfx('boss_die');
     }
 
     startTeleport(fromLeft) {
         this.state = 'TELEPORTING';
+        this.trackPauseStart(); // [FIX v4]
         let fadeElement = document.getElementById('teleport-fade');
         fadeElement.style.display = 'block';
         setTimeout(() => fadeElement.style.opacity = 1, 10);
@@ -1735,6 +2117,7 @@ class Game {
             setTimeout(() => {
                 fadeElement.style.display = 'none';
                 this.state = 'PLAYING';
+                this.resumeFromFreeze(); // [FIX v4]
             }, 700);
         }, 700);
     }
@@ -1754,17 +2137,39 @@ class Game {
     }
 
     triggerCinematicExplosions() {
-        this.cinematicBoss.dead = true;
-        this.spawnShockwave(this.cinematicBoss.x + this.cinematicBoss.width / 2, this.cinematicBoss.y + this.cinematicBoss.height / 2, 220, '#bf00ff', 700, 5); // [JUICE]
-        this.createExplosion(
-            this.cinematicBoss.x + this.cinematicBoss.width / 2, 
-            this.cinematicBoss.y + this.cinematicBoss.height / 2, 
-            '#bf00ff', 80, 12, 8, 2000
-        );
+        const b = this.cinematicBoss;
+        b.dead = true;
+        const cx = b.x + b.width / 2, cy = b.y + b.height / 2;
+        // [v4] DETONACAO em 3 atos: flash branco -> triplo anel de choque -> fragmentos
+        this.cinematicFlashUntil = Date.now() + 520;
+        this.spawnShockwave(cx, cy, 210, '#ffffff', 640, 5);
+        setTimeout(() => this.spawnShockwave(cx, cy, 300, '#bf00ff', 720, 4), 140);
+        setTimeout(() => this.spawnShockwave(cx, cy, 400, '#ffffff', 860, 3), 300);
+        // fragmentos poligonais girando (casca do chefe se despedaçando)
+        for (let i = 0; i < 30; i++) {
+            const a = Math.random() * Math.PI * 2;
+            const sp = 3 + Math.random() * 7;
+            this.cinematicShards.push({
+                x: cx + (Math.random() - 0.5) * 44,
+                y: cy + (Math.random() - 0.5) * 44,
+                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 2.5,
+                rot: Math.random() * Math.PI * 2, vrot: (Math.random() - 0.5) * 0.35,
+                size: 5 + Math.random() * 10,
+                color: Math.random() < 0.6 ? '#ffffff' : '#bf00ff',
+                verts: this._shardVerts()
+            });
+        }
+        this.createExplosion(cx, cy, '#bf00ff', 90, 13, 9, 2100);
+        this.createExplosion(cx, cy, '#ffffff', 50, 8, 12, 1400);
+        this.addShake(16);
+        this.hitStop(140);
+        audioManager.playSfx('boss_die');
+        audioManager.playSfx('kami_boom');
         this.enemies.forEach(e => {
             if (e !== this.cinematicBoss && !e.dead) {
                 e.dead = true;
-                this.createExplosion(e.x + e.width / 2, e.y + e.height / 2, 'white', 12, 6, 5, 1500);
+                this.spawnShockwave(e.x + e.width / 2, e.y + e.height / 2, 60, '#ffffff', 380, 2);
+                this.createExplosion(e.x + e.width / 2, e.y + e.height / 2, 'white', 14, 6, 5, 1500);
             }
         });
         if (!this.cinematicBoss.isBigBoss) this.souls += 3; else this.souls += 5;
@@ -1780,17 +2185,27 @@ class Game {
         this.updateSoulsUI();
     }
 
+    // [v4] poligono irregular de um fragmento (3 a 5 vertices)
+    _shardVerts() {
+        const n = 3 + Math.floor(Math.random() * 3);
+        const v = [];
+        for (let i = 0; i < n; i++) {
+            const a = (i / n) * Math.PI * 2 + Math.random() * 0.6;
+            const r = 0.55 + Math.random() * 0.45;
+            v.push([Math.cos(a) * r, Math.sin(a) * r]);
+        }
+        return v;
+    }
+
     endCinematic() {
         if (this.isBossWave && this.player && !this.player.hurtThisWave) this.unlockAchievement('immaculate');
         this.state = 'UPGRADE_MENU';
-        window.timeScale = 1.0;
+        window.timeScale = 1.0; // [v4] garante saida do slow-mo da cinematica
         this.enemies = []; 
         this.meteors = [];
+        this.cinematicShards = []; // [v4]
         document.getElementById('fade-overlay').style.opacity = 0;
         audioManager.play('principal');
-        if (this.player && !this.player.manaShieldReady && this.player.perks.manaShield) {
-            this.manaShieldPausedTime = this.player.manaShieldCooldown - Date.now();
-        }
         this.showUpgradeMenu();
     }
 
@@ -2187,8 +2602,10 @@ class Game {
         }
         if (canDraw) {
             this.lastDrawTime = now;
-            if (this.state !== 'MENU' && this.player) this.draw();
+            if (this.state === 'MENU') this.drawMenuScene(); // [v3] cenario vivo no menu
+            else if (this.player) this.draw();
         }
+        if (window.syncControlsVisibility) window.syncControlsVisibility(); // [v3]
     }
 
     logRuntimeError(err) {
@@ -2200,7 +2617,7 @@ class Game {
         if (!this.player) return;
 
         if (this.state === 'BOSS_DEATH_CINEMATIC') {
-            window.timeScale = 0.2; 
+            window.timeScale = 0.22;
             
             this.player.update();
             this.bullets.forEach(b => b.update());
@@ -2218,16 +2635,67 @@ class Game {
                 let s = this.shockwaves[i]; s.update();
                 if (s.dead) this.shockwaves.splice(i, 1);
             }
+            // [v4] fragmentos girando em camera lenta, caindo com gravidade
+            for (let i = this.cinematicShards.length - 1; i >= 0; i--) {
+                const sh = this.cinematicShards[i];
+                sh.vy += 0.06 * window.timeScale;
+                sh.x += sh.vx * window.timeScale;
+                sh.y += sh.vy * window.timeScale;
+                sh.rot += sh.vrot * window.timeScale;
+                if (sh.y > this.height + 80) this.cinematicShards.splice(i, 1);
+            }
             
             let elapsed = Date.now() - this.cinematicStartTime;
+            const cb = this.cinematicBoss;
             
-            if (elapsed >= 3000 && !this.cinematicExplosionDone) {
+            // FASE 1 (0,5s-2,4s): desestabilizacao — tremor, glitch, micro-explosoes
+            if (elapsed >= 500 && elapsed < 2400 && cb && !cb.dead) {
+                cb._cineJitter = Math.min(9, ((elapsed - 500) / 1900) * 9);
+                if (Date.now() - this._cineBoomAt > 170) {
+                    this._cineBoomAt = Date.now();
+                    const ang = Math.random() * Math.PI * 2;
+                    const ox = cb.x + cb.width / 2 + Math.cos(ang) * cb.width * 0.9;
+                    const oy = cb.y + cb.height / 2 + Math.sin(ang) * cb.height * 0.6;
+                    this.createExplosion(ox, oy, Math.random() < 0.5 ? '#bf00ff' : '#ffffff', 8, 5, 4, 520);
+                    this.spawnShockwave(ox, oy, 40 + Math.random() * 30, '#ffffff', 300, 2);
+                }
+                // energia do cenario sendo SUGADA para dentro do chefe
+                for (let k = 0; k < 2; k++) {
+                    if (this.particles.length >= this.particleCap) break;
+                    const a = Math.random() * Math.PI * 2;
+                    const rr = 110 + Math.random() * 70;
+                    const px = cb.x + cb.width / 2 + Math.cos(a) * rr;
+                    const py = cb.y + cb.height / 2 + Math.sin(a) * rr;
+                    const p = ObjectPool.getParticle(px, py, Math.random() < 0.4 ? '#bf00ff' : '#ffffff', 2 + Math.random() * 3, 620, 0);
+                    const dx = cb.x + cb.width / 2 - px, dy = cb.y + cb.height / 2 - py;
+                    const dd = Math.hypot(dx, dy) || 1;
+                    const spd = 2.6 + Math.random() * 2.2;
+                    p.vx = (dx / dd) * spd; p.vy = (dy / dd) * spd;
+                    this.particles.push(p);
+                }
+                this.addShake(4 + ((elapsed - 500) / 1900) * 7);
+            }
+            
+            // FASE 2 (2,4s-2,8s): implosao — o silencio antes do estouro; ele encolhe
+            if (elapsed >= 2400 && elapsed < 2800 && cb && !cb.dead) {
+                const q = (elapsed - 2400) / 400;
+                window.timeScale = 0.12; // [v4] slow-mo fundo no ponto da implosao
+                cb._cineJitter = 9 * (1 - q);
+                cb._cineScale = Math.max(0.12, 1 - q * 0.88);
+                this.shake *= 0.82;
+            }
+            
+            if (elapsed >= 2800 && !this.cinematicExplosionDone) {
+                window.timeScale = 0.22;
                 this.triggerCinematicExplosions();
                 this.cinematicExplosionDone = true;
             }
             
-            if (elapsed >= 3000) {
-                let fadeProgress = (elapsed - 3000) / 2000;
+            // [v4] apos a detonacao o shake decai (a tela nao fica tremendo 2s inteiros)
+            if (elapsed >= 2800 && this.shake > 0.3) this.shake *= 0.97;
+            
+            if (elapsed >= 2800) {
+                let fadeProgress = (elapsed - 2800) / 2000;
                 document.getElementById('fade-overlay').style.opacity = Math.min(1, fadeProgress);
             } else {
                 document.getElementById('fade-overlay').style.opacity = 0;
@@ -2458,9 +2926,6 @@ class Game {
             this.isGoldenWave = false;
             
             this.state = 'UPGRADE_MENU';
-            if (this.player && !this.player.manaShieldReady && this.player.perks.manaShield) {
-                this.manaShieldPausedTime = this.player.manaShieldCooldown - Date.now();
-            }
             this.showUpgradeMenu();
         }
         if (this.enemiesToSpawn > 0) {
@@ -2558,18 +3023,46 @@ class Game {
         ctx.textAlign = 'center';
         ctx.fillStyle = '#fff';
         ctx.fillText(boss.enraged ? nome + ' — ' + TEXTS[currentLang].rage : nome, this.width / 2, by - 9);
-        ctx.fillStyle = 'rgba(0,0,0,0.65)';
-        ctx.fillRect(bx - 3, by - 3, bw + 6, 16);
+
+        // [v3] moldura chanfrada com glow (estetica hi-tech)
+        const cut = 8;
+        const frame = (x, y, w, h) => {
+            ctx.beginPath();
+            ctx.moveTo(x + cut, y); ctx.lineTo(x + w - cut, y); ctx.lineTo(x + w, y + cut);
+            ctx.lineTo(x + w, y + h - cut); ctx.lineTo(x + w - cut, y + h); ctx.lineTo(x + cut, y + h);
+            ctx.lineTo(x, y + h - cut); ctx.lineTo(x, y + cut);
+            ctx.closePath();
+        };
+        frame(bx - 5, by - 5, bw + 10, 20);
+        ctx.fillStyle = 'rgba(0,0,0,0.7)';
+        ctx.fill();
         ctx.strokeStyle = '#fff'; ctx.lineWidth = 1.5;
-        ctx.strokeRect(bx - 3, by - 3, bw + 6, 16);
+        ctx.shadowColor = 'rgba(255,255,255,0.45)'; ctx.shadowBlur = 7;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        ctx.save();
+        frame(bx, by, bw, 10);
+        ctx.clip();
         ctx.fillStyle = 'rgba(255,255,255,0.5)';
         ctx.fillRect(bx, by, bw * ghostRatio, 10);
         ctx.fillStyle = boss.enraged ? '#ff3333' : '#bf00ff';
         ctx.fillRect(bx, by, bw * ratio, 10);
+        ctx.strokeStyle = 'rgba(0,0,0,0.4)'; ctx.lineWidth = 1;
+        for (let i = 1; i < 10; i++) {
+            ctx.beginPath();
+            ctx.moveTo(bx + (bw / 10) * i, by);
+            ctx.lineTo(bx + (bw / 10) * i, by + 10);
+            ctx.stroke();
+        }
+        ctx.restore();
+
         if (ratio < 0.3) {
             ctx.globalAlpha = 0.35 + Math.sin(Date.now() / 130) * 0.25;
             ctx.strokeStyle = '#ff3333';
-            ctx.strokeRect(bx - 3, by - 3, bw + 6, 16);
+            ctx.lineWidth = 2;
+            frame(bx - 5, by - 5, bw + 10, 20);
+            ctx.stroke();
         }
         ctx.restore();
     }
@@ -2581,6 +3074,7 @@ class Game {
     }
 
     showUpgradeMenu() {
+        this.trackPauseStart(); // [FIX v4] congela TODOS os timers durante a escolha
         this.clearAllBullets();
 
         const menu = document.getElementById('upgrade-menu');
@@ -2669,7 +3163,8 @@ class Game {
                 alreadyPicked = true;
                 clearInterval(this.menuTimer);
                 audioManager.playWav('botton');
-                
+                audioManager.playSfx('perk_pick'); // [v3] arpejo magico
+
                 try {
                     selectedUpgrade.apply(this.player);
                     this.player.perksCounts[selectedUpgrade.id] = (this.player.perksCounts[selectedUpgrade.id] || 0) + 1;
@@ -2677,12 +3172,24 @@ class Game {
                     console.error("Erro ao aplicar perk:", err);
                 }
 
-                menu.classList.add('hidden');
-                if (this.player.perks.manaShield && !this.player.manaShieldReady) {
-                    this.player.manaShieldCooldown = Date.now() + this.manaShieldPausedTime;
+                // [v3] ritual de escolha: a carta brilha e e absorvida, as demais
+                // apagam, e o mago recebe o poder com uma onda de choque ao voltar
+                container.classList.add('choosing');
+                card.classList.add('picked');
+                const perkName = (currentLang === 'pt') ? selectedUpgrade.name_pt : selectedUpgrade.name_en;
+                if (this.player) {
+                    this.spawnShockwave(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, 130, '#ffffff', 460, 3);
+                    this.createExplosion(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, 'white', 16, 5, 4, 700);
+                    this.addFloatingText(this.player.x, this.player.y - 46, perkName.toUpperCase(), '#ffffff', 13);
                 }
-                this.player.updateStatsUI();
-                this.wave++; this.state = 'PLAYING'; this.startWave();
+
+                setTimeout(() => {
+                    menu.classList.add('hidden');
+                    container.classList.remove('choosing');
+                    this.resumeFromFreeze(); // [FIX v4] timers voltam de onde pararam
+                    if (this.player) this.player.updateStatsUI();
+                    this.wave++; this.state = 'PLAYING'; this.startWave();
+                }, 440);
             };
 
             card.onclick = pickUpgrade;
@@ -2732,37 +3239,575 @@ class Game {
         return valid[Math.floor(Math.random() * valid.length)];
     }
 
-    draw() {
-        const t = Date.now() / 1000;
-        let hueSpeed = this.isBossWave ? 0.12 : 0.05;
-        let hue = (Date.now() * hueSpeed) % 360;
-        let sat = this.isBossWave ? 50 : 35;
-        let luz = this.isBossWave ? 6.5 + Math.sin(t * 0.35) * 1.5 : 5;
-        ctx.fillStyle = `hsl(${hue}, ${sat}%, ${luz}%)`;
-        ctx.fillRect(0, 0, this.width, this.height);
+    buildBackdrop() {
+        // ===== [v4] CÉU CÓSMICO (pre-renderizado): nebulosa purpura + estrelas =====
+        const sky = document.createElement('canvas');
+        sky.width = this.width; sky.height = this.height;
+        const s = sky.getContext('2d');
+        let seed = 987654321;
+        const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
 
-        if (this.isBossWave) {
-            ctx.save();
-            ctx.globalCompositeOperation = 'lighter';
-            for (let i = 0; i < this.auroraCount; i++) { // [PERFORMANCE] 5/3/0 conforme qualidade
+        // nebulosas profundas (manchas violeta suaves — profundidade do ceu)
+        const nebs = [[240, 130, 320, 0.10], [880, 70, 260, 0.07], [1330, 260, 340, 0.08], [600, 300, 360, 0.05], [1150, 430, 300, 0.05]];
+        for (let n = 0; n < nebs.length; n++) {
+            const nb = nebs[n];
+            const gN = s.createRadialGradient(nb[0], nb[1], 10, nb[0], nb[1], nb[2]);
+            gN.addColorStop(0, 'rgba(122,72,214,' + nb[3].toFixed(3) + ')');
+            gN.addColorStop(0.55, 'rgba(84,46,158,' + (nb[3] * 0.55).toFixed(3) + ')');
+            gN.addColorStop(1, 'rgba(40,20,80,0)');
+            s.fillStyle = gN;
+            s.beginPath(); s.arc(nb[0], nb[1], nb[2], 0, Math.PI * 2); s.fill();
+        }
+
+        // planeta distante com anel (silhueta roxa)
+        const plx = 330, ply = 118, plr = 26;
+        s.save();
+        s.translate(plx, ply);
+        s.rotate(0.35);
+        s.strokeStyle = 'rgba(196,166,255,0.28)';
+        s.lineWidth = 2;
+        s.beginPath(); s.ellipse(0, 0, plr * 1.75, plr * 0.42, 0, 0, Math.PI * 2); s.stroke();
+        s.fillStyle = '#0d0916';
+        s.beginPath(); s.arc(0, 0, plr, 0, Math.PI * 2); s.fill();
+        s.strokeStyle = 'rgba(196,166,255,0.20)';
+        s.lineWidth = 1;
+        s.beginPath(); s.arc(0, 0, plr, 0, Math.PI * 2); s.stroke();
+        s.strokeStyle = 'rgba(220,200,255,0.42)';
+        s.lineWidth = 2;
+        s.beginPath(); s.ellipse(0, 0, plr * 1.75, plr * 0.42, 0, 0.15, Math.PI - 0.15); s.stroke();
+        s.restore();
+
+        // estrelas deterministicas em 3 profundidades (30% delas violeta)
+        for (let i = 0; i < 175; i++) {
+            const x = Math.floor(rnd() * this.width);
+            const y = Math.floor(rnd() * this.height * 0.78);
+            const depth = rnd();
+            const sz = depth > 0.88 ? 3 : (depth > 0.55 ? 2 : 1);
+            const a = 0.10 + depth * 0.55;
+            const violet = rnd() < 0.3;
+            s.fillStyle = violet ? 'rgba(202,172,255,' + a.toFixed(3) + ')' : 'rgba(255,255,255,' + a.toFixed(3) + ')';
+            s.fillRect(x, y, sz, sz);
+            if (depth > 0.92) {
+                s.fillStyle = violet ? 'rgba(202,172,255,' + (a * 0.45).toFixed(3) + ')' : 'rgba(255,255,255,' + (a * 0.45).toFixed(3) + ')';
+                s.fillRect(x - 3, y + sz / 2 - 0.5, sz + 6, 1);
+                s.fillRect(x + sz / 2 - 0.5, y - 3, 1, sz + 6);
+            }
+        }
+        this.skyCanvas = sky;
+
+        // ===== [v4] BURACO NEGRO SUPERMASSIVO no fundao (pre-renderizado) =====
+        this.blackHole = this.buildBlackHole(1080, 168, 102);
+
+        // ===== TORRES EM SILHUETA (2 camadas de parallax — profundidade) =====
+        const W = this.width + 128;
+        const mkTowers = (color, winAlpha, minW, maxW, minH, maxH, gapMin, gapMax, seed0) => {
+            const c = document.createElement('canvas');
+            c.width = W; c.height = this.height;
+            const g = c.getContext('2d');
+            let sd = seed0;
+            const r = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
+            let x = 0;
+            while (x < W) {
+                const w = minW + r() * (maxW - minW);
+                const h = minH + r() * (maxH - minH);
+                const by = this.height - h;
+                g.fillStyle = color;
+                g.fillRect(x, by, w, h);
+                g.beginPath();
+                g.moveTo(x, by);
+                g.lineTo(x + w / 2, by - 16 - r() * 30);
+                g.lineTo(x + w, by);
+                g.closePath();
+                g.fill();
+                if (r() < 0.42) {
+                    const ax = x + w * (0.25 + r() * 0.5);
+                    const at = by - 40 - r() * 26;
+                    g.fillRect(ax - 1, at, 2, 44);
+                    g.fillStyle = `rgba(255,255,255,${(0.35 + r() * 0.3).toFixed(3)})`;
+                    g.fillRect(ax - 2, at - 4, 4, 4);
+                    g.fillStyle = color;
+                }
+                // [v4] janelas violeta — cidade arcana aos pes do buraco negro
+                g.fillStyle = `rgba(205,170,255,${winAlpha})`;
+                const cols = Math.max(1, Math.floor(w / 17));
+                const rows = Math.floor(h / 25);
+                for (let cxx = 0; cxx < cols; cxx++) {
+                    for (let ry = 0; ry < rows; ry++) {
+                        if (r() < 0.15) g.fillRect(x + 7 + cxx * 17, by + 13 + ry * 25, 4, 6);
+                    }
+                }
+                x += w + gapMin + r() * gapMax;
+            }
+            return c;
+        };
+        this.towersFar = mkTowers('#1a1426', 0.14, 55, 120, 160, 340, 10, 60, 20250101);
+        this.towersNear = mkTowers('#0e0a17', 0.18, 80, 190, 90, 250, 16, 90, 13371337);
+
+        // ===== BLOB DE NEBLINA =====
+        const fc = document.createElement('canvas');
+        fc.width = 640; fc.height = 200;
+        const fg = fc.getContext('2d');
+        const grad = fg.createRadialGradient(320, 100, 12, 320, 100, 310);
+        grad.addColorStop(0, 'rgba(196,166,255,0.05)');
+        grad.addColorStop(1, 'rgba(196,166,255,0)');
+        fg.fillStyle = grad;
+        fg.fillRect(0, 0, 640, 200);
+        this.fogCanvas = fc;
+    }
+
+    // [v4] BURACO NEGRO SUPERMASSIVO estilo Gargantua: sombra (horizonte de
+    // eventos) com "void" escuro ao redor, anel de foton crisp, disco de acrecao
+    // QUADRADO (estetica do jogo) com anel de fogo continuo por baixo, Doppler
+    // (lado esquerdo fervendo) e o halo lenteado passando por CIMA da sombra.
+    buildBlackHole(bx, by, shadowR) {
+        const w = 660, h = 520;
+        const c = document.createElement('canvas');
+        c.width = w; c.height = h;
+        const g = c.getContext('2d');
+        const cx = w / 2, cy = h / 2;
+        const rot = -0.30;
+        const cosR = Math.cos(rot), sinR = Math.sin(rot);
+
+        // 1) bruma violeta ao redor de tudo
+        const haze = g.createRadialGradient(cx, cy, shadowR * 0.8, cx, cy, shadowR * 3.2);
+        haze.addColorStop(0, 'rgba(150,95,235,0.18)');
+        haze.addColorStop(0.45, 'rgba(110,60,190,0.09)');
+        haze.addColorStop(1, 'rgba(60,30,120,0)');
+        g.fillStyle = haze;
+        g.fillRect(0, 0, w, h);
+
+        // 2) VOID: anel de escuridao logo ao redor da sombra — faz o preto "afundar"
+        const voidG = g.createRadialGradient(cx, cy, shadowR * 0.85, cx, cy, shadowR * 2.0);
+        voidG.addColorStop(0, 'rgba(0,0,0,0.55)');
+        voidG.addColorStop(0.55, 'rgba(0,0,0,0.28)');
+        voidG.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = voidG;
+        g.beginPath();
+        g.arc(cx, cy, shadowR * 2.0, 0, Math.PI * 2);
+        g.fill();
+
+        // 3) DISCO DE PLASMA CONTÍNUO — bandas elípticas aditivas (frente quente,
+        //    tras mais fraca; a sombra cobre o meio depois e o halo lenteia o topo)
+        g.save();
+        g.translate(cx, cy);
+        g.rotate(rot);
+        g.globalCompositeOperation = 'lighter';
+        const bandas = [
+            { rx: shadowR * 2.45, ry: shadowR * 0.62, lw: shadowR * 0.50, cor: 'rgba(130,80,220,0.42)' },
+            { rx: shadowR * 1.95, ry: shadowR * 0.50, lw: shadowR * 0.36, cor: 'rgba(190,140,250,0.58)' },
+            { rx: shadowR * 1.48, ry: shadowR * 0.40, lw: shadowR * 0.26, cor: 'rgba(243,225,255,0.80)' },
+            { rx: shadowR * 1.14, ry: shadowR * 0.33, lw: shadowR * 0.15, cor: 'rgba(255,252,255,0.92)' }
+        ];
+        for (let bi = 0; bi < bandas.length; bi++) {
+            const bd = bandas[bi];
+            // frente (embaixo) — cheia
+            g.strokeStyle = bd.cor;
+            g.lineWidth = bd.lw;
+            g.beginPath();
+            g.ellipse(0, 0, bd.rx, bd.ry, 0, 0.04, Math.PI - 0.04);
+            g.stroke();
+            // tras (em cima) — 55% (a maior parte sera coberta pela sombra)
+            g.globalAlpha = 0.55;
+            g.beginPath();
+            g.ellipse(0, 0, bd.rx, bd.ry, 0, Math.PI + 0.04, Math.PI * 2 - 0.04);
+            g.stroke();
+            g.globalAlpha = 1;
+            // DOPPLER: o quadrante frontal-esquerdo (vindo na direcao do jogador) ferve
+            g.strokeStyle = 'rgba(255,255,255,' + (0.30 + bi * 0.14).toFixed(2) + ')';
+            g.lineWidth = bd.lw * 0.8;
+            g.beginPath();
+            g.ellipse(0, 0, bd.rx, bd.ry, 0, Math.PI * 0.58, Math.PI * 1.02);
+            g.stroke();
+        }
+        g.restore();
+
+        // 4) disco de acrecao em QUADRADOS — 3 aneis (externo roxo -> interno quente)
+        const passes = [
+            { rx: shadowR * 2.55, ry: shadowR * 0.64, n: 150, sMin: 2.5, sMax: 5, aBase: 0.34 },
+            { rx: shadowR * 1.85, ry: shadowR * 0.50, n: 130, sMin: 3, sMax: 6, aBase: 0.55 },
+            { rx: shadowR * 1.34, ry: shadowR * 0.40, n: 110, sMin: 3.5, sMax: 7, aBase: 0.82 }
+        ];
+        const drawDiskHalf = (half) => {
+            for (let pi = 0; pi < passes.length; pi++) {
+                const pass = passes[pi];
+                for (let i = 0; i < pass.n; i++) {
+                    const a = (i / pass.n) * Math.PI * 2 + pi * 0.35;
+                    const sa = Math.sin(a);
+                    if (half === 'back' ? sa >= 0 : sa < 0) continue;
+                    const ex = Math.cos(a) * pass.rx, ey = sa * pass.ry;
+                    const px = cx + ex * cosR - ey * sinR;
+                    const py = cy + ex * sinR + ey * cosR;
+                    const doppler = 0.5 - 0.5 * Math.cos(a - Math.PI);
+                    const heat = 1 - pi / 3;
+                    const alpha = pass.aBase * (0.6 + doppler * 1.6) * (half === 'back' ? 0.65 : 1);
+                    let rC = Math.min(255, Math.round(150 + heat * 105 + doppler * 80));
+                    let gC = Math.min(255, Math.round(110 + heat * 90 + doppler * 80));
+                    const bC = 255;
+                    if (doppler > 0.55) { rC = 255; gC = Math.min(255, gC + 90); } // lado quente quase branco
+                    const sz = pass.sMin + Math.random() * (pass.sMax - pass.sMin);
+                    g.save();
+                    g.translate(px, py);
+                    g.rotate(rot + a + Math.PI / 2);
+                    g.fillStyle = 'rgba(' + rC + ',' + gC + ',' + bC + ',' + Math.min(0.95, alpha).toFixed(3) + ')';
+                    g.fillRect(-sz / 2, -sz / 2, sz, sz);
+                    g.restore();
+                }
+            }
+        };
+        drawDiskHalf('back');
+
+        // 5) sombra — o HORIZONTE DE EVENTOS (preto absoluto)
+        g.beginPath();
+        g.arc(cx, cy, shadowR, 0, Math.PI * 2);
+        g.fillStyle = '#000';
+        g.fill();
+
+        // 6) anel de foton — fino, crisp, brilhante
+        g.save();
+        g.shadowColor = 'rgba(205,165,255,0.9)';
+        g.shadowBlur = 12;
+        g.strokeStyle = 'rgba(240,232,250,0.75)';
+        g.lineWidth = 2.2;
+        g.beginPath();
+        g.arc(cx, cy, shadowR + 3, 0, Math.PI * 2);
+        g.stroke();
+        g.restore();
+
+        // a frente das BANDAS continuas atravessa a frente da sombra (recortado
+        // ao circulo da sombra: so o trecho sobre o preto e redesenhado)
+        g.save();
+        g.beginPath();
+        g.arc(cx, cy, shadowR + 2, 0, Math.PI * 2);
+        g.clip();
+        g.translate(cx, cy);
+        g.rotate(rot);
+        g.globalCompositeOperation = 'lighter';
+        for (let bi = 0; bi < bandas.length; bi++) {
+            const bd = bandas[bi];
+            g.strokeStyle = bd.cor;
+            g.lineWidth = bd.lw;
+            g.beginPath();
+            g.ellipse(0, 0, bd.rx, bd.ry, 0, 0.05, Math.PI - 0.05);
+            g.stroke();
+            g.strokeStyle = 'rgba(255,255,255,' + (0.30 + bi * 0.14).toFixed(2) + ')';
+            g.lineWidth = bd.lw * 0.8;
+            g.beginPath();
+            g.ellipse(0, 0, bd.rx, bd.ry, 0, Math.PI * 0.58, Math.PI * 1.02);
+            g.stroke();
+        }
+        g.restore();
+
+        // a frente do disco (quadrados) passa POR CIMA da borda inferior da sombra
+        drawDiskHalf('front');
+
+        // 7) DOPPLER: o lado esquerdo (vindo na direcao do observador) FERVE
+        g.save();
+        g.translate(cx, cy);
+        g.rotate(rot);
+        g.globalCompositeOperation = 'lighter';
+        g.strokeStyle = 'rgba(255,255,255,0.95)';
+        g.lineWidth = shadowR * 0.10;
+        g.beginPath();
+        g.ellipse(0, 0, shadowR * 1.22, shadowR * 0.36, 0, Math.PI * 0.66, Math.PI * 1.14);
+        g.stroke();
+        // bolhas de plasma fervendo no lado quente
+        for (let i = 0; i < 14; i++) {
+            const a = Math.PI * 0.66 + Math.random() * Math.PI * 0.5;
+            const rr = shadowR + 8 + Math.random() * 16;
+            const px = Math.cos(a) * rr, py = Math.sin(a) * rr * 0.32;
+            const sz = 1.5 + Math.random() * 2.5;
+            g.fillStyle = 'rgba(255,255,255,' + (0.35 + Math.random() * 0.5).toFixed(2) + ')';
+            g.fillRect(px - sz / 2, py - sz / 2, sz, sz);
+        }
+        g.restore();
+
+        // 8) HALO LENTEADO — a assinatura Gargantua: o disco de tras curva por
+        //    CIMA da sombra (e o eco por baixo), formando um anel quase completo
+        g.save();
+        g.globalCompositeOperation = 'lighter';
+        g.shadowColor = 'rgba(230,200,255,1)';
+        g.shadowBlur = 26;
+        // topo — glow largo
+        g.strokeStyle = 'rgba(220,185,255,0.62)';
+        g.lineWidth = shadowR * 0.19;
+        g.beginPath();
+        g.arc(cx, cy, shadowR + 19, Math.PI * 1.04, Math.PI * 1.96);
+        g.stroke();
+        // topo — nucleo branco-quente
+        g.strokeStyle = 'rgba(255,253,255,0.98)';
+        g.lineWidth = shadowR * 0.085;
+        g.beginPath();
+        g.arc(cx, cy, shadowR + 19, Math.PI * 1.05, Math.PI * 1.95);
+        g.stroke();
+        // eco inferior
+        g.strokeStyle = 'rgba(230,205,255,0.45)';
+        g.lineWidth = shadowR * 0.09;
+        g.beginPath();
+        g.arc(cx, cy, shadowR + 14, Math.PI * 0.08, Math.PI * 0.92);
+        g.stroke();
+        g.strokeStyle = 'rgba(250,240,255,0.75)';
+        g.lineWidth = shadowR * 0.04;
+        g.beginPath();
+        g.arc(cx, cy, shadowR + 14, Math.PI * 0.09, Math.PI * 0.91);
+        g.stroke();
+        // PONTES LATERAIS: conectam o disco frontal ao halo superior — o anel
+        // lenteado fecha COMPLETO ao redor da sombra (assinatura Gargantua)
+        // ponte esquerda: branca-quente (lado Doppler)
+        g.strokeStyle = 'rgba(255,252,255,0.9)';
+        g.lineWidth = shadowR * 0.075;
+        g.beginPath();
+        g.arc(cx, cy, shadowR + 17, Math.PI * 0.965, Math.PI * 1.06);
+        g.stroke();
+        // ponte direita: violeta mais fria
+        g.strokeStyle = 'rgba(225,195,255,0.55)';
+        g.lineWidth = shadowR * 0.06;
+        g.beginPath();
+        g.arc(cx, cy, shadowR + 17, Math.PI * 1.94, Math.PI * 2.035);
+        g.stroke();
+        g.restore();
+        // textura quadriculada do halo (quadrados por cima do arco superior)
+        for (let i = 0; i < 52; i++) {
+            const a = Math.PI * 1.05 + (i / 52) * Math.PI * 0.90;
+            const rr = shadowR + 19 + Math.sin((i / 52) * Math.PI) * 6;
+            const px = cx + Math.cos(a) * rr;
+            const py = cy + Math.sin(a) * rr * 0.94;
+            const side = Math.abs(a - Math.PI * 1.5) / (Math.PI * 0.5);
+            const alpha = 0.45 + (1 - side) * 0.2 + (a < Math.PI * 1.5 ? 0.3 : 0.08);
+            const sz = 2.5 + (1 - side) * 2.5;
+            g.fillStyle = 'rgba(244,235,255,' + Math.min(0.95, alpha).toFixed(3) + ')';
+            g.fillRect(px - sz / 2, py - sz / 2, sz, sz);
+        }
+
+        // 9) arcos de lente sutis (distorcao gravitacional ao redor)
+        g.strokeStyle = 'rgba(190,150,255,0.12)';
+        g.lineWidth = 1;
+        g.beginPath(); g.arc(cx, cy, shadowR * 1.6, Math.PI * 1.08, Math.PI * 1.92); g.stroke();
+        g.beginPath(); g.arc(cx, cy, shadowR * 2.15, Math.PI * 1.12, Math.PI * 1.88); g.stroke();
+
+        return { canvas: c, x: bx, y: by, shadowR: shadowR };
+    }
+
+    // [v3] Fundo em camadas: ceu, estrelas/lua, grade hi-tech, torres (parallax),
+    // aurora do chefe, glow pulsante e neblina — tudo P&B e quase de graa custo.
+    drawBackground(g) {
+        const t = Date.now() / 1000;
+        const isBoss = this.isBossWave;
+        const hue = (Date.now() * (isBoss ? 0.12 : 0.05)) % 360;
+
+        if (isBoss) {
+            g.fillStyle = `hsl(${hue}, 45%, ${6.5 + Math.sin(t * 0.35) * 1.5}%)`;
+        } else {
+            // [v4] cosmos purpura: base violeta-escura que respira lentamente
+            g.fillStyle = `hsl(${263 + Math.sin(t * 0.045) * 14}, 17%, ${5.2 + Math.sin(t * 0.21) * 0.7}%)`;
+        }
+        g.fillRect(0, 0, this.width, this.height);
+
+        if (this.skyCanvas) g.drawImage(this.skyCanvas, 0, 0);
+
+        // [v4] BURACO NEGRO SUPERMASSIVO — o "ceu" do cenario, vivo e respirando
+        if (this.blackHole) {
+            const bh = this.blackHole;
+            g.save();
+            g.globalAlpha = 0.9 + Math.sin(t * 0.35) * 0.1;
+            g.drawImage(bh.canvas, bh.x - bh.canvas.width / 2, bh.y - bh.canvas.height / 2);
+            g.restore();
+            // materia quente orbitando na frente do disco (quadrados vivos)
+            const orbR = bh.shadowR * 1.32, orbRy = bh.shadowR * 0.38;
+            const bRot = -0.30, bCos = Math.cos(bRot), bSin = Math.sin(bRot);
+            for (let i = 0; i < 12; i++) {
+                const a = t * 0.5 + (i / 12) * Math.PI * 2;
+                const sa = Math.sin(a);
+                if (sa <= 0.05) continue;
+                const ex = Math.cos(a) * orbR, ey = sa * orbRy;
+                const px = bh.x + ex * bCos - ey * bSin;
+                const py = bh.y + ex * bSin + ey * bCos;
+                const doppler = 0.5 - 0.5 * Math.cos(a - Math.PI);
+                const heat = 0.3 + doppler * 0.7;
+                const sz = 2.5 + doppler * 2.5;
+                g.fillStyle = `rgba(${Math.round(170 + heat * 85)},${Math.round(140 + heat * 115)},255,${(0.4 + heat * 0.55).toFixed(2)})`;
+                g.fillRect(px - sz / 2, py - sz / 2, sz, sz);
+            }
+            // pulso do anel de foton
+            g.save();
+            g.globalAlpha = 0.22 + Math.sin(t * 1.15) * 0.12;
+            g.strokeStyle = '#cbb5ff';
+            g.lineWidth = 1.6;
+            g.beginPath();
+            g.arc(bh.x, bh.y, bh.shadowR + 4 + Math.sin(t * 1.15) * 2, 0, Math.PI * 2);
+            g.stroke();
+            g.restore();
+        }
+
+        const px = (this.player && this.state !== 'MENU') ? (this.player.x + this.player.width / 2) : this.width / 2 + Math.sin(t * 0.06) * 240;
+        const gx = -(((px - this.width / 2) * 0.03) % 96);
+        g.save();
+        g.strokeStyle = 'rgba(255,255,255,0.06)';
+        g.lineWidth = 1;
+        g.beginPath();
+        for (let x = gx - 96; x < this.width + 96; x += 96) { g.moveTo(x, 0); g.lineTo(x, this.height); }
+        for (let y = 0; y <= this.height; y += 96) { g.moveTo(0, y); g.lineTo(this.width, y); }
+        g.stroke();
+        g.restore();
+
+        if (this.towersFar) g.drawImage(this.towersFar, -64 - (px - this.width / 2) * 0.012, 0);
+        if (this.towersNear) g.drawImage(this.towersNear, -64 - (px - this.width / 2) * 0.030, 0);
+
+        if (isBoss) {
+            g.save();
+            g.globalCompositeOperation = 'lighter';
+            for (let i = 0; i < this.auroraCount; i++) {
                 const bx = this.width / 2 + Math.sin(t * (0.11 + i * 0.037) + i * 1.9) * this.width * 0.33;
                 const by = this.height * (0.26 + 0.13 * i) + Math.cos(t * (0.09 + i * 0.031) + i * 2.7) * this.height * 0.15;
                 const breathe = 1 + Math.sin(t * 0.45 + i * 1.3) * 0.25;
                 const rad = this.width * (0.15 + 0.05 * i) * breathe;
                 const hueB = hue + i * 72 + Math.sin(t * 0.13 + i) * 40;
-                ctx.globalAlpha = 0.11 + 0.05 * Math.sin(t * 0.4 + i * 2.1);
-                ctx.drawImage(AuroraBlobs.get(hueB), bx - rad, by - rad, rad * 2, rad * 2);
+                g.globalAlpha = 0.11 + 0.05 * Math.sin(t * 0.4 + i * 2.1);
+                g.drawImage(AuroraBlobs.get(hueB), bx - rad, by - rad, rad * 2, rad * 2);
             }
+            g.restore();
+        }
+
+        const pulseSpeed = isBoss ? 600 : 1100;
+        const pulse = Math.max(0, 0.10 + Math.sin(Date.now() / pulseSpeed) * 0.05);
+        g.save();
+        g.globalAlpha = pulse;
+        g.drawImage(BgGlow.get(isBoss ? (hue + 40) % 360 : 272), 0, 0, this.width, this.height);
+        g.restore();
+
+        if (this.fogCanvas) {
+            const w = 640;
+            for (let i = 0; i < 3; i++) {
+                const fx = ((t * (9 + i * 5) + i * 760) % (this.width + w)) - w;
+                g.drawImage(this.fogCanvas, fx, this.height - 168, w, 185);
+            }
+        }
+    }
+
+    // [v3] O MENU INICIAL agora tem o cenario VIVO atras: cenario 3D, faiscas
+    // subindo e o mago selecionado em destaque (troca ao escolher personagem/cajado).
+    drawMenuScene() {
+        const t = Date.now() / 1000;
+        this.drawBackground(ctx);
+        this.updateBgDust();
+        this.drawBgDust(ctx);
+        if (this.terrainCanvas) ctx.drawImage(this.terrainCanvas, 0, 0);
+
+        if (!this.menuSparks) this.menuSparks = [];
+        while (this.menuSparks.length < 14) {
+            this.menuSparks.push({ x: Math.random() * this.width, y: 560 + Math.random() * 120, vy: 0.25 + Math.random() * 0.7, a: 0.15 + Math.random() * 0.5, s: 1 + Math.random() * 2, ph: Math.random() * 6.28 });
+        }
+        ctx.save();
+        ctx.fillStyle = '#fff';
+        for (let i = 0; i < this.menuSparks.length; i++) {
+            const sp = this.menuSparks[i];
+            sp.y -= sp.vy;
+            if (sp.y < -8) { sp.y = 640; sp.x = Math.random() * this.width; }
+            ctx.globalAlpha = sp.a * (0.55 + Math.sin(t * 2 + sp.ph) * 0.45);
+            ctx.fillRect(sp.x + Math.sin(t * 0.8 + sp.ph) * 9, sp.y, sp.s, sp.s);
+        }
+        ctx.restore();
+
+        const charIdx = window.selectedChar || 1;
+        const staffIdx = window.selectedStaff || 1;
+        const groundY = 650;
+        const bob = Math.sin(t * 1.5) * 3.5;
+        const px = this.width / 2;
+        const py = groundY - 83 + bob * 0.35;
+
+        ctx.save();
+        ctx.globalAlpha = 0.34;
+        ctx.fillStyle = '#000';
+        ctx.beginPath();
+        ctx.ellipse(px, groundY + 5, Math.max(20, 36 - bob * 1.2), 7, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+
+        const img = ASSETS.images['mage' + charIdx];
+        if (img && img.complete && img.naturalHeight !== 0) {
+            ctx.drawImage(img, px - 31, py, 62, 83);
+        } else {
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(px - 31, py, 62, 83);
+        }
+
+        const ang = -Math.PI / 2 + Math.sin(t * 0.7) * 0.20;
+        const pivotY = py + 74;
+        const sImg = ASSETS.images['cajado' + staffIdx];
+        if (sImg && sImg.complete && sImg.naturalHeight !== 0) {
+            ctx.save();
+            ctx.translate(px, pivotY);
+            ctx.rotate(ang + Math.PI / 2);
+            const h2 = 104;
+            const w2 = h2 * (sImg.naturalWidth / sImg.naturalHeight) * 0.85;
+            ctx.drawImage(sImg, -w2 / 2, -h2 + 8, w2, h2);
             ctx.restore();
         }
 
-        let pulseSpeed = this.isBossWave ? 600 : 1100;
-        let pulse = Math.max(0, 0.10 + Math.sin(Date.now() / pulseSpeed) * 0.05);
-        // [PERFORMANCE] glow pre-renderizado por faixa de matiz (mesmo visual, custo quase zero)
+        const ox = px + Math.cos(ang) * 118 + Math.cos(t * 2.1) * 14;
+        const oy = pivotY + Math.sin(ang) * 118 - 6 + Math.sin(t * 2.8) * 9;
+        const pulse = 0.8 + Math.sin(t * 3) * 0.2;
+        const gg = ctx.createRadialGradient(ox, oy, 1, ox, oy, 30 * pulse);
+        gg.addColorStop(0, 'rgba(255,255,255,0.95)');
+        gg.addColorStop(0.35, 'rgba(255,255,255,0.30)');
+        gg.addColorStop(1, 'rgba(255,255,255,0)');
         ctx.save();
-        ctx.globalAlpha = pulse;
-        ctx.drawImage(BgGlow.get((hue + 40) % 360), 0, 0, this.width, this.height);
+        ctx.fillStyle = gg;
+        ctx.beginPath();
+        ctx.arc(ox, oy, 30 * pulse, 0, Math.PI * 2);
+        ctx.fill();
         ctx.restore();
+    }
+
+    groundBelow(x, fromY) {
+        let best = null;
+        for (let i = 0; i < this.blocks.length; i++) {
+            const b = this.blocks[i];
+            if (x < b.x - 4 || x > b.x + b.w + 4) continue;
+            const tocando = b.y >= fromY - 4; // plataforma no nivel do pe ou abaixo
+            const afundado = (fromY >= b.y && fromY <= b.y + b.h); // pe dentro do bloco (robustez)
+            if (tocando || afundado) {
+                if (best === null || b.y < best) best = b.y;
+            }
+        }
+        return best;
+    }
+
+    // [v3] sombras projetadas sob as entidades — leitura instantanea de altura/peso (3D).
+    // Sobre plataformas escuras uma sombra preta pura desaparece, entao cada sombra
+    // ganha tambem um "rim light" branco sutil (marcador hi-tech no chao).
+    drawShadows(g) {
+        if (this.state === 'MENU') return;
+        g.save();
+        const drawOne = (e) => {
+            if (!e || e.dead || e.y < -40) return;
+            const gy = this.groundBelow(e.x + e.width / 2, e.y + e.height);
+            if (gy === null) return;
+            const alt = Math.max(0, gy - (e.y + e.height));
+            const k = Math.max(0.35, 1 - alt / 430);
+            const rx = Math.max(6, e.width * 0.62 * k);
+            const ry = Math.max(2, 6.5 * k);
+            const cx = e.x + e.width / 2;
+            const cy = gy + 4;
+            g.globalAlpha = 0.6 * k;
+            g.fillStyle = 'rgb(0,0,0)';
+            g.beginPath();
+            g.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+            g.fill();
+            g.globalAlpha = 0.20 * k;
+            g.strokeStyle = 'rgb(255,255,255)';
+            g.lineWidth = 1;
+            g.beginPath();
+            g.ellipse(cx, cy, rx + 2, ry + 1.5, 0, 0, Math.PI * 2);
+            g.stroke();
+        };
+        drawOne(this.player);
+        for (let i = 0; i < this.enemies.length; i++) drawOne(this.enemies[i]);
+        g.restore();
+    }
+
+    draw() {
+        const t = Date.now() / 1000;
+        this.drawBackground(ctx); // [v3] fundo em camadas (estrelas, torres, grade, neblina)
         
         ctx.save();
         if (this.shake > 0.5) {
@@ -2770,21 +3815,29 @@ class Game {
         }
         this.drawBgDust(ctx); // [JUICE] poeira arcana de fundo
         if (this.state === 'BOSS_DEATH_CINEMATIC') {
+            // [v4] camera: aproxima do chefe morrendo e, apos a detonacao, volta suave
             let elapsed = Date.now() - this.cinematicStartTime;
             let targetX = this.cinematicBoss.x + this.cinematicBoss.width / 2;
             let targetY = this.cinematicBoss.y + this.cinematicBoss.height / 2;
-            let progress = Math.min(1, elapsed / 3000); 
-            let shakeIntensity = elapsed < 3000 ? progress * 6 : 0;
-            let shakeX = (Math.random() - 0.5) * shakeIntensity;
-            let shakeY = (Math.random() - 0.5) * shakeIntensity;
-            let zoom = 1 + (progress * 0.5); 
-            let startCamX = this.width / 2;
-            let startCamY = this.height / 2;
-            let currentCamX = startCamX + (targetX - startCamX) * progress;
-            let currentCamY = startCamY + (targetY - startCamY) * progress;
+            let zoom, camX, camY, shakeX = 0, shakeY = 0;
+            if (elapsed < 2800) {
+                let progress = Math.min(1, elapsed / 2400);
+                let pe = 1 - Math.pow(1 - progress, 2);
+                shakeX = (Math.random() - 0.5) * progress * 6;
+                shakeY = (Math.random() - 0.5) * progress * 6;
+                zoom = 1 + pe * 0.42;
+                camX = this.width / 2 + (targetX - this.width / 2) * pe;
+                camY = this.height / 2 + (targetY - this.height / 2) * pe;
+            } else {
+                let back = Math.min(1, (elapsed - 2800) / 1100);
+                let be = 1 - Math.pow(1 - back, 3);
+                zoom = 1.42 + (1 - 1.42) * be;
+                camX = targetX + (this.width / 2 - targetX) * be;
+                camY = targetY + (this.height / 2 - targetY) * be;
+            }
             ctx.translate(this.width / 2, this.height / 2);
             ctx.scale(zoom, zoom);
-            ctx.translate(-currentCamX + shakeX, -currentCamY + shakeY);
+            ctx.translate(-camX + shakeX, -camY + shakeY);
         }
 
         if (this.showTeleportZonesUntil && Date.now() < this.showTeleportZonesUntil) {
@@ -2803,6 +3856,7 @@ class Game {
         }
 
         if (this.terrainCanvas) ctx.drawImage(this.terrainCanvas, 0, 0);
+        this.drawShadows(ctx); // [v3] sombras 3D sob as entidades
         
         if (this.player && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC') {
             const tip = this.player.getStaffTip();
@@ -2837,8 +3891,42 @@ class Game {
         this.lightningEffects.forEach(l => l.draw(ctx));
         this.floatingTexts.forEach(t => t.draw(ctx));
         this.shockwaves.forEach(s => s.draw(ctx)); // [JUICE]
+        // [v4] fragmentos da morte do chefe (casca se despedaçando)
+        if (this.cinematicShards && this.cinematicShards.length > 0) {
+            for (let i = 0; i < this.cinematicShards.length; i++) {
+                const sh = this.cinematicShards[i];
+                ctx.save();
+                ctx.translate(sh.x, sh.y);
+                ctx.rotate(sh.rot);
+                ctx.fillStyle = sh.color;
+                ctx.beginPath();
+                for (let v = 0; v < sh.verts.length; v++) {
+                    const vx = sh.verts[v][0] * sh.size, vy = sh.verts[v][1] * sh.size;
+                    if (v === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+                }
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+            }
+        }
 
         ctx.restore();
+
+        // [v4] detonacao: clarao branco no pico -> pos-glow VIOLETA que decai
+        // (branco puro indo direto ao preto le como corte de UI; o glow colore le como explosao)
+        if (this.state === 'BOSS_DEATH_CINEMATIC' && Date.now() < (this.cinematicFlashUntil || 0)) {
+            const k = (this.cinematicFlashUntil - Date.now()) / 520; // 1 -> 0
+            const wA = Math.max(0, (k - 0.5) * 2) * 0.9;      // branco no comeco
+            const vA = Math.max(0, 1 - Math.abs(k - 0.42) / 0.42) * 0.4; // violeta depois
+            if (vA > 0.01) {
+                ctx.fillStyle = `rgba(191,0,255,${vA.toFixed(3)})`;
+                ctx.fillRect(0, 0, this.width, this.height);
+            }
+            if (wA > 0.01) {
+                ctx.fillStyle = `rgba(255,255,255,${wA.toFixed(3)})`;
+                ctx.fillRect(0, 0, this.width, this.height);
+            }
+        }
 
         this.drawBossBar(ctx); // [JUICE] barra do chefe no topo
 
@@ -2861,7 +3949,7 @@ class Game {
         }
 
         if (this.state === 'BOSS_CONFIRM' || this.state === 'UPGRADE_MENU' || this.state === 'PAUSED') {
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)'; ctx.fillRect(0, 0, this.width, this.height);
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.45)'; ctx.fillRect(0, 0, this.width, this.height);
         }
     }
 }
@@ -3192,6 +4280,13 @@ class CompanionOrb {
             }
         }
 
+        // [v4] halo suave atras de tudo (o orbe "emite luz")
+        ctx.save();
+        ctx.globalAlpha = 0.3 + Math.sin(t * 2.4) * 0.08;
+        const hsz = coreSize * 2.3;
+        ctx.drawImage(coreSprite, this.x - hsz / 2, this.y - hsz / 2, hsz, hsz);
+        ctx.restore();
+
         // ===== Anel rúnico externo (girando) =====
         const ringSize = 42 * pulse;
         ctx.save();
@@ -3230,6 +4325,19 @@ class CompanionOrb {
             ctx.beginPath();
             ctx.arc(sx, sy, Math.max(0.3, ss), 0, Math.PI * 2);
             ctx.fill();
+        }
+
+        // [v4] mini-orbes irmaos orbitando (eliptico = sensacao de profundidade 3D)
+        for (let m = 0; m < 2; m++) {
+            const ma = t * (1.5 + m * 0.85) + m * Math.PI;
+            const mr = 24 + Math.sin(t * 1.4 + m * 2.2) * 6;
+            const mx = this.x + Math.cos(ma) * mr;
+            const my = this.y + Math.sin(ma) * mr * 0.5;
+            const msz = 10 + Math.sin(t * 4.6 + m * 1.7) * 3;
+            ctx.save();
+            ctx.globalAlpha = 0.85;
+            ctx.drawImage(coreSprite, mx - msz / 2, my - msz / 2, msz, msz);
+            ctx.restore();
         }
 
         // ===== Flash ao atirar =====
@@ -3760,7 +4868,29 @@ class Player {
     shoot() {
         const tip = this.getStaffTip();
         const centerX = tip.x; const centerY = tip.y;
-        const angle = tip.angle;
+        let angle = tip.angle;
+
+        // [FIX v3] MIRA GRUDADA + TIRO PREDITIVO: no celular com mira automatica o cajado
+        // aponta para o inimigo REAL (referencia visual), mas o projetil sai antecipando
+        // o movimento dele (lead) — assim os tiros nao erram quando o alvo anda de lado.
+        const mc = window.mobileControls;
+        const locked = (window.isMobileDevice && !window.aimJoystickEnabled && mc) ? mc.lockedEnemy : null;
+        if (locked && !locked.dead && locked.y > -30) {
+            const ex = locked.x + locked.width / 2;
+            const ey = locked.y + locked.height / 2;
+            const vx = locked.estVX || 0, vy = locked.estVY || 0;
+            let tFly = Math.hypot(ex - centerX, ey - centerY) / BULLET_SPEED_PPS;
+            for (let k = 0; k < 2; k++) {
+                tFly = Math.min(0.65, Math.hypot(ex + vx * tFly - centerX, ey + vy * tFly - centerY) / BULLET_SPEED_PPS);
+            }
+            let aimX = ex + vx * tFly, aimY = ey + vy * tFly;
+            const dxp = aimX - ex, dyp = aimY - ey;
+            const dp = Math.hypot(dxp, dyp);
+            if (dp > 150) { aimX = ex + (dxp / dp) * 150; aimY = ey + (dyp / dp) * 150; }
+            const leadAngle = Math.atan2(aimY - centerY, aimX - centerX);
+            if (Math.abs(leadAngle - angle) < 0.9) angle = leadAngle;
+        }
+
         this.muzzleFlashUntil = Date.now() + 70; this.muzzleFlashAngle = angle; // [JUICE]
         let dmg = this.stats.damage;
         let critou = false;
@@ -3800,6 +4930,18 @@ class Player {
             this.manaShieldReady = false; this.manaShieldCooldown = Date.now() + 20000; 
             document.getElementById('mana-shield-indicator').style.display = 'none';
             game.addFloatingText(this.x, this.y - 20, TEXTS[currentLang].blocked, "#4dff4d");
+            // [v4] o escudo ESTILHACA: anel de choque + fragmentos verdes voando
+            const scx = this.x + this.width / 2, scy = this.y + this.height / 2;
+            game.spawnShockwave(scx, scy, 95, '#4dff4d', 420, 3);
+            game.createExplosion(scx, scy, '#a8ffbe', 10, 5, 5, 420);
+            for (let i = 0; i < 12; i++) {
+                if (game.particles.length >= game.particleCap) break;
+                const a = (i / 12) * Math.PI * 2 + Math.random() * 0.4;
+                const sp = 2 + Math.random() * 3;
+                const p = ObjectPool.getParticle(scx + Math.cos(a) * 46, scy + Math.sin(a) * 46, '#4dff4d', 3 + Math.random() * 4, 560, 0);
+                p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp;
+                game.particles.push(p);
+            }
             audioManager.playSfx('shatter'); this.invulnUntil = Date.now() + 3000; return;
         }
 
@@ -3849,10 +4991,21 @@ class Player {
     draw(ctx) {
         if (Date.now() < this.invulnUntil && Math.floor(Date.now() / 100) % 2 === 0 && Date.now() >= this.dashActiveUntil) return;
         if (this.manaShieldReady) {
-            const d = 100 + Math.sin(Date.now() / 300) * 5;
+            // [v4] escudo com VIDA: hexagono girando + contra-anel (profundidade 3D)
+            const cxS = this.x + this.width / 2, cyS = this.y + this.height / 2;
+            const d = 102 + Math.sin(Date.now() / 300) * 5;
             ctx.save();
-            ctx.globalAlpha = 0.75;
-            ctx.drawImage(ShieldSprite.get(), this.x + this.width/2 - d/2, this.y + this.height/2 - d/2, d, d);
+            ctx.translate(cxS, cyS);
+            ctx.rotate(Date.now() / 2400);
+            ctx.globalAlpha = 0.78;
+            ctx.drawImage(ShieldSprite.get(), -d / 2, -d / 2, d, d);
+            ctx.restore();
+            ctx.save();
+            ctx.translate(cxS, cyS);
+            ctx.rotate(-Date.now() / 3100);
+            ctx.globalAlpha = 0.26;
+            const d2 = d * 1.24;
+            ctx.drawImage(ShieldSprite.get(), -d2 / 2, -d2 / 2, d2, d2);
             ctx.restore();
         }
 
@@ -3873,6 +5026,7 @@ class Player {
         const sq = this.squashY;
         ctx.save();
         ctx.translate(this.x + this.width / 2, this.y + bobY + this.height);
+        ctx.rotate(Math.max(-0.06, Math.min(0.06, this.vx * 0.018))); // [v3] inclinacao ao andar
         ctx.scale(1 / sq, sq);
         if (img && img.complete && img.naturalHeight !== 0) {
             const proporcao = img.naturalWidth / img.naturalHeight;
@@ -4143,6 +5297,15 @@ class Enemy {
         if (this.isGolden && this.trailTick % 10 === 0) {
             game.createParticle(this.x + this.width / 2 + (Math.random() - 0.5) * 22, this.y + this.height / 2 + (Math.random() - 0.5) * 22, '#ffd700', 2 + Math.random() * 2, 420, 0.3);
         }
+        // [v4] veneno: bolhas toxicas sobem borbulhando do inimigo envenenado
+        if (this.poisonActive && this.trailTick % 7 === 0 && game.particles.length < game.particleCap) {
+            const bx = this.x + this.width / 2 + (Math.random() - 0.5) * this.width * 0.9;
+            const by = this.y + this.height * (0.2 + Math.random() * 0.6);
+            const p = ObjectPool.getParticle(bx, by, Math.random() < 0.5 ? '#3dff6e' : '#8dffab', 2 + Math.random() * 2.5, 620, 0);
+            p.vx = (Math.random() - 0.5) * 0.5;
+            p.vy = -(0.35 + Math.random() * 0.7);
+            game.particles.push(p);
+        }
         this.x = Math.max(0, Math.min(game.width - this.width, this.x));
 
         let fireRateMod = 1.0;
@@ -4297,8 +5460,15 @@ class Enemy {
             let offsetCentralizado = (tamanhoVisual - this.width) / 2;
             if (Date.now() - this.lastHitTime < 100) ctx.globalAlpha = 0.5;
 
-            if (tintedSprite) ctx.drawImage(tintedSprite, this.x - offsetCentralizado, this.y - offsetCentralizado, tamanhoVisual, tamanhoVisual);
-            else ctx.drawImage(img, this.x - offsetCentralizado, this.y - offsetCentralizado, tamanhoVisual, tamanhoVisual);
+            // [v3] vida 3D: respiracao (squash sutil) + inclinacao na direcao do movimento
+            const breathe = 1 + Math.sin(Date.now() / 320 + this.movePhase) * 0.035;
+            const tilt = Math.max(-0.10, Math.min(0.10, (this.estVX || 0) / 1400));
+            ctx.save();
+            ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+            ctx.rotate(tilt);
+            ctx.scale(breathe, 2 - breathe);
+            ctx.drawImage(tintedSprite || img, -tamanhoVisual / 2, -tamanhoVisual / 2, tamanhoVisual, tamanhoVisual);
+            ctx.restore();
 
             if (this.kamikaze && this.kamikazeState === 'aviso' && Math.floor(Date.now() / 130) % 2 === 0) {
                 ctx.font = '26px "Press Start 2P"';
@@ -4317,6 +5487,19 @@ class Enemy {
             }
 
             ctx.restore();
+
+            // [v4] veneno: anel toxico pulsante ao redor do inimigo
+            if (this.poisonActive) {
+                const pr = this.width * 0.95 + Math.sin(Date.now() / 160 + this.movePhase) * 3;
+                ctx.save();
+                ctx.globalAlpha = 0.28 + Math.sin(Date.now() / 160 + this.movePhase) * 0.14;
+                ctx.strokeStyle = '#3dff6e';
+                ctx.lineWidth = 1.6;
+                ctx.beginPath();
+                ctx.arc(this.x + this.width / 2, this.y + this.height / 2, pr, 0, Math.PI * 2);
+                ctx.stroke();
+                ctx.restore();
+            }
 
             // 5. Barra de HP
             ctx.fillStyle = 'red'; ctx.fillRect(this.x, this.y - 8, this.width, 3);
@@ -4535,8 +5718,33 @@ class Boss extends Enemy {
                 }
                 ctx.restore();
             }
-            if (bossTinted) ctx.drawImage(bossTinted, this.x - offsetCentralizado, this.y - offsetCentralizado, tamanhoVisual, tamanhoVisual);
-            else ctx.drawImage(img, this.x - offsetCentralizado, this.y - offsetCentralizado, tamanhoVisual, tamanhoVisual);
+            // [v3] tremor no sprite enquanto carrega o especial
+            let shx = this.isChargingShot ? (Math.random() - 0.5) * 3 : 0;
+            let shy = this.isChargingShot ? (Math.random() - 0.5) * 3 : 0;
+            const drawImg = bossTinted || img;
+            if (this._cinematic) {
+                // [v4] morte cinematica: tremor crescente + encolhimento + glitch de video
+                shx += (Math.random() - 0.5) * (this._cineJitter || 0);
+                shy += (Math.random() - 0.5) * (this._cineJitter || 0);
+                const cs = Math.max(0.05, this._cineScale === undefined ? 1 : this._cineScale);
+                ctx.save();
+                ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
+                ctx.scale(cs, cs);
+                ctx.drawImage(drawImg, -tamanhoVisual / 2 + shx, -tamanhoVisual / 2 + shy, tamanhoVisual, tamanhoVisual);
+                if (this._cineGlitch) {
+                    for (let gb = 0; gb < 3; gb++) {
+                        const gby = (Math.random() - 0.5) * tamanhoVisual * 0.9;
+                        const gbh = 2 + Math.random() * 4;
+                        ctx.globalAlpha = 0.22 + Math.random() * 0.5;
+                        ctx.fillStyle = '#ffffff';
+                        ctx.fillRect(-tamanhoVisual / 2 + (Math.random() - 0.5) * 14, gby, tamanhoVisual, gbh);
+                    }
+                    ctx.globalAlpha = 1;
+                }
+                ctx.restore();
+            } else {
+                ctx.drawImage(drawImg, this.x - offsetCentralizado + shx, this.y - offsetCentralizado + shy, tamanhoVisual, tamanhoVisual);
+            }
             
             if (this.shieldActive) {
                 const d = 130 + Math.sin(Date.now() / 250) * 8;
@@ -5071,13 +6279,83 @@ class Particle {
 }
 
 class LightningBeam {
-    constructor(targetX, targetY, isThick) { this.x = targetX; this.y = targetY; this.spawnTime = Date.now(); this.duration = 333; this.dead = false; this.isThick = isThick; }
+    // [v4] raio de verdade: caminho jagged gerado no impacto, galhos laterais,
+    // brilho em 3 camadas (halo -> corpo -> nucleo branco) e flash no ponto de acerto.
+    constructor(targetX, targetY, isThick) {
+        this.x = targetX; this.y = targetY; this.spawnTime = Date.now();
+        this.duration = isThick ? 420 : 320; this.dead = false; this.isThick = isThick;
+        const segs = 10 + (isThick ? 4 : 0);
+        this.pts = [];
+        for (let i = 0; i <= segs; i++) {
+            const yy = (this.y / segs) * i;
+            const jitter = (i === 0 || i === segs) ? 0 : (Math.random() - 0.5) * (isThick ? 46 : 30);
+            this.pts.push({ x: this.x + jitter, y: yy });
+        }
+        this.branches = [];
+        const nb = isThick ? 3 : 2;
+        for (let b = 0; b < nb; b++) {
+            const startIdx = 2 + Math.floor(Math.random() * (segs - 4));
+            let bx = this.pts[startIdx].x, by = this.pts[startIdx].y;
+            const dir = Math.random() < 0.5 ? -1 : 1;
+            const bl = [];
+            for (let j = 0; j < 3; j++) {
+                bx += dir * (8 + Math.random() * 18);
+                by += (this.y / segs) * (0.5 + Math.random());
+                bl.push({ x: bx, y: by });
+            }
+            this.branches.push({ from: startIdx, pts: bl });
+        }
+    }
     update() { if (Date.now() - this.spawnTime > this.duration) this.dead = true; }
+    _stroke(ctx) {
+        ctx.beginPath();
+        for (let i = 0; i < this.pts.length; i++) {
+            if (i === 0) ctx.moveTo(this.pts[i].x, this.pts[i].y);
+            else ctx.lineTo(this.pts[i].x, this.pts[i].y);
+        }
+        ctx.stroke();
+    }
     draw(ctx) {
-        let remaining = this.duration - (Date.now() - this.spawnTime); const opacity = Math.max(0, remaining / this.duration);
-        ctx.save(); ctx.globalAlpha = opacity; let width = this.isThick ? 16 : 10;
-        ctx.strokeStyle = '#ffff00'; ctx.lineWidth = width; ctx.beginPath(); ctx.moveTo(this.x, 0); ctx.lineTo(this.x, this.y); ctx.stroke();
-        ctx.strokeStyle = 'white'; ctx.lineWidth = width / 3; ctx.beginPath(); ctx.moveTo(this.x, 0); ctx.lineTo(this.x, this.y); ctx.stroke();
+        const age = Date.now() - this.spawnTime;
+        const k = Math.max(0, 1 - age / this.duration);
+        if (k <= 0) return;
+        const flicker = (age < 70) ? 1 : (Math.random() < 0.25 ? 0.4 : 0.9);
+        ctx.save();
+        ctx.globalAlpha = k * flicker;
+        ctx.lineJoin = 'round'; ctx.lineCap = 'round';
+        // halo
+        ctx.strokeStyle = 'rgba(185,215,255,0.35)';
+        ctx.lineWidth = this.isThick ? 18 : 11;
+        this._stroke(ctx);
+        // corpo
+        ctx.strokeStyle = '#e8f2ff';
+        ctx.lineWidth = this.isThick ? 7 : 4.5;
+        this._stroke(ctx);
+        // nucleo
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = this.isThick ? 2.6 : 1.8;
+        this._stroke(ctx);
+        // galhos
+        ctx.strokeStyle = 'rgba(255,255,255,0.75)';
+        ctx.lineWidth = 1.4;
+        for (let b = 0; b < this.branches.length; b++) {
+            const br = this.branches[b];
+            ctx.beginPath();
+            ctx.moveTo(this.pts[br.from].x, this.pts[br.from].y);
+            for (let j = 0; j < br.pts.length; j++) ctx.lineTo(br.pts[j].x, br.pts[j].y);
+            ctx.stroke();
+        }
+        // flash de impacto
+        if (age < 120) {
+            const r = (this.isThick ? 44 : 28) * (1 - age / 120);
+            const gg = ctx.createRadialGradient(this.x, this.y, 1, this.x, this.y, r);
+            gg.addColorStop(0, 'rgba(255,255,255,0.85)');
+            gg.addColorStop(1, 'rgba(255,255,255,0)');
+            ctx.fillStyle = gg;
+            ctx.beginPath();
+            ctx.arc(this.x, this.y, r, 0, Math.PI * 2);
+            ctx.fill();
+        }
         ctx.restore();
     }
 }
@@ -5114,8 +6392,31 @@ document.addEventListener('webkitfullscreenchange', updateFullscreenIcon);
  */
 function initGame() {
     setLanguage('pt'); 
+    // [v4] o jogo SEMPRE nasce do preto (adeus transicao seca / flash branco)
+    const boot = document.getElementById('boot-black');
+    if (boot) {
+        requestAnimationFrame(() => {
+            boot.style.opacity = '0';
+            setTimeout(() => boot.remove(), 650);
+        });
+    }
+
+    // [v4] titulo letra a letra: cada letra sobe girando em 3D
+    const titleEl = document.querySelector('.game-title');
+    if (titleEl && !titleEl.dataset.split) {
+        const txt = titleEl.textContent;
+        titleEl.dataset.split = '1';
+        titleEl.innerHTML = txt.split('').map((ch, i) =>
+            `<span style="animation-delay:${(0.16 + i * 0.042).toFixed(3)}s">${ch === ' ' ? '&nbsp;' : ch}</span>`).join('');
+    }
+    setTimeout(() => document.body.classList.add('menu-ready'), 1700);
+
     // [LAYOUT] marca o body como mobile: hints de teclado somem, hint de joystick aparece
-    if (window.isMobileDevice) document.body.classList.add('mobile');
+    if (window.isMobileDevice) {
+        document.body.classList.add('mobile');
+        const pb = document.getElementById('pause-btn-ingame');
+        if (pb) pb.innerText = 'PAUSE'; // sem "(ESC)" no celular
+    }
     game = new Game();
     Perf.init(); // [PERFORMANCE] qualidade adaptativa
     // [LAYOUT] esconde o botao de tela cheia se o navegador nao suportar (ex.: iPhone antigo)
@@ -5134,7 +6435,7 @@ function initGame() {
         const isUnlocked = unlockedData.includes(c.id); const el = document.createElement('div');
         el.className = `char-card ${isUnlocked ? '' : 'char-locked'}`; if (index === 0) el.classList.add('selected');
         
-        el.innerHTML = `<img src="Assets/mage${c.id}.png" style="width:64px;height:64px;display:block;margin:0 auto;object-fit:contain;" alt="Mage ${c.id}">
+        el.innerHTML = `<img src="Assets/mage${c.id}.png" onerror="this.style.display='none';this.parentElement.classList.add('img-missing')" style="width:64px;height:64px;display:block;margin:0 auto;object-fit:contain;" alt="Mage ${c.id}">
             <p>${c.name}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px">${c.cost} Souls</p>` : ''}`;
             
         el.onclick = () => {
@@ -5166,7 +6467,7 @@ function initGame() {
         const isUnlocked = unlockedStaffs.includes(s.id); const el = document.createElement('div');
         el.className = `char-card ${isUnlocked ? '' : 'char-locked'}`; if (window.selectedStaff === s.id) el.classList.add('selected');
         
-        el.innerHTML = `<img src="Assets/cajado${s.id}.png" style="width:44px;height:84px;display:block;margin:0 auto;object-fit:contain;" alt="Cajado ${s.id}">
+        el.innerHTML = `<img src="Assets/cajado${s.id}.png" onerror="this.style.display='none';this.parentElement.classList.add('img-missing')" style="width:44px;height:84px;display:block;margin:0 auto;object-fit:contain;" alt="Cajado ${s.id}">
             <p>${s.name}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px">${s.cost} Souls</p>` : ''}`;
             
         el.onclick = () => {
@@ -5207,6 +6508,22 @@ function startGame() {
 
 function confirmBossWave() { document.getElementById('boss-confirm-menu').classList.add('hidden'); game.triggerConfirmedBossWave(); }
 function returnToMenu() { location.reload(); }
+
+// [v3] DESISTIR tem peso: som triste, a tela apaga em vermelho e o menu "cai" derrotado
+function confirmGiveUp() {
+    audioManager.playWav('botton');
+    audioManager.playSfx('giveup');
+    const ov = document.getElementById('giveup-overlay');
+    if (ov) ov.style.opacity = '1';
+    const pmenu = document.getElementById('pause-menu');
+    if (pmenu) pmenu.classList.add('giving-up');
+    document.body.classList.add('quitting');
+    // [v4] derrota em 3 tempos: tela cai -> vermelho-derrota escurece -> PRETO absoluto
+    // -> o menu principal renasce do preto com as letras subindo (sem corte seco)
+    const blk = document.getElementById('giveup-black');
+    setTimeout(() => { if (blk) blk.style.opacity = '1'; }, 1350);
+    setTimeout(() => location.reload(), 2500);
+}
 
 /**
  * SUPORTE A CELULAR
@@ -5250,42 +6567,49 @@ if (window.isMobileDevice) {
         const aimBase = document.getElementById('aim-base');
         const aimKnob = document.getElementById('aim-knob');
         const jumpBtn = document.getElementById('jump-btn');
-        const GAME_W = 1472, GAME_H = 690;
         window.controlsEditMode = false;
 
+        // [FIX v3] Os controles agora ficam ancorados nos CANTOS DA TELA (viewport),
+        // nao colados ao canvas. Funciona em retrato, paisagem, com ou sem tela cheia,
+        // em qualquer aparelho. Layout salvo em fracoes (fx/fy/size) da viewport.
         const defaultLayout = {
-            move: { x: 40, y: 480, size: 180 },
-            jump: { x: 1262, y: 490, size: 170 },
-            aim: { x: 1272, y: 160, size: 160 }
+            move: { fx: 0.035, fy: 0.66, size: 0.34 },  // joystick: canto esquerdo inferior
+            jump: { fx: 0.875, fy: 0.04, size: 0.32 },  // PULAR: canto direito SUPERIOR
+            aim:  { fx: 0.85,  fy: 0.70, size: 0.30 }   // mira manual: canto direito inferior
         };
         let layout;
-        try { layout = JSON.parse(localStorage.getItem('mobileControlsLayout')) || defaultLayout; }
+        try { layout = JSON.parse(localStorage.getItem('mobileControlsLayoutV3')) || defaultLayout; }
         catch (err) { layout = defaultLayout; }
         ['move', 'jump', 'aim'].forEach(k => { if (!layout[k]) layout[k] = { ...defaultLayout[k] }; });
 
+        function controlSize(c) {
+            const vp = getViewportSize();
+            return Math.max(84, Math.min(200, c.size * Math.min(vp.w, vp.h)));
+        }
+        function place(el, c) {
+            const vp = getViewportSize();
+            const size = controlSize(c);
+            let x = c.fx * vp.w, y = c.fy * vp.h;
+            x = Math.max(10, Math.min(vp.w - size - 10, x));
+            y = Math.max(10, Math.min(vp.h - size - 10, y));
+            el.style.width = el.style.height = size + 'px';
+            el.style.left = x + 'px';
+            el.style.top = y + 'px';
+            if (el === jumpBtn) el.style.fontSize = Math.max(10, Math.round(size * 0.15)) + 'px';
+        }
         function clampLayout() {
             ['move', 'jump', 'aim'].forEach(k => {
                 const c = layout[k];
-                c.size = Math.max(80, Math.min(400, c.size));
-                c.x = Math.max(0, Math.min(GAME_W - c.size, c.x));
-                c.y = Math.max(0, Math.min(GAME_H - c.size, c.y));
+                c.size = Math.max(0.2, Math.min(0.55, c.size));
+                c.fx = Math.max(0, Math.min(0.97, c.fx));
+                c.fy = Math.max(0, Math.min(0.97, c.fy));
             });
         }
 
-        function place(el, c, rect, s) {
-            el.style.width = (c.size * s) + 'px';
-            el.style.height = (c.size * s) + 'px';
-            el.style.left = (rect.left + c.x * s) + 'px';
-            el.style.top = (rect.top + c.y * s) + 'px';
-            if (el === jumpBtn) el.style.fontSize = Math.max(9, Math.round(c.size * s * 0.12)) + 'px';
-        }
-
         window.positionMobileControls = function () {
-            const rect = canvas.getBoundingClientRect();
-            const s = rect.width / GAME_W;
-            place(joyBase, layout.move, rect, s);
-            place(aimBase, layout.aim, rect, s);
-            place(jumpBtn, layout.jump, rect, s);
+            place(joyBase, layout.move);
+            place(aimBase, layout.aim);
+            place(jumpBtn, layout.jump);
         };
 
         window.aimJoystickEnabled = localStorage.getItem('aimJoystickEnabled') === '1';
@@ -5313,7 +6637,7 @@ if (window.isMobileDevice) {
         window.openControlsEditor = function () {
             window.controlsEditMode = true;
             clearSelection();
-            document.getElementById('main-menu').classList.add('hidden');
+            document.getElementById('main-menu').classList.remove('hidden');
             document.getElementById('controls-editor').classList.remove('hidden');
             updateAimVisibility();
             positionMobileControls();
@@ -5321,9 +6645,9 @@ if (window.isMobileDevice) {
         function closeControlsEditor(save) {
             if (save) {
                 clampLayout();
-                localStorage.setItem('mobileControlsLayout', JSON.stringify(layout));
+                localStorage.setItem('mobileControlsLayoutV3', JSON.stringify(layout));
             } else {
-                try { layout = JSON.parse(localStorage.getItem('mobileControlsLayout')) || defaultLayout; }
+                try { layout = JSON.parse(localStorage.getItem('mobileControlsLayoutV3')) || defaultLayout; }
                 catch (err) { layout = defaultLayout; }
                 ['move', 'jump', 'aim'].forEach(k => { if (!layout[k]) layout[k] = { ...defaultLayout[k] }; });
             }
@@ -5334,9 +6658,10 @@ if (window.isMobileDevice) {
             updateAimVisibility();
             positionMobileControls();
         }
-        function adjustSelectedSize(delta) {
+        function adjustSelectedSize(deltaPx) {
             if (!selectedControl) return;
-            layout[selectedControl].size += delta;
+            const vp = getViewportSize();
+            layout[selectedControl].size += deltaPx / Math.min(vp.w, vp.h);
             clampLayout();
             positionMobileControls();
         }
@@ -5347,8 +6672,8 @@ if (window.isMobileDevice) {
             layout = { move: { ...defaultLayout.move }, jump: { ...defaultLayout.jump }, aim: { ...defaultLayout.aim } };
             positionMobileControls();
         });
-        document.getElementById('ce-minus').addEventListener('click', () => adjustSelectedSize(-20));
-        document.getElementById('ce-plus').addEventListener('click', () => adjustSelectedSize(20));
+        document.getElementById('ce-minus').addEventListener('click', () => adjustSelectedSize(-16));
+        document.getElementById('ce-plus').addEventListener('click', () => adjustSelectedSize(16));
 
         function setupControl(el, key, onStart, onMove, onEnd) {
             el.addEventListener('touchstart', (e) => {
@@ -5356,8 +6681,8 @@ if (window.isMobileDevice) {
                 if (window.controlsEditMode) {
                     clearSelection(); selectedControl = key; el.classList.add('control-selected');
                     const t = e.changedTouches[0];
-                    const rect = canvas.getBoundingClientRect();
-                    editDrag = { id: t.identifier, startX: t.clientX, startY: t.clientY, origX: layout[key].x, origY: layout[key].y, scale: rect.width / GAME_W };
+                    const vp = getViewportSize();
+                    editDrag = { id: t.identifier, startX: t.clientX, startY: t.clientY, origFX: layout[key].fx, origFY: layout[key].fy, vpW: vp.w, vpH: vp.h };
                     return;
                 }
                 if (onStart) onStart(e);
@@ -5368,10 +6693,8 @@ if (window.isMobileDevice) {
                     for (let i = 0; i < e.changedTouches.length; i++) {
                         const t = e.changedTouches[i];
                         if (t.identifier !== editDrag.id) continue;
-                        const dx = (t.clientX - editDrag.startX) / editDrag.scale;
-                        const dy = (t.clientY - editDrag.startY) / editDrag.scale;
-                        layout[key].x = editDrag.origX + dx;
-                        layout[key].y = editDrag.origY + dy;
+                        layout[key].fx = editDrag.origFX + (t.clientX - editDrag.startX) / editDrag.vpW;
+                        layout[key].fy = editDrag.origFY + (t.clientY - editDrag.startY) / editDrag.vpH;
                         clampLayout();
                         positionMobileControls();
                     }
@@ -5439,16 +6762,48 @@ if (window.isMobileDevice) {
         updateAimVisibility();
         positionMobileControls();
         setTimeout(positionMobileControls, 300);
+
+        // [FIX v3] controles so aparecem DURANTE o jogo (no menu ficam escondidos,
+        // antes vazavam por cima do botao de tela cheia e do seletor de idioma)
+        let _ctrlVis = null;
+        window.syncControlsVisibility = function () {
+            const emJogo = window.controlsEditMode || (typeof game !== 'undefined' && game && game.state !== 'MENU' && game.state !== 'GAME_OVER');
+            if (emJogo === _ctrlVis) return; // so mexe no DOM quando muda
+            _ctrlVis = emJogo;
+            controls.style.display = emJogo ? 'block' : 'none';
+        };
+        window.syncControlsVisibility();
+
+        // [FIX v3] aviso elegante para girar o aparelho (jogo e paisagem) — nao bloqueia
+        const rotHint = document.getElementById('rotate-hint');
+        function checkOrientation() {
+            if (!rotHint) return;
+            const portrait = window.innerHeight > window.innerWidth;
+            if (portrait) {
+                rotHint.classList.add('show');
+                clearTimeout(checkOrientation._t);
+                checkOrientation._t = setTimeout(() => rotHint.classList.remove('show'), 3800);
+            } else {
+                rotHint.classList.remove('show');
+            }
+        }
+        window.addEventListener('orientationchange', () => setTimeout(checkOrientation, 250));
+        window.addEventListener('resize', checkOrientation);
+        checkOrientation();
     })();
 
+    // [FIX v3] MIRA GRUDADA: a mira (cajado) fixa no inimigo REAL — e apenas uma
+    // referencia do alvo. Quem antecipa o movimento e o PROJETIL (Player.shoot).
     window.updateMobileAim = function () {
         if (typeof game === 'undefined' || !game || !game.player) return;
         const cx = game.player.x + game.player.width / 2;
         const cy = game.player.y + game.player.height / 2;
+        const mc = window.mobileControls;
 
         if (window.aimJoystickEnabled) {
-            game.input.mouse.x = cx + window.mobileControls.aimDX * 500;
-            game.input.mouse.y = cy + window.mobileControls.aimDY * 500;
+            mc.lockedEnemy = null;
+            game.input.mouse.x = cx + mc.aimDX * 500;
+            game.input.mouse.y = cy + mc.aimDY * 500;
             return;
         }
 
@@ -5458,33 +6813,20 @@ if (window.isMobileDevice) {
             const d = Math.hypot((e.x + e.width / 2) - cx, (e.y + e.height / 2) - cy);
             if (d < minDist) { minDist = d; nearest = e; }
         });
+        mc.lockedEnemy = nearest;
 
         let aimX, aimY;
         if (nearest) {
-            // [MIRA PREDITIVA] mira onde o inimigo VAI ESTAR quando o tiro chegar,
-            // em vez de mirar onde ele esta agora (erro de tiro ao mover de lado)
-            let ex = nearest.x + nearest.width / 2;
-            let ey = nearest.y + nearest.height / 2;
-            const vx = nearest.estVX || 0, vy = nearest.estVY || 0;
-            let t = minDist / BULLET_SPEED_PPS;
-            for (let k = 0; k < 2; k++) {
-                t = Math.min(0.65, Math.hypot(ex + vx * t - cx, ey + vy * t - cy) / BULLET_SPEED_PPS);
-            }
-            aimX = ex + vx * t;
-            aimY = ey + vy * t;
-            // trava: o ponto previsto nunca se afasta demais do alvo real
-            const dxp = aimX - ex, dyp = aimY - ey;
-            const dp = Math.hypot(dxp, dyp);
-            if (dp > 160) { aimX = ex + (dxp / dp) * 160; aimY = ey + (dyp / dp) * 160; }
+            aimX = nearest.x + nearest.width / 2;
+            aimY = nearest.y + nearest.height / 2;
         } else {
             aimX = cx; aimY = cy - 500;
         }
 
         // Suavizacao: a mira nao "teleporta" ao trocar de alvo (movimento fluido do cajado)
-        const mc = window.mobileControls;
         if (mc.aimX === undefined) { mc.aimX = aimX; mc.aimY = aimY; }
-        mc.aimX += (aimX - mc.aimX) * 0.14;
-        mc.aimY += (aimY - mc.aimY) * 0.14;
+        mc.aimX += (aimX - mc.aimX) * 0.22;
+        mc.aimY += (aimY - mc.aimY) * 0.22;
         game.input.mouse.x = mc.aimX;
         game.input.mouse.y = mc.aimY;
     };
@@ -5514,8 +6856,10 @@ function toggleSettingsMenu() {
     if (el.classList.contains('hidden')) {
         updateFpsButtons();
         el.classList.remove('hidden');
+        el.classList.remove('closing'); // [v4] reabre com cascata
     } else {
-        el.classList.add('hidden');
+        el.classList.add('closing'); // [v4] fecha com animacao
+        setTimeout(() => { el.classList.add('hidden'); el.classList.remove('closing'); }, 210);
     }
 }
 
@@ -5524,7 +6868,13 @@ function toggleSettingsMenu() {
  */
 function toggleSimpleMenu(id) {
     const el = document.getElementById(id);
-    el.classList.toggle('hidden');
+    if (el.classList.contains('hidden')) {
+        el.classList.remove('hidden');
+        el.classList.remove('closing'); // [v4] reabre com cascata
+    } else {
+        el.classList.add('closing'); // [v4] fecha com animacao
+        setTimeout(() => { el.classList.add('hidden'); el.classList.remove('closing'); }, 210);
+    }
 }
 
 function buildAchievementsUI() {
