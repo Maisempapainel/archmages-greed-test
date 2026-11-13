@@ -524,7 +524,14 @@
         #hud-top-left > div:first-child { text-shadow: 0 0 8px rgba(255,255,255,0.35); }
         .bar-container { clip-path: polygon(5px 0, 100% 0, 100% calc(100% - 5px), calc(100% - 5px) 100%, 0 100%, 0 5px);
             border: none; background: #141414; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.5); height: 12px; }
-        #souls-container { font-family: var(--f-disp); font-weight: 700; font-size: 13px; letter-spacing: 2px; text-shadow: 0 0 10px rgba(77,166,255,0.55); }
+        #souls-container { font-family: var(--f-disp); font-weight: 700; letter-spacing: 2px;
+            display: flex; align-items: center; gap: 9px; }
+        #soul-icon { width: 30px; height: 34px; filter: drop-shadow(0 0 7px rgba(77,166,255,0.75));
+            animation: soulFloat 2.6s ease-in-out infinite; }
+        @keyframes soulFloat { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-3px); } }
+        #souls-right { display: flex; flex-direction: column; align-items: flex-start; line-height: 1.15; }
+        #souls-text { font-size: 20px; color: #dcecff; text-shadow: 0 0 12px rgba(77,166,255,0.65); }
+        #souls-caption { font-family: var(--f-body); font-size: 8px; letter-spacing: 2px; color: #6f93c4; }
         #wave-display { font-family: var(--f-disp); font-weight: 900; letter-spacing: 8px; font-size: clamp(26px, 5vw, 46px); }
         #pause-btn-ingame, #perk-list-btn, #stats-btn { font-family: var(--f-body); font-weight: 700; letter-spacing: 1px;
             clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
@@ -606,7 +613,9 @@
             clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
         }
         body.mobile #pause-btn-ingame { padding: 6px 12px; font-size: 11px; margin: 0; }
-        body.mobile #souls-container { font-size: 11px; }
+        body.mobile #soul-icon { width: 22px; height: 25px; }
+        body.mobile #souls-text { font-size: 15px; }
+        body.mobile #souls-caption { font-size: 7px; }
         body.mobile #perk-list-btn { left: calc(50% - 105px) !important; bottom: 10px !important; padding: 8px 12px !important; }
         body.mobile #stats-btn { left: calc(50% + 12px) !important; bottom: 10px !important; padding: 8px 12px !important; }
     </style>
@@ -698,6 +707,121 @@
             100% { opacity: 0; transform: translate(-50%, calc(-50% + 58px)) scale(1.04); }
         }
     </style>
+
+    <style id="v6-menu">
+        /* ================= v6 — MENUS, PREVIEW & TRANSIÇÃO ================= */
+
+        /* [v6] o cenário atrás do menu fica com um blur LEVÍSSIMO (sai ao jogar) */
+        #gameCanvas { transition: filter 0.55s ease; }
+        body.in-menu #gameCanvas { filter: blur(2px) brightness(0.82); }
+
+        /* [v6] flash + warp ao apertar JOGAR */
+        #launch-flash { position: absolute; inset: 0; z-index: 9500; pointer-events: none; opacity: 0;
+            background: radial-gradient(ellipse at center, rgba(255,255,255,0.92) 0%, rgba(170,200,255,0.38) 45%, rgba(0,0,0,0) 78%); }
+        #launch-flash.go { animation: launchFlash 0.7s ease-out forwards; }
+        @keyframes launchFlash { 0% { opacity: 0; } 16% { opacity: 0.85; } 100% { opacity: 0; } }
+
+        /* [v6] a interface INTEIRA despenca quando você aperta JOGAR */
+        #main-menu.launching { pointer-events: none; }
+        #main-menu.launching > * { animation: uiFall 0.72s cubic-bezier(0.5, 0, 0.9, 0.45) forwards !important; }
+        #main-menu.launching > *:nth-child(1) { animation-delay: 0s; }
+        #main-menu.launching > *:nth-child(2) { animation-delay: 0.05s; }
+        #main-menu.launching > *:nth-child(3) { animation-delay: 0.09s; }
+        #main-menu.launching > *:nth-child(4) { animation-delay: 0.12s; }
+        #main-menu.launching > *:nth-child(5) { animation-delay: 0.15s; }
+        #main-menu.launching > *:nth-child(6) { animation-delay: 0.18s; }
+        #main-menu.launching > *:nth-child(7) { animation-delay: 0.21s; }
+        #main-menu.launching > *:nth-child(8) { animation-delay: 0.24s; }
+        #main-menu.launching > *:nth-child(9) { animation-delay: 0.28s; }
+        #main-menu.launching > *:nth-child(10) { animation-delay: 0.32s; }
+        #main-menu.launching > *:nth-child(11) { animation-delay: 0.36s; }
+        #main-menu.launching > *:nth-child(12) { animation-delay: 0.40s; }
+        #main-menu.launching > *:nth-child(13) { animation-delay: 0.44s; }
+        #main-menu.launching > *:nth-child(14) { animation-delay: 0.48s; }
+        #main-menu.launching > *:nth-child(15) { animation-delay: 0.52s; }
+        @keyframes uiFall { to { transform: translateY(118vh) rotate(3deg); opacity: 0; } }
+
+        /* [v6] PREVIEW do personagem: grande, à direita, NÍTIDO (sem blur) */
+        #hero-preview { position: absolute; right: clamp(8px, 3.2vw, 60px); bottom: 3.5vh;
+            height: min(68vh, 440px); aspect-ratio: 290 / 420; z-index: 6; pointer-events: none;
+            animation: menuRise 0.8s 1.15s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+            filter: drop-shadow(0 0 18px rgba(255,255,255,0.10)); }
+        @media (max-width: 1080px) { #hero-preview { height: min(54vh, 340px); right: 1.5vw; } }
+        @media (orientation: portrait) { #hero-preview { height: min(36vh, 260px); right: 6px; bottom: 8vh; opacity: 0.96; } }
+
+        /* [v6] ícones dos botões do menu: SVGs desenhados, MAIORES (sem exagero) */
+        .menu-btn-row .btn { display: inline-flex; align-items: center; justify-content: center;
+            padding: 9px 14px; min-width: 52px; min-height: 50px; }
+        .menu-btn-row .btn svg { width: 30px; height: 30px; display: block; }
+        #btn-sanctuary { color: #7db8ff; }
+        #btn-sanctuary svg { filter: drop-shadow(0 0 7px rgba(77,166,255,0.55)); }
+        #btn-ach:hover { filter: drop-shadow(0 0 10px rgba(255,255,255,0.5)); }
+        #btn-settings:hover, #btn-sanctuary:hover { filter: drop-shadow(0 0 10px currentColor); }
+        #btn-howto { display: none; font-family: var(--f-disp); font-size: 19px; font-weight: 900; }
+        body.mobile #btn-howto { display: inline-flex; }
+
+        /* [v6] CONFIGURAÇÕES: volume mora aqui agora (e cobre o pause) */
+        #settings-menu { z-index: 130; }
+        #vol-row { display: flex; align-items: center; gap: 14px; margin: 20px 0 4px; }
+        #vol-row #mute-btn { width: 46px; height: 46px; font-size: 19px; padding: 0;
+            display: inline-flex; align-items: center; justify-content: center; }
+        #vol-row input[type=range] { width: 190px; height: 5px; accent-color: #fff; }
+        #vol-label { font-family: var(--f-body); font-size: 10px; letter-spacing: 3px; color: #aaa; }
+
+        /* [v6] manual "COMO JOGAR" (mobile) */
+        #howto-content { max-width: 640px; font-family: var(--f-body); font-size: clamp(10px, 2vw, 12px);
+            line-height: 1.55; color: #cfcfcf; max-height: min(56dvh, 460px); overflow-y: auto; padding: 0 6px; }
+        .ht-row { display: flex; gap: 14px; align-items: flex-start; margin-bottom: 13px; }
+        .ht-ico { width: 38px; text-align: center; font-size: 24px; flex-shrink: 0; filter: drop-shadow(0 0 6px rgba(255,255,255,0.35)); }
+        .ht-row b { color: #fff; letter-spacing: 1px; }
+        #pause-menu #btn-pauseconfig svg { flex-shrink: 0; }
+
+        /* [v6] MENU INICIAL SEM SCROLL no celular em paisagem: layout GRID
+           de 2 colunas (personagens | cajados lado a lado) — tudo cabe na
+           tela, nem uma barrinha de rolagem */
+        @media (orientation: landscape) and (max-height: 540px) {
+            #main-menu { overflow: hidden !important; padding: 4px 10px !important;
+                padding-right: clamp(104px, 18vw, 156px) !important; /* espaco do mago */
+                display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+                grid-auto-rows: min-content; align-content: center; justify-items: center;
+                column-gap: 14px; row-gap: 2px; }
+            #main-menu::before, #main-menu::after { display: none; }
+            #main-menu > .lang-select { grid-column: 1 / -1; margin-bottom: 0; gap: 6px; }
+            #main-menu > .game-title { grid-column: 1 / -1; font-size: clamp(15px, 4vw, 24px) !important; }
+            #main-menu > #menu-subtitle { grid-column: 1 / -1; margin: 0 0 2px; font-size: 8px; }
+            /* PERSONAGENS na coluna 1, CAJADOS na coluna 2 (lado a lado) */
+            #main-menu > p.menu-label:nth-of-type(1) { grid-area: 4 / 1; }
+            #main-menu > #char-selection { grid-area: 5 / 1; margin-bottom: 0; }
+            #main-menu > p.menu-label:nth-of-type(2) { grid-area: 4 / 2; }
+            #main-menu > #staff-selection { grid-area: 5 / 2; margin-bottom: 0; }
+            #main-menu > #btn-play { grid-column: 1 / -1; margin-top: 4px !important;
+                padding: 7px 28px !important; font-size: 11px !important; }
+            #main-menu > #mobile-options { grid-column: 1 / -1; font-size: 8px; }
+            #main-menu > .menu-btn-row { grid-column: 1 / -1; }
+            #main-menu > #controls-hint, #main-menu > #mobile-hint { grid-column: 1 / -1; margin: 0; font-size: 7px; }
+            #main-menu > #audio-hint { display: none; }
+            .menu-label { font-size: 7px; margin: 1px 0 0; }
+            .char-select-container { gap: 5px; }
+            .char-card { width: clamp(72px, 12vw, 92px); padding: 3px 2px; }
+            .char-card img { width: 28px !important; height: 28px !important; }
+            .char-card p { margin: 1px 0 0; font-size: 7px; white-space: nowrap; }
+            .char-card p:last-child { font-size: 8px !important; letter-spacing: 0; }
+            /* cajado: so a imagem (o PREVIEW grande a direita ja mostra o equipado) */
+            #staff-selection .char-card p:first-child { display: none; }
+            #mobile-options #aim-toggle-row { margin: 1px 0; }
+            #btn-edit-controls { padding: 4px 9px !important; font-size: 7px !important; }
+            .flag-btn { font-size: 0; padding: 4px 5px; }
+            .flag-img { width: 22px; height: 16px; display: block; }
+            .menu-btn-row { margin: 3px 0 0; gap: 6px; }
+            .menu-btn-row .btn { min-height: 40px; min-width: 44px; padding: 6px 10px; }
+            .menu-btn-row .btn svg { width: 23px; height: 23px; }
+            #hero-preview { height: min(52vh, 240px); right: 3px; bottom: 1vh; }
+        }
+        /* retrato baixo também compacta */
+        @media (orientation: portrait) and (max-height: 700px) {
+            #hero-preview { display: none; }
+        }
+    </style>
 </head>
 <body>
 
@@ -711,6 +835,7 @@
 <div id="game-container">
     <div id="fade-overlay" style="position:absolute; top:0; left:0; width:100%; height:100%; background:black; opacity:0; pointer-events:none; z-index:9999;"></div>
     <div id="teleport-fade"></div>
+    <div id="launch-flash"></div>
     <div id="mobile-controls" class="hidden">
         <div id="joy-base"><div id="joy-knob"></div></div>
         <div id="aim-base"><div id="aim-knob"></div></div>
@@ -767,7 +892,11 @@
 
         <div id="hud-top-right">
             <div id="souls-container">
-                <span id="souls-label">Almas</span>: <span id="souls-text">0</span>
+                <canvas id="soul-icon" width="44" height="50" title="Almas"></canvas>
+                <div id="souls-right">
+                    <span id="souls-text">0</span>
+                    <span id="souls-caption">(Almas)</span>
+                </div>
             </div>
             <button id="pause-btn-ingame" onclick="audioManager.playWav('botton'); game.togglePause()">PAUSE (ESC)</button>
         </div>
@@ -801,12 +930,9 @@
         <button class="btn" onclick="audioManager.playWav('botton'); togglePerkModal()" style="margin-top:10px; padding: 5px 10px;" id="btn-close-perks">FECHAR</button>
     </div>
 
-    <div id="audio-controls">
-        <button id="mute-btn" class="btn" onclick="audioManager.playWav('botton'); audioManager.toggleMute()" style="padding: 5px; font-size: 10px; border:none; width: 30px;">🔊</button>
-        <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" oninput="audioManager.setVolume(this.value)">
-    </div>
 
     <div id="main-menu" class="menu-screen">
+        <canvas id="hero-preview" width="290" height="420"></canvas>
         <button id="fullscreen-btn" onclick="audioManager.playWav('botton'); toggleFullscreen()" title="Tela cheia">⛶</button>
         <div class="lang-select">
             <button class="flag-btn active" id="lang-pt" onclick="audioManager.playWav('botton'); setLanguage('pt')"><img src="https://flagcdn.com/w40/br.png" alt="BR" class="flag-img">PT-BR</button>
@@ -824,9 +950,16 @@
             <button class="btn" id="btn-edit-controls" onclick="audioManager.playWav('botton'); openControlsEditor()">EDITAR CONTROLES</button>
         </div>
         <div class="menu-btn-row">
-            <button class="btn" id="btn-settings" onclick="audioManager.playWav('botton'); toggleSettingsMenu()">⚙</button>
-            <button class="btn" id="btn-ach" onclick="audioManager.playWav('botton'); toggleSimpleMenu('achievements-menu')">🏆</button>
-            <button class="btn" id="btn-sanctuary" onclick="audioManager.playWav('botton'); toggleSimpleMenu('sanctuary-menu')">✨</button>
+            <button class="btn" id="btn-settings" onclick="audioManager.playWav('botton'); toggleSettingsMenu()" title="Configurações" aria-label="Configurações">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.4"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+            <button class="btn" id="btn-ach" onclick="audioManager.playWav('botton'); toggleSimpleMenu('achievements-menu')" title="Conquistas" aria-label="Conquistas">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            </button>
+            <button class="btn" id="btn-sanctuary" onclick="audioManager.playWav('botton'); toggleSimpleMenu('sanctuary-menu')" title="Santuário das Almas" aria-label="Santuário das Almas">
+                <svg viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 C16 6 18 10 17 15 C16.4 19 14.5 22 12 23 C9.5 22 7.6 19 7 15 C6 10 8 6 12 2 Z"/><circle cx="9.8" cy="12.5" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.2" cy="12.5" r="1.05" fill="currentColor" stroke="none"/><path d="M8.5 22.5 C7.5 23.5 7.5 24.6 8 25.6"/><path d="M15.5 22.5 C16.5 23.5 16.5 24.6 16 25.6"/></svg>
+            </button>
+            <button class="btn" id="btn-howto" onclick="audioManager.playWav('botton'); toggleHowTo()" title="Como Jogar" aria-label="Como Jogar">?</button>
         </div>
         <p id="controls-hint">A/D ou ← → p/ Mover, Espaço/↑ p/ Pular, Mouse p/ Mirar, F p/ Habilidade</p>
         <p id="mobile-hint">Joystick p/ mover &bull; Botão p/ pular &bull; Mira automática</p>
@@ -834,8 +967,8 @@
     </div>
 
     <div id="settings-menu" class="menu-screen hidden">
-        <h1 style="font-size:20px;">CONFIGURAÇÕES</h1>
-        <p style="font-size:10px; color:#ccc; margin-bottom:20px; text-align:center; max-width:600px; line-height:1.6;">
+        <h1 id="settings-title" style="font-size:20px;">CONFIGURAÇÕES</h1>
+        <p style="font-size:10px; color:#ccc; margin-bottom:16px; text-align:center; max-width:600px; line-height:1.6;">
             Taxa de quadros (apenas visual).<br>
             Esta opção NUNCA altera a velocidade do jogo.
         </p>
@@ -845,7 +978,18 @@
             <button class="flag-btn" id="fps-240" onclick="audioManager.playWav('botton'); setRenderFps(240)">240 FPS</button>
             <button class="flag-btn" id="fps-max" onclick="audioManager.playWav('botton'); setRenderFps(0)">MÁXIMO</button>
         </div>
-        <button class="btn" onclick="audioManager.playWav('botton'); toggleSettingsMenu()" style="margin-top:25px;">VOLTAR</button>
+        <div id="vol-row">
+            <button id="mute-btn" class="btn" onclick="audioManager.playWav('botton'); audioManager.toggleMute()" title="Som">🔊</button>
+            <input type="range" id="volume-slider" min="0" max="1" step="0.1" value="0.5" oninput="audioManager.setVolume(this.value)">
+            <span id="vol-label">VOLUME</span>
+        </div>
+        <button class="btn" onclick="audioManager.playWav('botton'); toggleSettingsMenu()" style="margin-top:20px;">VOLTAR</button>
+    </div>
+
+    <div id="howto-menu" class="menu-screen hidden">
+        <h1 id="howto-title" style="font-size:18px;">COMO JOGAR</h1>
+        <div id="howto-content"></div>
+        <button class="btn" onclick="audioManager.playWav('botton'); toggleHowTo()" style="margin-top:14px;">VOLTAR</button>
     </div>
 
     <div id="achievements-menu" class="menu-screen hidden">
@@ -879,6 +1023,10 @@
         <h1 id="pause-title">PAUSADO</h1>
         <button class="btn" id="btn-resume" onclick="audioManager.playWav('botton'); game.togglePause()">CONTINUAR</button>
         <button class="btn" id="btn-giveup" onclick="confirmGiveUp()" style="color:#ff5555; box-shadow: inset 0 0 0 1.5px rgba(255,85,85,0.75);">DESISTIR</button>
+        <button class="btn" id="btn-pauseconfig" onclick="audioManager.playWav('botton'); toggleSettingsMenu()" style="display:flex; align-items:center; gap:9px; justify-content:center;">
+            <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.4"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <span id="btn-pauseconfig-txt">CONFIGURAÇÕES</span>
+        </button>
     </div>
 
     <div id="game-over-menu" class="menu-screen hidden">
@@ -945,7 +1093,8 @@ const TEXTS = {
         achToast: "CONQUISTA!", meteorW: "CHUVA DE METEOROS!", goldenW: "GENERAIS A CAMINHO!",
         bossName: "DEVORADOR DE ALMAS", miniName: "GUARDIÃO ARCANO", rage: "FÚRIA!",
         achTitle: "CONQUISTAS", sanctuaryTitle: "SANTUARIO DAS ALMAS", settings: "CONFIGURAÇÕES",
-        back: "VOLTAR", maxLevel: "MAXIMO", noPerks: "Nenhum perk coletado"
+        back: "VOLTAR", maxLevel: "MAXIMO", noPerks: "Nenhum perk coletado",
+        howto: "COMO JOGAR", volume: "VOLUME", pauseCfg: "CONFIGURAÇÕES"
     },
     en: {
         play: "PLAY", controls: "A/D or ← → to Move, Space/↑ to Jump, Mouse to Aim, F for Skill",
@@ -960,7 +1109,8 @@ const TEXTS = {
         achToast: "ACHIEVEMENT!", meteorW: "METEOR SHOWER!", goldenW: "GENERALS INCOMING!",
         bossName: "SOUL DEVOURER", miniName: "ARCANE GUARDIAN", rage: "RAGE!",
         achTitle: "ACHIEVEMENTS", sanctuaryTitle: "SOUL SANCTUARY", settings: "SETTINGS",
-        back: "BACK", maxLevel: "MAXED", noPerks: "No perks collected"
+        back: "BACK", maxLevel: "MAXED", noPerks: "No perks collected",
+        howto: "HOW TO PLAY", volume: "VOLUME", pauseCfg: "SETTINGS"
     }
 };
 
@@ -980,6 +1130,10 @@ function setLanguage(lang) {
     document.getElementById('pause-title').innerText = t.paused;
     document.getElementById('btn-resume').innerText = t.resume;
     document.getElementById('btn-giveup').innerText = t.giveUp;
+    const _st = document.getElementById('settings-title'); if (_st) _st.innerText = t.settings;
+    const _pc = document.getElementById('btn-pauseconfig-txt'); if (_pc) _pc.innerText = t.pauseCfg;
+    const _vl = document.getElementById('vol-label'); if (_vl) _vl.innerText = t.volume;
+    const _ht = document.getElementById('howto-title'); if (_ht) _ht.innerText = t.howto;
     document.getElementById('game-over-title').innerText = t.gameOver;
     document.getElementById('stats-wave').innerText = t.waves;
     document.getElementById('stats-souls').innerText = t.souls;
@@ -989,7 +1143,7 @@ function setLanguage(lang) {
     document.getElementById('perk-list-btn').innerText = t.perks;
     document.getElementById('mana-shield-indicator').innerText = t.shield;
     document.getElementById('phoenix-indicator').innerText = t.phoenix;
-    document.getElementById('souls-label').innerText = t.souls;
+    document.getElementById('souls-caption').innerText = '(' + t.souls + ')';
     const jumpBtnEl = document.getElementById('jump-btn');
     if (jumpBtnEl) jumpBtnEl.innerText = (lang === 'pt') ? 'PULAR' : 'JUMP';
     document.getElementById('ach-title').innerText = t.achTitle;
@@ -2092,6 +2246,10 @@ class Game {
     }
 
     togglePause() {
+        // [v6] se as CONFIGURAÇÕES estão abertas por cima do pause, ESC/PAUSE
+        // fecha primeiro as configurações (não despausa por debaixo delas)
+        const st = document.getElementById('settings-menu');
+        if (st && !st.classList.contains('hidden')) { toggleSettingsMenu(); return; }
         if (this.state !== 'PLAYING' && this.state !== 'PAUSED') return;
         const menu = document.getElementById('pause-menu');
         if (this.state === 'PLAYING') {
@@ -2546,6 +2704,139 @@ class Game {
         this._waveTextTimeout = setTimeout(() => { el.style.opacity = 0; }, 3000);
     }
 
+    // [v6] KAMIKAZE estilhaçado no chão: engrenagens, chapas e parafusos da
+    // nave ficam espalhados no local (gravidade, quique) e somem em 5s com fade
+    spawnKamiCrash(x, gy) {
+        this.spawnShockwave(x, gy - 4, 70, '#ff8866', 360, 3);
+        this.createExplosion(x, gy - 8, '#ff8844', 16, 6, 5, 700);
+        this.addShake(6);
+        this.hitStop(40);
+        audioManager.playSfx('shatter');
+        audioManager.playSfx('kami_boom');
+        if (!this.groundJunk) this.groundJunk = [];
+        const kinds = ['gear', 'gear', 'plate', 'plate', 'bolt', 'rod'];
+        const NJ = 9 + Math.floor(Math.random() * 5);
+        for (let i = 0; i < NJ; i++) {
+            const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
+            const sp = 1.8 + Math.random() * 3.6;
+            this.groundJunk.push({
+                kind: kinds[Math.floor(Math.random() * kinds.length)],
+                x: x + (Math.random() - 0.5) * 14, y: gy - 6 - Math.random() * 8,
+                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 1.5,
+                gy: gy + 2 + Math.random() * 7,
+                rot: Math.random() * Math.PI * 2, vrot: (Math.random() - 0.5) * 0.5,
+                sz: 4.5 + Math.random() * 5,
+                born: Date.now()
+            });
+        }
+        // fagulhas do estilhaço
+        for (let i = 0; i < 10; i++) {
+            this.createParticle(x + (Math.random() - 0.5) * 20, gy - Math.random() * 14,
+                Math.random() < 0.5 ? '#ffcc66' : '#99aaff', 2.5 + Math.random() * 3, 480, 1);
+        }
+    }
+
+    updateGroundJunk() {
+        if (!this.groundJunk || !this.groundJunk.length) return;
+        const now = Date.now();
+        const dt = Math.min(50, now - (this._gjT || now)); this._gjT = now;
+        for (let i = this.groundJunk.length - 1; i >= 0; i--) {
+            const j = this.groundJunk[i];
+            j.vy += 0.026 * dt / 4;
+            j.x += j.vx * dt / 16;
+            j.y += j.vy * dt / 16;
+            j.rot += j.vrot * dt / 16;
+            if (j.y >= j.gy) {
+                j.y = j.gy;
+                j.vy *= -0.36; j.vx *= 0.72; j.vrot *= 0.6;
+                if (Math.abs(j.vy) < 0.35) { j.vy = 0; j.vx = 0; j.vrot = 0; }
+            }
+            if (now - j.born > 5000) this.groundJunk.splice(i, 1); // 5s e sumiu
+        }
+    }
+
+    drawGroundJunk(ctx) {
+        if (!this.groundJunk || !this.groundJunk.length) return;
+        const now = Date.now();
+        for (let i = 0; i < this.groundJunk.length; i++) {
+            const j = this.groundJunk[i];
+            const age = now - j.born;
+            const a = age > 4000 ? Math.max(0, 1 - (age - 4000) / 1000) : 1; // fade no último 1s
+            if (a <= 0) continue;
+            ctx.save();
+            ctx.globalAlpha = a;
+            ctx.translate(j.x, j.y);
+            ctx.rotate(j.rot);
+            const s = j.sz;
+            if (j.kind === 'gear') {
+                ctx.fillStyle = '#8b93a3';
+                for (let t = 0; t < 6; t++) { // dentes
+                    ctx.save(); ctx.rotate(t * Math.PI / 3);
+                    ctx.fillRect(-s * 0.16, -s * 0.62, s * 0.32, s * 0.26); ctx.restore();
+                }
+                ctx.beginPath(); ctx.arc(0, 0, s * 0.48, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#c8d2de';
+                ctx.beginPath(); ctx.arc(-s * 0.12, -s * 0.14, s * 0.20, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#0a0a10';
+                ctx.beginPath(); ctx.arc(0, 0, s * 0.16, 0, Math.PI * 2); ctx.fill();
+            } else if (j.kind === 'plate') {
+                ctx.fillStyle = '#7d8494';
+                ctx.fillRect(-s * 0.5, -s * 0.34, s, s * 0.68);
+                ctx.fillStyle = '#aeb8c6';
+                ctx.fillRect(-s * 0.5, -s * 0.34, s, s * 0.16);
+                ctx.fillStyle = '#3a3f4c';
+                ctx.fillRect(s * 0.22, -s * 0.08, s * 0.14, s * 0.14);
+            } else if (j.kind === 'bolt') {
+                ctx.fillStyle = '#9aa3b2';
+                ctx.beginPath();
+                for (let hx = 0; hx < 6; hx++) {
+                    const ha = (hx / 6) * Math.PI * 2;
+                    const px = Math.cos(ha) * s * 0.26, py = Math.sin(ha) * s * 0.26;
+                    if (hx === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+                }
+                ctx.closePath(); ctx.fill();
+                ctx.fillStyle = '#454b58';
+                ctx.beginPath(); ctx.arc(0, 0, s * 0.10, 0, Math.PI * 2); ctx.fill();
+            } else { // rod (haste)
+                ctx.fillStyle = '#6d7484';
+                ctx.fillRect(-s * 0.55, -s * 0.10, s * 1.1, s * 0.20);
+                ctx.fillStyle = '#98a1b0';
+                ctx.fillRect(-s * 0.55, -s * 0.10, s * 1.1, s * 0.07);
+            }
+            ctx.restore();
+        }
+    }
+
+    // [v6] warp de lançamento: o cenário "desencosta" da câmera (zoom-out)
+    launchWarp() { this._warpAt = Date.now(); }
+
+    // [v6] marcador do alvo TRAVADO pelo toque (colchetes roxos pulsando)
+    drawLockMarkers(ctx) {
+        const mc = window.mobileControls;
+        const en = mc && mc.forcedLock;
+        if (!en || en.dead || window.aimJoystickEnabled) return;
+        if (this.state !== 'PLAYING') return;
+        const t = Date.now() / 1000;
+        const cx = en.x + en.width / 2, cy = en.y + en.height / 2;
+        const r = Math.max(en.width, en.height) * 0.72 + 7 + Math.sin(t * 6) * 2.2;
+        ctx.save();
+        ctx.strokeStyle = '#bf00ff';
+        ctx.lineWidth = 2.4;
+        ctx.shadowColor = 'rgba(191,0,255,0.85)';
+        ctx.shadowBlur = 9;
+        const L = r * 0.42;
+        for (let q = 0; q < 4; q++) {
+            const a = q * Math.PI / 2 + Math.PI / 4;
+            const px = cx + Math.cos(a) * r, py = cy + Math.sin(a) * r;
+            ctx.beginPath();
+            ctx.moveTo(px - Math.cos(a + 0.55) * L, py - Math.sin(a + 0.55) * L);
+            ctx.lineTo(px, py);
+            ctx.lineTo(px - Math.cos(a - 0.55) * L, py - Math.sin(a - 0.55) * L);
+            ctx.stroke();
+        }
+        ctx.restore();
+    }
+
     updateSoulsUI() {
         document.getElementById('souls-text').innerText = this.souls;
         document.getElementById('final-souls').innerText = this.souls;
@@ -2707,7 +2998,9 @@ class Game {
         this.lastTickTime = now;
         if (delta > 100) delta = 100;
         if (delta < 0) delta = 0;
-        Perf.frame(delta); // [PERFORMANCE] qualidade adaptativa
+        // [v6] so mede a PERFORMANCE REAL do jogo: no menu o blur CSS deixa o
+        // frame lento no renderizador de software e nao pode contaminar o nivel
+        if (this.state !== 'MENU' && this.state !== 'GAME_OVER') Perf.frame(delta);
         this.tickAccumulator = (this.tickAccumulator || 0) + delta;
 
         const TICK_MS = 1000 / TICKS_PER_SECOND;
@@ -2871,7 +3164,7 @@ class Game {
                     this.statTotalKills++;
 					// ===== STREAK SYSTEM =====
                     const agoraStreak = Date.now();
-                    if (agoraStreak - this.streakLastKill < 2000) {
+                    if (agoraStreak - this.streakLastKill < 4000) {
                         this.streakCount++;
                     } else {
                         this.streakCount = 1;
@@ -2934,6 +3227,7 @@ class Game {
                 this.particles.splice(i, 1);
             }
         }
+        this.updateGroundJunk(); // [v6] peças do kamikaze no chão
 
         for (let i = this.lightningEffects.length - 1; i >= 0; i--) {
             let l = this.lightningEffects[i];
@@ -2960,7 +3254,7 @@ class Game {
         dom('kamikaze-warning').style.display = kamiAviso ? 'block' : 'none';
 		// ===== HUD DO STREAK =====
         const streakEl = document.getElementById('streak-display');
-        if (this.streakCount >= 2 && Date.now() - this.streakLastKill < 2000) {
+        if (this.streakCount >= 2 && Date.now() - this.streakLastKill < 4000) {
             streakEl.style.display = 'block';
             const multTxt = this.streakMultiplier > 1 ? ` ×${this.streakMultiplier}` : '';
             streakEl.innerText = `${this.streakCount} STREAK${multTxt}`;
@@ -3743,242 +4037,92 @@ class Game {
         // ===== [v5] METEOROS DE FUNDO — caem raramente e destroem a cidade PRA SEMPRE =====
         this.bgMeteors = [];
         this.bgBits = [];
+        this.bgBricks = []; // [v6] tijolos do impacto (alvenaria voando)
+        this.groundJunk = []; // [v6] peças do kamikaze
         this.citySmoke = [];
         this.bgSmokePuffs = [];
         this.cityBurns = []; // crateras em brasa (glow permanente dos impactos)
-        this._bgMeteorNext = performance.now() + 14000 + Math.random() * 22000;
+        this._bgMeteorNext = performance.now() + 18000 + Math.random() * 14000; // o 1º vem logo; os próximos: 1-4 min
     }
 
-    // [v4] BURACO NEGRO SUPERMASSIVO estilo Gargantua: sombra (horizonte de
-    // eventos) com "void" escuro ao redor, anel de foton crisp, disco de acrecao
-    // QUADRADO (estetica do jogo) com anel de fogo continuo por baixo, Doppler
-    // (lado esquerdo fervendo) e o halo lenteado passando por CIMA da sombra.
+    // [v6] BURACO NEGRO SUPERMASSIVO — RECONSTRUÇÃO TOTAL.
+    // O antigo tinha um "anel lenteado" fino e uniforme ao redor da sombra:
+    // lia como Saturno com anel de rochas. Um buraco negro de verdade
+    // (M87*/Gargantua) não tem anel: tem um DISCO DE ACREÇÃO volumétrico de
+    // plasma orbitando, e a luz da parte de TRÁS do disco é CURVADA pela
+    // gravidade e sobe por cima da sombra como um arco GROSSO e turvo —
+    // a imagem lenteada. Tudo ANIMADO em velocidade kepleriana (ferve
+    // perto do horizonte, arrasta longe) com Doppler beaming: o lado que
+    // vem até nós arde branco-quente, o que se afasta esfria no roxo.
     buildBlackHole(bx, by, shadowR) {
-        const w = 660, h = 520;
-        const c = document.createElement('canvas');
-        c.width = w; c.height = h;
-        const g = c.getContext('2d');
-        const cx = w / 2, cy = h / 2;
-        const rot = -0.30;
-        const cosR = Math.cos(rot), sinR = Math.sin(rot);
+        const R = shadowR;
 
-        // 1) bruma violeta ao redor de tudo
-        const haze = g.createRadialGradient(cx, cy, shadowR * 0.8, cx, cy, shadowR * 3.2);
-        haze.addColorStop(0, 'rgba(150,95,235,0.18)');
-        haze.addColorStop(0.45, 'rgba(110,60,190,0.09)');
-        haze.addColorStop(1, 'rgba(60,30,120,0)');
-        g.fillStyle = haze;
-        g.fillRect(0, 0, w, h);
-
-        // 2) VOID: anel de escuridao logo ao redor da sombra — faz o preto "afundar"
-        const voidG = g.createRadialGradient(cx, cy, shadowR * 0.85, cx, cy, shadowR * 2.0);
-        voidG.addColorStop(0, 'rgba(0,0,0,0.55)');
-        voidG.addColorStop(0.55, 'rgba(0,0,0,0.28)');
+        // ---- sprite da SOMBRA: void afundado + horizonte preto + photon ring ----
+        const SS = 460;
+        const sc = document.createElement('canvas'); sc.width = sc.height = SS;
+        const g = sc.getContext('2d');
+        const cx = SS / 2, cy = SS / 2;
+        const voidG = g.createRadialGradient(cx, cy, R * 0.86, cx, cy, R * 1.55);
+        voidG.addColorStop(0, 'rgba(0,0,0,0.52)');
+        voidG.addColorStop(0.55, 'rgba(0,0,0,0.24)');
         voidG.addColorStop(1, 'rgba(0,0,0,0)');
         g.fillStyle = voidG;
-        g.beginPath();
-        g.arc(cx, cy, shadowR * 2.0, 0, Math.PI * 2);
-        g.fill();
-
-        // 3) DISCO DE PLASMA CONTÍNUO — bandas elípticas aditivas (frente quente,
-        //    tras mais fraca; a sombra cobre o meio depois e o halo lenteia o topo)
-        g.save();
-        g.translate(cx, cy);
-        g.rotate(rot);
-        g.globalCompositeOperation = 'lighter';
-        const bandas = [
-            { rx: shadowR * 2.45, ry: shadowR * 0.62, lw: shadowR * 0.50, cor: 'rgba(130,80,220,0.42)' },
-            { rx: shadowR * 1.95, ry: shadowR * 0.50, lw: shadowR * 0.36, cor: 'rgba(190,140,250,0.58)' },
-            { rx: shadowR * 1.48, ry: shadowR * 0.40, lw: shadowR * 0.26, cor: 'rgba(243,225,255,0.80)' },
-            { rx: shadowR * 1.14, ry: shadowR * 0.33, lw: shadowR * 0.15, cor: 'rgba(255,252,255,0.92)' }
-        ];
-        for (let bi = 0; bi < bandas.length; bi++) {
-            const bd = bandas[bi];
-            // frente (embaixo) — cheia
-            g.strokeStyle = bd.cor;
-            g.lineWidth = bd.lw;
-            g.beginPath();
-            g.ellipse(0, 0, bd.rx, bd.ry, 0, 0.04, Math.PI - 0.04);
-            g.stroke();
-            // tras (em cima) — 55% (a maior parte sera coberta pela sombra)
-            g.globalAlpha = 0.55;
-            g.beginPath();
-            g.ellipse(0, 0, bd.rx, bd.ry, 0, Math.PI + 0.04, Math.PI * 2 - 0.04);
-            g.stroke();
-            g.globalAlpha = 1;
-            // DOPPLER: o quadrante frontal-esquerdo (vindo na direcao do jogador) ferve
-            g.strokeStyle = 'rgba(255,255,255,' + (0.30 + bi * 0.14).toFixed(2) + ')';
-            g.lineWidth = bd.lw * 0.8;
-            g.beginPath();
-            g.ellipse(0, 0, bd.rx, bd.ry, 0, Math.PI * 0.58, Math.PI * 1.02);
-            g.stroke();
-        }
-        g.restore();
-
-        // 4) disco de acrecao em QUADRADOS — 3 aneis (externo roxo -> interno quente)
-        const passes = [
-            { rx: shadowR * 2.55, ry: shadowR * 0.64, n: 150, sMin: 2.5, sMax: 5, aBase: 0.34 },
-            { rx: shadowR * 1.85, ry: shadowR * 0.50, n: 130, sMin: 3, sMax: 6, aBase: 0.55 },
-            { rx: shadowR * 1.34, ry: shadowR * 0.40, n: 110, sMin: 3.5, sMax: 7, aBase: 0.82 }
-        ];
-        const drawDiskHalf = (half) => {
-            for (let pi = 0; pi < passes.length; pi++) {
-                const pass = passes[pi];
-                for (let i = 0; i < pass.n; i++) {
-                    const a = (i / pass.n) * Math.PI * 2 + pi * 0.35;
-                    const sa = Math.sin(a);
-                    if (half === 'back' ? sa >= 0 : sa < 0) continue;
-                    const ex = Math.cos(a) * pass.rx, ey = sa * pass.ry;
-                    const px = cx + ex * cosR - ey * sinR;
-                    const py = cy + ex * sinR + ey * cosR;
-                    const doppler = 0.5 - 0.5 * Math.cos(a - Math.PI);
-                    const heat = 1 - pi / 3;
-                    const alpha = pass.aBase * (0.6 + doppler * 1.6) * (half === 'back' ? 0.65 : 1);
-                    let rC = Math.min(255, Math.round(150 + heat * 105 + doppler * 80));
-                    let gC = Math.min(255, Math.round(110 + heat * 90 + doppler * 80));
-                    const bC = 255;
-                    if (doppler > 0.55) { rC = 255; gC = Math.min(255, gC + 90); } // lado quente quase branco
-                    const sz = pass.sMin + Math.random() * (pass.sMax - pass.sMin);
-                    g.save();
-                    g.translate(px, py);
-                    g.rotate(rot + a + Math.PI / 2);
-                    g.fillStyle = 'rgba(' + rC + ',' + gC + ',' + bC + ',' + Math.min(0.95, alpha).toFixed(3) + ')';
-                    g.fillRect(-sz / 2, -sz / 2, sz, sz);
-                    g.restore();
-                }
-            }
-        };
-        drawDiskHalf('back');
-
-        // 5) sombra — o HORIZONTE DE EVENTOS (preto absoluto)
-        g.beginPath();
-        g.arc(cx, cy, shadowR, 0, Math.PI * 2);
+        g.beginPath(); g.arc(cx, cy, R * 1.55, 0, Math.PI * 2); g.fill();
+        // horizonte de eventos: preto ABSOLUTO (a "sombra" do buraco)
         g.fillStyle = '#000';
-        g.fill();
+        g.beginPath(); g.arc(cx, cy, R, 0, Math.PI * 2); g.fill();
+        // (o photon ring é DINÂMICO: desenhado no draw por cima do void)
 
-        // 6) anel de foton — fino, crisp, brilhante
-        g.save();
-        g.shadowColor = 'rgba(205,165,255,0.9)';
-        g.shadowBlur = 12;
-        g.strokeStyle = 'rgba(240,232,250,0.75)';
-        g.lineWidth = 2.2;
-        g.beginPath();
-        g.arc(cx, cy, shadowR + 3, 0, Math.PI * 2);
-        g.stroke();
-        g.restore();
+        // ---- sprite da BRUMA violeta (halo difuso que envolve tudo) ----
+        const HS = 760;
+        const hc = document.createElement('canvas'); hc.width = hc.height = HS;
+        const hg = hc.getContext('2d');
+        const hgr = hg.createRadialGradient(HS / 2, HS / 2, R * 0.7, HS / 2, HS / 2, HS / 2 * 0.98);
+        hgr.addColorStop(0, 'rgba(128,80,220,0.14)');
+        hgr.addColorStop(0.42, 'rgba(104,58,190,0.075)');
+        hgr.addColorStop(1, 'rgba(50,26,110,0)');
+        hg.fillStyle = hgr; hg.fillRect(0, 0, HS, HS);
 
-        // a frente das BANDAS continuas atravessa a frente da sombra (recortado
-        // ao circulo da sombra: so o trecho sobre o preto e redesenhado)
-        g.save();
-        g.beginPath();
-        g.arc(cx, cy, shadowR + 2, 0, Math.PI * 2);
-        g.clip();
-        g.translate(cx, cy);
-        g.rotate(rot);
-        g.globalCompositeOperation = 'lighter';
-        for (let bi = 0; bi < bandas.length; bi++) {
-            const bd = bandas[bi];
-            g.strokeStyle = bd.cor;
-            g.lineWidth = bd.lw;
-            g.beginPath();
-            g.ellipse(0, 0, bd.rx, bd.ry, 0, 0.05, Math.PI - 0.05);
-            g.stroke();
-            g.strokeStyle = 'rgba(255,255,255,' + (0.30 + bi * 0.14).toFixed(2) + ')';
-            g.lineWidth = bd.lw * 0.8;
-            g.beginPath();
-            g.ellipse(0, 0, bd.rx, bd.ry, 0, Math.PI * 0.58, Math.PI * 1.02);
-            g.stroke();
+        // ---- disco de acreção: FAIXAS ORBITAIS (segmentos de arco) ----
+        // cada elemento é um trecho CONTÍNUO de plasma, não um pontinho:
+        // somados formam um disco denso, com velocidade kepleriana
+        const disk = [];
+        for (let i = 0; i < 64; i++) {
+            const r = 1.10 + Math.pow(Math.random(), 1.5) * 1.55; // denso perto do horizonte
+            disk.push({
+                r: r,
+                a: Math.random() * Math.PI * 2,
+                w: 1.05 / Math.pow(r, 1.5),            // KEPLERIANO: perto = rápido
+                span: 0.42 + Math.random() * 0.55,     // arcos LONGOS: fluem e se fundem
+                lw: 3.5 + Math.random() * 5 + Math.max(0, 2.6 - r) * 2.8, // grosso perto
+                seed: Math.random() * 6.28,
+                jy: (Math.random() - 0.5) * 0.34,      // desalinho = GROSURA do halo
+                hot: Math.random() < 0.22              // hot spots ocasionais
+            });
         }
-        g.restore();
+        // paleta TÉRMICA pré-computada: branco-quente -> âmbar -> laranja -> roxo
+        // (bucket de calor 0=interno..3=externo) × (0=normal, 1=lado Doppler fervedo)
+        const pal = [];
+        for (let hb = 0; hb < 4; hb++) {
+            const heat = 1 - hb / 3;
+            let cor;
+            if (heat > 0.72) cor = '#fff8ec';
+            else if (heat > 0.45) cor = '#ffd28e';
+            else if (heat > 0.22) cor = '#ff9a4e';
+            else cor = '#c95cff';
+            pal.push(cor);
+            pal.push(heat > 0.4 ? '#ffffff' : '#ffe9d0');
+        }
+        this._bhPal = pal;
 
-        // a frente do disco (quadrados) passa POR CIMA da borda inferior da sombra
-        drawDiskHalf('front');
-
-        // 7) DOPPLER: o lado esquerdo (vindo na direcao do observador) FERVE
-        g.save();
-        g.translate(cx, cy);
-        g.rotate(rot);
-        g.globalCompositeOperation = 'lighter';
-        g.strokeStyle = 'rgba(255,255,255,0.95)';
-        g.lineWidth = shadowR * 0.10;
-        g.beginPath();
-        g.ellipse(0, 0, shadowR * 1.22, shadowR * 0.36, 0, Math.PI * 0.66, Math.PI * 1.14);
-        g.stroke();
-        // bolhas de plasma fervendo no lado quente
+        // material caindo em espiral (espaguetificação) — pré-agendado
+        const infall = [];
         for (let i = 0; i < 14; i++) {
-            const a = Math.PI * 0.66 + Math.random() * Math.PI * 0.5;
-            const rr = shadowR + 8 + Math.random() * 16;
-            const px = Math.cos(a) * rr, py = Math.sin(a) * rr * 0.32;
-            const sz = 1.5 + Math.random() * 2.5;
-            g.fillStyle = 'rgba(255,255,255,' + (0.35 + Math.random() * 0.5).toFixed(2) + ')';
-            g.fillRect(px - sz / 2, py - sz / 2, sz, sz);
-        }
-        g.restore();
-
-        // 8) HALO LENTEADO — a assinatura Gargantua: o disco de tras curva por
-        //    CIMA da sombra (e o eco por baixo), formando um anel quase completo
-        g.save();
-        g.globalCompositeOperation = 'lighter';
-        g.shadowColor = 'rgba(230,200,255,1)';
-        g.shadowBlur = 26;
-        // topo — glow largo
-        g.strokeStyle = 'rgba(220,185,255,0.62)';
-        g.lineWidth = shadowR * 0.19;
-        g.beginPath();
-        g.arc(cx, cy, shadowR + 19, Math.PI * 1.04, Math.PI * 1.96);
-        g.stroke();
-        // topo — nucleo branco-quente
-        g.strokeStyle = 'rgba(255,253,255,0.98)';
-        g.lineWidth = shadowR * 0.085;
-        g.beginPath();
-        g.arc(cx, cy, shadowR + 19, Math.PI * 1.05, Math.PI * 1.95);
-        g.stroke();
-        // eco inferior
-        g.strokeStyle = 'rgba(230,205,255,0.45)';
-        g.lineWidth = shadowR * 0.09;
-        g.beginPath();
-        g.arc(cx, cy, shadowR + 14, Math.PI * 0.08, Math.PI * 0.92);
-        g.stroke();
-        g.strokeStyle = 'rgba(250,240,255,0.75)';
-        g.lineWidth = shadowR * 0.04;
-        g.beginPath();
-        g.arc(cx, cy, shadowR + 14, Math.PI * 0.09, Math.PI * 0.91);
-        g.stroke();
-        // PONTES LATERAIS: conectam o disco frontal ao halo superior — o anel
-        // lenteado fecha COMPLETO ao redor da sombra (assinatura Gargantua)
-        // ponte esquerda: branca-quente (lado Doppler)
-        g.strokeStyle = 'rgba(255,252,255,0.9)';
-        g.lineWidth = shadowR * 0.075;
-        g.beginPath();
-        g.arc(cx, cy, shadowR + 17, Math.PI * 0.965, Math.PI * 1.06);
-        g.stroke();
-        // ponte direita: violeta mais fria
-        g.strokeStyle = 'rgba(225,195,255,0.55)';
-        g.lineWidth = shadowR * 0.06;
-        g.beginPath();
-        g.arc(cx, cy, shadowR + 17, Math.PI * 1.94, Math.PI * 2.035);
-        g.stroke();
-        g.restore();
-        // textura quadriculada do halo (quadrados por cima do arco superior)
-        for (let i = 0; i < 52; i++) {
-            const a = Math.PI * 1.05 + (i / 52) * Math.PI * 0.90;
-            const rr = shadowR + 19 + Math.sin((i / 52) * Math.PI) * 6;
-            const px = cx + Math.cos(a) * rr;
-            const py = cy + Math.sin(a) * rr * 0.94;
-            const side = Math.abs(a - Math.PI * 1.5) / (Math.PI * 0.5);
-            const alpha = 0.45 + (1 - side) * 0.2 + (a < Math.PI * 1.5 ? 0.3 : 0.08);
-            const sz = 2.5 + (1 - side) * 2.5;
-            g.fillStyle = 'rgba(244,235,255,' + Math.min(0.95, alpha).toFixed(3) + ')';
-            g.fillRect(px - sz / 2, py - sz / 2, sz, sz);
+            infall.push({ seed: i * 1.618 + Math.random() * 0.7, dur: 2.6 + Math.random() * 2.4, ph: Math.random() });
         }
 
-        // 9) arcos de lente sutis (distorcao gravitacional ao redor)
-        g.strokeStyle = 'rgba(190,150,255,0.12)';
-        g.lineWidth = 1;
-        g.beginPath(); g.arc(cx, cy, shadowR * 1.6, Math.PI * 1.08, Math.PI * 1.92); g.stroke();
-        g.beginPath(); g.arc(cx, cy, shadowR * 2.15, Math.PI * 1.12, Math.PI * 1.88); g.stroke();
-
-        return { canvas: c, x: bx, y: by, shadowR: shadowR };
+        this._bhLastT = performance.now();
+        return { x: bx, y: by, shadowR: R, sprite: sc, haze: hc, disk: disk, infall: infall };
     }
 
     // [v5] METEORO DE FUNDO atinge uma construção: buraco irregular no canvas
@@ -4038,8 +4182,26 @@ class Game {
             if (this.citySmoke.length < 7) this.citySmoke.push({ cx: cx, cy: cy - 2, next: 0 });
             if (this.cityBurns.length < 10) this.cityBurns.push({ cx: cx, cy: cy, r: r * 1.15, ph: Math.random() * 6.28 });
         }
-        // detritos voando (curto e sutil — não atrapalha a gameplay)
-        for (let i = 0; i < 10; i++) {
+        // [v6] TIJOLOS: a alvenaria do prédio se estilhaça — retângulos de pedra
+        // voando com gravidade, girando e quicando; some em fade (sutil)
+        if (this.bgBricks.length < 90) {
+            const NB = 15 + Math.floor(Math.random() * 7);
+            for (let i = 0; i < NB; i++) {
+                const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.7;
+                const sp = 0.05 + Math.random() * 0.16;
+                this.bgBricks.push({
+                    x: m.tx + (Math.random() - 0.5) * 8, y: m.ty + (Math.random() - 0.5) * 8,
+                    vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                    gy: this.height - 2 - Math.random() * 26, // chão da cidade
+                    rot: Math.random() * Math.PI * 2, vrot: (Math.random() - 0.5) * 0.02,
+                    w: 3 + Math.random() * 4.5, h: 2 + Math.random() * 3,
+                    life: 900 + Math.random() * 600,
+                    color: ['#9c8db8', '#6b5d8e', '#433763', '#b7a9d6'][Math.floor(Math.random() * 4)]
+                });
+            }
+        }
+        // poeira/brasas curtas (o que sobra do impacto)
+        for (let i = 0; i < 8; i++) {
             const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
             const sp = 0.06 + Math.random() * 0.12;
             this.bgBits.push({
@@ -4055,6 +4217,17 @@ class Game {
     // [v3] Fundo em camadas: ceu, estrelas/lua, grade hi-tech, ruínas (parallax),
     // aurora do chefe, glow pulsante e neblina — leve e quase de graça.
     drawBackground(g) {
+        // [v6] WARP DE LANÇAMENTO: 0.7s de zoom-out cinematográfico
+        let _warp = false;
+        if (this._warpAt && Date.now() - this._warpAt < 700) {
+            const k = (Date.now() - this._warpAt) / 700;
+            const s = 1 + 0.065 * Math.pow(1 - k, 3);
+            g.save();
+            g.translate(this.width / 2, this.height / 2);
+            g.scale(s, s);
+            g.translate(-this.width / 2, -this.height / 2);
+            _warp = true;
+        }
         const t = Date.now() / 1000;
         const isBoss = this.isBossWave;
         const hue = (Date.now() * (isBoss ? 0.12 : 0.05)) % 360;
@@ -4084,103 +4257,6 @@ class Game {
             g.restore();
         }
 
-        // [v4] BURACO NEGRO SUPERMASSIVO — o "ceu" do cenario, vivo e respirando
-        if (this.blackHole) {
-            const bh = this.blackHole;
-            g.save();
-            g.globalAlpha = 0.9 + Math.sin(t * 0.35) * 0.1;
-            g.drawImage(bh.canvas, bh.x - bh.canvas.width / 2, bh.y - bh.canvas.height / 2);
-            g.restore();
-            // materia quente orbitando na frente do disco (quadrados vivos)
-            const orbR = bh.shadowR * 1.32, orbRy = bh.shadowR * 0.38;
-            const bRot = -0.30, bCos = Math.cos(bRot), bSin = Math.sin(bRot);
-            for (let i = 0; i < 12; i++) {
-                const a = t * 0.5 + (i / 12) * Math.PI * 2;
-                const sa = Math.sin(a);
-                if (sa <= 0.05) continue;
-                const ex = Math.cos(a) * orbR, ey = sa * orbRy;
-                const px = bh.x + ex * bCos - ey * bSin;
-                const py = bh.y + ex * bSin + ey * bCos;
-                const doppler = 0.5 - 0.5 * Math.cos(a - Math.PI);
-                const heat = 0.3 + doppler * 0.7;
-                const sz = 2.5 + doppler * 2.5;
-                g.fillStyle = `rgba(${Math.round(170 + heat * 85)},${Math.round(140 + heat * 115)},255,${(0.4 + heat * 0.55).toFixed(2)})`;
-                g.fillRect(px - sz / 2, py - sz / 2, sz, sz);
-            }
-            // pulso do anel de foton
-            g.save();
-            g.globalAlpha = 0.22 + Math.sin(t * 1.15) * 0.12;
-            g.strokeStyle = '#cbb5ff';
-            g.lineWidth = 1.6;
-            g.beginPath();
-            g.arc(bh.x, bh.y, bh.shadowR + 4 + Math.sin(t * 1.15) * 2, 0, Math.PI * 2);
-            g.stroke();
-            g.restore();
-
-            // [v5] DISTORÇÕES GRAVITACIONAIS ANIMADAS — o espaço ao redor ferve
-            // 1) ondas de lente: arcos que nascem no horizonte e se expandem
-            for (let i = 0; i < 3; i++) {
-                const lp = (t * 0.40 + i / 3) % 1;
-                const lr = bh.shadowR + 5 + lp * bh.shadowR * 1.12;
-                const la = (1 - lp) * 0.26;
-                if (la <= 0.02) continue;
-                g.save();
-                g.globalAlpha = la;
-                g.strokeStyle = '#c9adff';
-                g.lineWidth = 1.3;
-                g.beginPath();
-                g.ellipse(bh.x, bh.y, lr, lr * 0.94, 0, 0, Math.PI * 2);
-                g.stroke();
-                g.restore();
-            }
-            // 2) matéria caindo em espiral e se ESPAGUETIFICANDO ao entrar
-            const infN = [12, 8, 5][Perf.level] || 8;
-            for (let i = 0; i < infN; i++) {
-                const seedA = i * 1.618;
-                const life = (t * 0.15 + i / infN) % 1;
-                const ang = seedA + t * (0.5 + (i % 3) * 0.15) + life * 2.6;
-                const rr = bh.shadowR * (2.3 - life * 1.26) + Math.sin(t * 2 + seedA) * 4;
-                const ex = Math.cos(ang) * rr;
-                const ey = Math.sin(ang) * rr * 0.30;
-                const fx = bh.x + ex * bCos - ey * bSin;
-                const fy = bh.y + ex * bSin + ey * bCos;
-                const fa = 0.5 - life * 0.28;
-                if (fa <= 0.04) continue;
-                const stretch = 1 + life * 3.4;
-                const fsz = 2 + (1 - life) * 2;
-                g.save();
-                g.globalAlpha = fa;
-                g.translate(fx, fy);
-                g.rotate(bRot + ang + Math.PI / 2);
-                g.fillStyle = life > 0.7 ? '#fff6ff' : '#b892ff';
-                g.fillRect(-fsz * stretch / 2, -fsz / 2, fsz * stretch, fsz);
-                g.restore();
-            }
-            // 3) o próprio anel VIBRA (espaço-tempo tremendo ao redor do horizonte)
-            g.save();
-            g.globalAlpha = 0.26 + Math.sin(t * 2.2) * 0.10;
-            g.strokeStyle = '#e9dcff';
-            g.lineWidth = 1;
-            g.beginPath();
-            g.ellipse(bh.x, bh.y, bh.shadowR + 7 + Math.sin(t * 1.7) * 2.5, (bh.shadowR + 7) * 0.96 + Math.cos(t * 1.3) * 2.5, 0, 0, Math.PI * 2);
-            g.stroke();
-            g.restore();
-            // 4) rastros de luz lenteados girando devagar ao redor do anel
-            for (let i = 0; i < 3; i++) {
-                const la = t * 0.12 + i * 2.1;
-                const lrx = bh.shadowR * 1.5 + Math.sin(t * 0.4 + i) * 9;
-                const lrr = Math.hypot(Math.cos(la) * lrx, Math.sin(la) * lrx * 0.93);
-                g.save();
-                g.globalAlpha = 0.20 + Math.sin(t * 1.1 + i * 2) * 0.08;
-                g.strokeStyle = '#d9c6ff';
-                g.lineWidth = 1.2;
-                g.beginPath();
-                g.arc(bh.x, bh.y, lrr, la - 0.16, la + 0.16);
-                g.stroke();
-                g.restore();
-            }
-        }
-
         const px = (this.player && this.state !== 'MENU') ? (this.player.x + this.player.width / 2) : this.width / 2 + Math.sin(t * 0.06) * 240;
         const gx = -(((px - this.width / 2) * 0.03) % 96);
         g.save();
@@ -4191,6 +4267,248 @@ class Game {
         for (let y = 0; y <= this.height; y += 96) { g.moveTo(0, y); g.lineTo(this.width, y); }
         g.stroke();
         g.restore();
+
+        // [v6] BURACO NEGRO SUPERMASSIVO — o espaço-tempo distorcendo AO VIVO
+        if (this.blackHole) {
+            const bh = this.blackHole;
+            const R = bh.shadowR;
+            const bNow = performance.now();
+            const bDt = Math.min(50, bNow - (this._bhLastT || bNow)) / 1000;
+            this._bhLastT = bNow;
+            const bt = bNow / 1000;
+            const rot = -0.14, cosR = Math.cos(rot), sinR = Math.sin(rot);
+            const bx = bh.x, by = bh.y;
+            const proj = (ex, ey) => [bx + ex * cosR - ey * sinR, by + ex * sinR + ey * cosR];
+
+            // 0) bruma violeta respirando (o campo gravitacional "pesa" no ar)
+            g.save();
+            g.globalAlpha = 0.85 + Math.sin(bt * 0.3) * 0.12;
+            g.drawImage(bh.haze, bx - bh.haze.width / 2, by - bh.haze.height / 2);
+            g.restore();
+
+            const lim = [64, 44, 28][Perf.level] || 44;
+            const passos = bh.disk;
+            const pal = bh.pal || this._bhPal;
+            const cor = (heat, dop) => pal[(heat > 0.72 ? 0 : heat > 0.45 ? 1 : heat > 0.22 ? 2 : 3) * 2 + (dop > 0.58 ? 1 : 0)];
+            const heatOf = (p) => Math.max(0, 1 - (p.r - 1.10) / 1.55);
+            const dopOf = (p) => 0.5 - 0.5 * Math.cos(p.a - Math.PI);
+
+            // ===== LENTE GRAVITACIONAL — o disco de TRÁS é DOBRADO por cima
+            // da sombra: mesma largura orbital (fundindo com o disco frontal
+            // nas laterais) e altura comprimida junto ao photon ring. É a
+            // assinatura Gargantua/M87*: não é um anel, é o próprio disco.
+            g.save();
+            g.translate(bx, by);
+            g.rotate(rot);
+            g.globalCompositeOperation = 'lighter';
+            g.lineCap = 'round';
+            // corpo-base do halo: meia-elipse vertical GROSSA, COLADA na
+            // borda superior da sombra (o arco "abraça" o buraco negro)
+            g.globalAlpha = 0.15;
+            g.strokeStyle = '#ffce8a';
+            g.lineWidth = R * 0.13;
+            g.beginPath(); g.ellipse(0, 0, R * 1.42, R * 1.025, 0, Math.PI, Math.PI * 2); g.stroke();
+            g.globalAlpha = 0.12;
+            g.strokeStyle = '#c95cff';
+            g.lineWidth = R * 0.24;
+            g.beginPath(); g.ellipse(0, 0, R * 1.95, R * 1.055, 0, Math.PI + 0.05, Math.PI * 2 - 0.05); g.stroke();
+            // segmentos vivos: o plasma de trás espirra por cima (fino no
+            // ápice, grosso e quente nas laterais onde funde com o disco)
+            for (let i = 0; i < Math.min(passos.length, lim); i++) {
+                const p = passos[i];
+                const sa = Math.sin(p.a);
+                if (sa >= -0.02) continue; // só a metade de trás
+                const dop = dopOf(p), heat = heatOf(p);
+                const flick = 0.82 + Math.sin(bt * 2.4 + p.seed * 3) * 0.18;
+                const al = (0.32 + heat * 0.32 + dop * 0.42) * flick * (p.hot ? 1.5 : 1);
+                const rx = p.r * R;
+                const ry = R * (1.012 + (p.r - 1.10) * 0.050); // COLADO na borda, comprimido
+                const apex = Math.abs(Math.cos(p.a)); // 0 no topo, 1 nas laterais
+                g.save();
+                g.translate(0, p.jy * R * 0.22);
+                // rastro (motion blur do plasma subindo o arco)
+                g.globalAlpha = Math.min(0.5, al * 0.40);
+                g.strokeStyle = cor(heat * 0.6, 0);
+                g.lineWidth = p.lw * 0.6;
+                g.beginPath();
+                g.ellipse(0, 0, rx, ry, 0, p.a - p.span / 2 - 0.10, p.a - p.span * 0.18);
+                g.stroke();
+                // corpo vivo: fino no ápice, grosso nas laterais
+                g.globalAlpha = Math.min(0.9, al);
+                g.strokeStyle = cor(heat, dop);
+                g.lineWidth = p.lw * (0.35 + apex * 0.95); // ápice FINO, laterais cheias
+                g.beginPath();
+                g.ellipse(0, 0, rx, ry, 0, p.a - p.span / 2, p.a + p.span / 2);
+                g.stroke();
+                g.restore();
+            }
+            g.restore();
+
+            // ===== a SOMBRA: horizonte de eventos, preto absoluto =====
+            const breathe = 1 + Math.sin(bt * 0.55) * 0.008;
+            const sw = bh.sprite.width * breathe;
+            g.drawImage(bh.sprite, bx - sw / 2, by - sw / 2, sw, sw);
+            // PHOTON RING: círculo PERFEITO, fininho e aderente à borda —
+            // a assinatura óptica do horizonte (sem blur: aderente e uniforme)
+            g.save();
+            g.globalCompositeOperation = 'lighter';
+            // [PHOTON RING SÓ NO TOPO] a luz de fótons curva POR CIMA do
+            // horizonte — embaixo o disco frontal domina a borda. Nunca um
+            // anel completo (isso é planeta com anel, não buraco negro).
+            const rg = g.createLinearGradient(0, by - R * 1.6, 0, by);
+            rg.addColorStop(0, 'rgba(255,252,255,0.95)');
+            rg.addColorStop(1, 'rgba(230,215,255,0.55)');
+            // 3 camadas: núcleo BRANCO afiado -> corpo âmbar -> halo violeta
+            g.strokeStyle = rg;
+            g.lineWidth = 2.4;
+            g.beginPath();
+            g.arc(bx, by, (R + 1.2) * breathe, Math.PI + 0.22, Math.PI * 2 - 0.22);
+            g.stroke();
+            g.globalAlpha = 0.5;
+            g.lineWidth = 6;
+            g.strokeStyle = 'rgba(255,214,150,0.55)';
+            g.beginPath();
+            g.arc(bx, by, (R + 2.2) * breathe, Math.PI + 0.26, Math.PI * 2 - 0.26);
+            g.stroke();
+            g.globalAlpha = 0.22;
+            g.lineWidth = 11;
+            g.strokeStyle = 'rgba(210,170,255,0.5)';
+            g.beginPath();
+            g.arc(bx, by, (R + 3.5) * breathe, Math.PI + 0.3, Math.PI * 2 - 0.3);
+            g.stroke();
+            g.restore();
+
+            // ===== DISCO FRONTAL: massa de plasma quase de perfil, passando
+            // POR BAIXO da sombra — térmico + Doppler beaming =====
+            g.save();
+            g.translate(bx, by);
+            g.rotate(rot);
+            g.globalCompositeOperation = 'lighter';
+            g.lineCap = 'round'; // faixas que fluem
+            // [Gargantua] o plano do disco passa PELO CENTRO do buraco: a
+            // frente cruza na frente da METADE INFERIOR da sombra
+            const dyD = R * 0.30;
+            // corpo-base do disco (elipses contínuas, 4 faixas: adensando
+            // pra DENTRO, colado na borda do horizonte)
+            g.globalAlpha = 0.30;
+            g.strokeStyle = '#fff6e6';
+            g.lineWidth = R * 0.17;
+            g.beginPath(); g.ellipse(0, dyD, R * 1.18, R * 0.24, 0, 0.03, Math.PI - 0.03); g.stroke();
+            g.globalAlpha = 0.17;
+            g.strokeStyle = '#ffd28e';
+            g.lineWidth = R * 0.24;
+            g.beginPath(); g.ellipse(0, dyD, R * 1.38, R * 0.30, 0, 0.03, Math.PI - 0.03); g.stroke();
+            g.globalAlpha = 0.11;
+            g.strokeStyle = '#ff8f45';
+            g.lineWidth = R * 0.30;
+            g.beginPath(); g.ellipse(0, dyD, R * 1.80, R * 0.34, 0, 0.04, Math.PI - 0.04); g.stroke();
+            g.globalAlpha = 0.09;
+            g.strokeStyle = '#c95cff';
+            g.lineWidth = R * 0.34;
+            g.beginPath(); g.ellipse(0, dyD, R * 2.28, R * 0.40, 0, 0.05, Math.PI - 0.05); g.stroke();
+            // segmentos vivos do disco (keplerianos)
+            for (let i = 0; i < Math.min(passos.length, lim); i++) {
+                const p = passos[i];
+                const sa = Math.sin(p.a);
+                if (sa < 0.02) continue; // só a metade da frente
+                const dop = dopOf(p), heat = heatOf(p);
+                const flick = 0.82 + Math.sin(bt * 2.8 + p.seed * 3) * 0.18;
+                const al = (0.32 + heat * 0.40 + dop * 0.44) * flick * (p.hot ? 1.5 : 1);
+                const rx = p.r * R * (1 + Math.sin(bt * 1.5 + p.seed) * 0.012);
+                const ry = p.r * R * 0.27;
+                // rastro (motion blur orbital)
+                g.globalAlpha = Math.min(0.55, al * 0.45);
+                g.strokeStyle = cor(heat * 0.6, 0);
+                g.lineWidth = p.lw * 0.6;
+                g.beginPath();
+                g.ellipse(0, dyD, rx, ry, 0, p.a - p.span / 2 - 0.09, p.a - p.span * 0.2);
+                g.stroke();
+                // corpo vivo
+                g.globalAlpha = Math.min(0.95, al);
+                g.strokeStyle = cor(heat, dop);
+                g.lineWidth = p.lw * (0.85 + dop * 0.45 + heat * 0.3);
+                g.beginPath();
+                g.ellipse(0, dyD, rx, ry, 0, p.a - p.span / 2, p.a + p.span / 2);
+                g.stroke();
+            }
+            g.restore();
+
+            // ===== HOT SPOTS correndo pelo photon ring — só no arco superior
+            // (embaixo da sombra não há ring: o disco frontal cobre) =====
+            for (let i = 0; i < 3; i++) {
+                const ha = Math.PI + 0.3 + ((bt * 0.30 + i / 3) % 1) * (Math.PI - 0.6);
+                for (let k = 0; k < 3; k++) {
+                    const ta = ha - k * 0.08;
+                    const hx = bx + Math.cos(ta) * (R + 2.5);
+                    const hy = by + Math.sin(ta) * (R + 2.5);
+                    g.globalAlpha = (k === 0 ? 0.95 : 0.5 / k);
+                    g.fillStyle = k === 0 ? '#ffffff' : '#ffd9a0';
+                    const s2 = 3.4 - k * 0.9;
+                    g.fillRect(hx - s2 / 2, hy - s2 / 2, s2, s2);
+                }
+            }
+            g.globalAlpha = 1;
+
+            // 1e) matéria ESPAGUETIFICANDO: estica e dissolve no horizonte
+            for (let i = 0; i < bh.infall.length; i++) {
+                const s = bh.infall[i];
+                const life = ((bt + s.ph * s.dur) % s.dur) / s.dur;
+                const ang = s.seed + bt * 0.22 + life * 3.1;
+                const rr = R * (2.45 - life * 1.33);
+                const ex = Math.cos(ang) * rr;
+                const ey2 = Math.sin(ang) * rr * 0.30;
+                const fx = bx + ex * cosR - ey2 * sinR;
+                const fy = by + ex * sinR + ey2 * cosR;
+                const fa = 0.55 - life * 0.32;
+                if (fa <= 0.04) continue;
+                const stretch = 1 + life * 4.2;
+                const fsz = 2 + (1 - life) * 2.2;
+                g.save();
+                g.globalAlpha = fa;
+                g.translate(fx, fy);
+                g.rotate(rot + ang + Math.PI / 2);
+                g.fillStyle = life > 0.72 ? '#fff4ff' : '#a97fff';
+                g.fillRect(-fsz * stretch / 2, -fsz / 2, fsz * stretch, fsz);
+                g.restore();
+            }
+
+            // 1f) ONDAS DE LENTE: o espaço-tempo ondula saindo do horizonte
+            for (let i = 0; i < 3; i++) {
+                const lp = (bt * 0.34 + i / 3) % 1;
+                const lr = R + 6 + lp * R * 1.15;
+                const la = (1 - lp) * 0.22;
+                if (la <= 0.02) continue;
+                g.save();
+                g.globalAlpha = la;
+                g.strokeStyle = '#c9adff';
+                g.lineWidth = 1.2;
+                g.beginPath();
+                g.ellipse(bx, by, lr, lr * 0.95, 0, 0, Math.PI * 2);
+                g.stroke();
+                g.restore();
+            }
+
+            // 1g) ESTRELAS DISTORCIDAS pela lente: perto do buraco negro a
+            //     luz estica tangencialmente — o céu se DEFORMA ao redor
+            if (this.starTwinkle) {
+                for (let i = 0; i < this.starTwinkle.length; i += 3) {
+                    const st = this.starTwinkle[i];
+                    const dx = st.x - bx, dy = st.y - by;
+                    const d = Math.hypot(dx, dy);
+                    if (d > R * 2.9 || d < R * 1.15) continue;
+                    const tang = Math.atan2(dy, dx) + Math.PI / 2;
+                    const len = (1 - (d - R * 1.15) / (R * 1.75)) * 16 + 3;
+                    g.save();
+                    g.globalAlpha = 0.30 + Math.sin(bt * 1.7 + st.ph) * 0.12;
+                    g.translate(st.x, st.y);
+                    g.rotate(tang);
+                    g.fillStyle = st.violet ? '#caacff' : '#ffffff';
+                    g.fillRect(-len / 2, -0.5, len, 1);
+                    g.restore();
+                }
+            }
+        }
+
 
         // [v5] linha do horizonte — cidade contra-luz, separada do buraco negro
         if (this.horizonCanvas) {
@@ -4241,7 +4559,7 @@ class Game {
         const bgDt = Math.min(50, nowMs - (this._bgT || nowMs)); this._bgT = nowMs;
         const bgAlive = !this.paused && this.state !== 'PAUSED';
         if (this.cityNear && bgAlive && nowMs > (this._bgMeteorNext || Infinity) && this.bgMeteors.length < 2) {
-            this._bgMeteorNext = nowMs + 26000 + Math.random() * 44000;
+            this._bgMeteorNext = nowMs + 60000 + Math.random() * 180000; // [v6] 1 a 4 minutos
             const cands = this.cityNear.buildings.filter(b => b.hits < 2);
             if (cands.length > 0) {
                 const b = cands[Math.floor(Math.random() * cands.length)];
@@ -4254,8 +4572,12 @@ class Game {
                 this.bgMeteors.push({
                     x: tx - (dirX / dl) * dist, y: ty - (1 / dl) * dist,
                     ux: dirX / dl, uy: 1 / dl,
-                    speed: 0.20 + Math.random() * 0.10,
-                    tx: tx, ty: ty, target: b, hit: false, trail: []
+                    speed: 0.17 + Math.random() * 0.07, // [v6] um pouco mais lento: dá pra ACOMPANHAR com o olho
+                    tx: tx, ty: ty, target: b, hit: false, trail: [],
+                    rot: Math.random() * Math.PI * 2, vrot: (Math.random() - 0.5) * 0.011,
+                    sz: 8 + Math.random() * 3.5,
+                    verts: (() => { const v = []; for (let k = 0; k < 6; k++) { const aa = (k / 6) * Math.PI * 2 + Math.random() * 0.5; const rr = 0.62 + Math.random() * 0.38; v.push([Math.cos(aa) * rr, Math.sin(aa) * rr]); } return v; })(),
+                    sparkT: 0, smokeT: 0
                 });
             }
         }
@@ -4276,24 +4598,66 @@ class Game {
             }
             const fadeHit = m.hit ? Math.max(0, 1 - (nowMs - m.hitAt) / 480) : 1;
             if (m.hit && fadeHit <= 0) { this.bgMeteors.splice(i, 1); continue; }
+            if (!m.hit) { m.rot += m.vrot * bgDt; }
             g.save();
-            // rastro de fogo
+            // [v6] RASTRO DE FOGO de verdade: chama grossa grudada na pedra
+            // esfriando ao longo do rastro (branco -> laranja -> vermelho-rosa)
             for (let ti = 0; ti < m.trail.length; ti++) {
                 const tp = m.trail[ti];
-                g.globalAlpha = (ti / m.trail.length) * 0.45 * fadeHit;
-                g.fillStyle = ti > 6 ? '#ffd9a0' : '#ff9a40';
-                const tsz = 1.5 + (ti / m.trail.length) * 3.5;
+                const k = ti / m.trail.length;
+                const tsz = m.sz * (0.35 + k * 1.15);
+                g.globalAlpha = (0.16 + k * 0.42) * fadeHit;
+                g.fillStyle = k > 0.72 ? '#fff3de' : (k > 0.4 ? '#ffb45e' : '#ff6a3a');
                 g.fillRect(tp.x - tsz / 2, tp.y - tsz / 2, tsz, tsz);
             }
-            // corpo (pedra pequena em chamas)
-            g.globalAlpha = 0.9 * fadeHit;
-            g.fillStyle = '#ff9a40';
-            g.fillRect(m.x - 4, m.y - 4, 8, 8);
-            g.globalAlpha = 0.95 * fadeHit;
-            g.fillStyle = '#fff2dd';
-            g.fillRect(m.x - 2, m.y - 2.5, 4.5, 5);
+            // fagulhas caindo do meteoro (vivas, pequenas)
+            if (!m.hit && bgAlive) {
+                m.sparkT -= bgDt;
+                while (m.sparkT <= 0) {
+                    m.sparkT += 26 + Math.random() * 34;
+                    this.bgBits.push({
+                        x: m.x - m.ux * 6 + (Math.random() - 0.5) * 5, y: m.y - m.uy * 6 + (Math.random() - 0.5) * 5,
+                        vx: (Math.random() - 0.5) * 0.05 - m.ux * 0.02, vy: (Math.random() - 0.5) * 0.05 - m.uy * 0.02,
+                        life: 300 + Math.random() * 380, size: 1.4 + Math.random() * 1.8,
+                        color: Math.random() < 0.6 ? '#ffc27a' : '#ff8a3a'
+                    });
+                }
+            }
+            // CORPO: pedra POLIGONAL irregular em reentrada (não quadradinho)
+            g.globalAlpha = fadeHit;
+            const glowR = m.sz * 2.6;
+            const mg = g.createRadialGradient(m.x, m.y, 1, m.x, m.y, glowR);
+            mg.addColorStop(0, 'rgba(255,240,210,0.85)');
+            mg.addColorStop(0.35, 'rgba(255,150,60,0.42)');
+            mg.addColorStop(1, 'rgba(255,90,30,0)');
+            g.fillStyle = mg;
+            g.beginPath(); g.arc(m.x, m.y, glowR, 0, Math.PI * 2); g.fill();
+            g.translate(m.x, m.y);
+            g.rotate(m.rot);
+            // facetas da rocha: duas passadas (sombra + luz de entrada)
+            g.fillStyle = '#4a3b52';
+            g.beginPath();
+            for (let vi = 0; vi < m.verts.length; vi++) {
+                const vx = m.verts[vi][0] * m.sz, vy = m.verts[vi][1] * m.sz;
+                if (vi === 0) g.moveTo(vx, vy); else g.lineTo(vx, vy);
+            }
+            g.closePath(); g.fill();
+            g.fillStyle = '#8d7a96';
+            g.beginPath();
+            for (let vi = 0; vi < 4; vi++) {
+                const vx = m.verts[vi][0] * m.sz * 0.62, vy = m.verts[vi][1] * m.sz * 0.62;
+                if (vi === 0) g.moveTo(vx, vy); else g.lineTo(vx, vy);
+            }
+            g.closePath(); g.fill();
+            // borda incandescente na face frontal (direção do movimento)
+            g.rotate(-m.rot);
+            g.strokeStyle = 'rgba(255,220,170,0.9)';
+            g.lineWidth = 1.4;
+            g.beginPath();
+            g.arc(0, 0, m.sz * 0.95, Math.atan2(m.uy, m.ux) - 1.15, Math.atan2(m.uy, m.ux) + 1.15);
+            g.stroke();
             g.restore();
-            // anel do impacto (sutil, some rápido)
+            // anel do impacto (sutil, some rápido) + clarão quente
             if (m.hit) {
                 const ip = Math.min(1, (nowMs - m.hitAt) / 450);
                 if (ip < 1) {
@@ -4307,6 +4671,32 @@ class Game {
                     g.restore();
                 }
             }
+        }
+
+        // [v6] TIJOLOS do impacto voando/quicando (gravidade leve de fundo)
+        for (let i = this.bgBricks.length - 1; i >= 0; i--) {
+            const bk = this.bgBricks[i];
+            if (bgAlive) {
+                bk.vy += 0.00042 * bgDt;
+                bk.x += bk.vx * bgDt; bk.y += bk.vy * bgDt;
+                bk.rot += bk.vrot * bgDt;
+                if (bk.y >= bk.gy) {
+                    bk.y = bk.gy; bk.vy *= -0.34; bk.vx *= 0.6; bk.vrot *= 0.5;
+                    if (Math.abs(bk.vy) < 0.012) { bk.vy = 0; bk.vx = 0; bk.vrot = 0; }
+                }
+                bk.life -= bgDt;
+                if (bk.life <= 0) { this.bgBricks.splice(i, 1); continue; }
+            }
+            const ba = Math.min(1, bk.life / 450);
+            g.save();
+            g.globalAlpha = ba;
+            g.translate(bk.x, bk.y);
+            g.rotate(bk.rot);
+            g.fillStyle = bk.color;
+            g.fillRect(-bk.w / 2, -bk.h / 2, bk.w, bk.h);
+            g.fillStyle = 'rgba(255,255,255,0.14)';
+            g.fillRect(-bk.w / 2, -bk.h / 2, bk.w, 1);
+            g.restore();
         }
 
         // [v5] fumaça persistente subindo dos escombros (muito sutil)
@@ -4381,6 +4771,7 @@ class Game {
                 g.drawImage(this.fogCanvas, fx, this.height - 168, w, 185);
             }
         }
+        if (_warp) g.restore(); // [v6] fim do warp de lançamento
     }
 
     // [v3] O MENU INICIAL agora tem o cenario VIVO atras: cenario 3D, faiscas
@@ -4407,55 +4798,8 @@ class Game {
         }
         ctx.restore();
 
-        const charIdx = window.selectedChar || 1;
-        const staffIdx = window.selectedStaff || 1;
-        const groundY = 650;
-        const bob = Math.sin(t * 1.5) * 3.5;
-        const px = this.width / 2;
-        const py = groundY - 83 + bob * 0.35;
-
-        ctx.save();
-        ctx.globalAlpha = 0.34;
-        ctx.fillStyle = '#000';
-        ctx.beginPath();
-        ctx.ellipse(px, groundY + 5, Math.max(20, 36 - bob * 1.2), 7, 0, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
-
-        const img = ASSETS.images['mage' + charIdx];
-        if (img && img.complete && img.naturalHeight !== 0) {
-            ctx.drawImage(img, px - 31, py, 62, 83);
-        } else {
-            ctx.fillStyle = '#fff';
-            ctx.fillRect(px - 31, py, 62, 83);
-        }
-
-        const ang = -Math.PI / 2 + Math.sin(t * 0.7) * 0.20;
-        const pivotY = py + 74;
-        const sImg = ASSETS.images['cajado' + staffIdx];
-        if (sImg && sImg.complete && sImg.naturalHeight !== 0) {
-            ctx.save();
-            ctx.translate(px, pivotY);
-            ctx.rotate(ang + Math.PI / 2);
-            const h2 = 104;
-            const w2 = h2 * (sImg.naturalWidth / sImg.naturalHeight) * 0.85;
-            ctx.drawImage(sImg, -w2 / 2, -h2 + 8, w2, h2);
-            ctx.restore();
-        }
-
-        const ox = px + Math.cos(ang) * 118 + Math.cos(t * 2.1) * 14;
-        const oy = pivotY + Math.sin(ang) * 118 - 6 + Math.sin(t * 2.8) * 9;
-        const pulse = 0.8 + Math.sin(t * 3) * 0.2;
-        const gg = ctx.createRadialGradient(ox, oy, 1, ox, oy, 30 * pulse);
-        gg.addColorStop(0, 'rgba(255,255,255,0.95)');
-        gg.addColorStop(0.35, 'rgba(255,255,255,0.30)');
-        gg.addColorStop(1, 'rgba(255,255,255,0)');
-        ctx.save();
-        ctx.fillStyle = gg;
-        ctx.beginPath();
-        ctx.arc(ox, oy, 30 * pulse, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.restore();
+        // [v6] o herói agora mora no PREVIEW grande à direita (hero-preview),
+        // nítido e sem blur — aqui ficou só o cenário vivo de fundo
     }
 
     groundBelow(x, fromY) {
@@ -4575,9 +4919,11 @@ class Game {
 
         this.player.draw(ctx);
         this.enemies.forEach(e => { if (!e.dead) e.draw(ctx); });
+        this.drawLockMarkers(ctx); // [v6] alvo travado pelo toque
         this.drawMeteors(ctx);
         this.bullets.forEach(b => b.draw(ctx));
         this.particles.forEach(p => p.draw(ctx));
+        this.drawGroundJunk(ctx); // [v6] engrenagens do kamikaze no chão
         this.lightningEffects.forEach(l => l.draw(ctx));
         this.floatingTexts.forEach(t => t.draw(ctx));
         this.shockwaves.forEach(s => s.draw(ctx)); // [JUICE]
@@ -5940,6 +6286,15 @@ class Enemy {
                     this.dead = true;
                     return;
                 }
+                // [v6] se ERROU o jogador: CHOCA contra o SOLO e estilhaça —
+                // nada de atravessar o chão e sumir magicamente
+                const kcx = this.x + this.width / 2;
+                const kgy = game.groundBelow(kcx, this.y);
+                if (kgy !== null && this.y + this.height >= kgy) {
+                    game.spawnKamiCrash(kcx, kgy);
+                    this.dead = true;
+                    return;
+                }
                 if (this.y > game.height + 80 || this.x < -80 || this.x > game.width + 80) {
                     this.dead = true;
                     return;
@@ -6077,16 +6432,19 @@ class Enemy {
         // [JUICE] anel de choque na morte
         game.spawnShockwave(this.x + this.width / 2, this.y + this.height / 2, this.isGolden ? 70 : 46, deathColor, 320, 2.5);
         // [v5] detritos de verdade: lascas irregulares girando + poeira residual
-        game.createDebris(this.x + this.width / 2, this.y + this.height / 2, '#565073', 6, 5, 4.2, 950);
-        game.createDebris(this.x + this.width / 2, this.y + this.height / 2, deathColor, 3, 3.2, 5.5, 620);
+        game.createDebris(this.x + this.width / 2, this.y + this.height / 2, '#565073', 9, 6, 4.4, 950);
+        game.createDebris(this.x + this.width / 2, this.y + this.height / 2, deathColor, 5, 4.2, 5.8, 640);
         for (let i = 0; i < 4; i++) game.createParticle(this.x + 15, this.y + 15, deathColor, 6);
         if (this.isGolden) {
             for (let i = 0; i < 4; i++) game.createParticle(this.x + 15, this.y + 15, '#ffaa00', 8);
         }
         if (game.player.perks.fragmentation) {
-            for (let i = 0; i < 4; i++) {
-                let ang = Math.random() * Math.PI * 2;
-                game.bullets.push(ObjectPool.getBullet(this.x + 15, this.y + 15, ang, 0, true, { speed: 2.0, projSize: 3, isFragment: true }));
+            // [v6] EXPLOSÃO RADIAL COMPLETA: 9 destroços em TODAS as direções
+            const NF = 9;
+            for (let i = 0; i < NF; i++) {
+                let ang = (i / NF) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
+                game.bullets.push(ObjectPool.getBullet(this.x + this.width / 2, this.y + this.height / 2, ang, 0, true,
+                    { speed: 1.7 + Math.random() * 0.9, projSize: 4, isFragment: true }));
             }
         }
 
@@ -6970,36 +7328,38 @@ class Projectile {
         audioManager.playSfx('shatter');
     }
 
-    // [v5] fragmento-detrito: lasca irregular girando, quente, esfriando
+    // [v6] fragmento = DESTROÇO de verdade: lasca poligonal GROSSA girando,
+    // aresta em brasa que ESFRIA, faíscas voando e nada de "bolinha com rastro"
     drawFragment(ctx) {
         const age = Date.now() - (this.bornAt || 0);
-        const heat = Math.max(0, 1 - age / 900); // esfria com o tempo
-        const sz = this.radius * 3.2;
-        if (this.history.length > 1) {
-            ctx.save();
-            ctx.lineCap = 'round';
-            for (let i = 0; i < this.history.length - 1; i++) {
-                const p1 = this.history[i], p2 = this.history[i + 1];
-                const tt = (i + 1) / this.history.length;
-                ctx.globalAlpha = tt * 0.5;
-                ctx.strokeStyle = heat > 0.3 ? '#ff9a40' : '#9a8cc0';
-                ctx.lineWidth = Math.max(1, sz * 0.4 * tt);
-                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
-            }
-            ctx.restore();
+        const heat = Math.max(0, 1 - age / 1100); // esfria com o tempo
+        const sz = this.radius * 4.6;
+        this.spin += this.fragSpin * 0.55;
+        // faíscas quentes atrás do destroço (determinísticas, zero alocação)
+        const sp = Math.hypot(this.vx, this.vy) || 1;
+        const bx2 = -this.vx / sp, by2 = -this.vy / sp;
+        for (let k = 0; k < 2; k++) {
+            const sd = (this.hueSeed * 9.7 + k * 41.3) % 1;
+            const fx = this.x + bx2 * (sz * (0.8 + sd * 1.6)) + by2 * (sd - 0.5) * 7;
+            const fy = this.y + by2 * (sz * (0.8 + sd * 1.6)) - bx2 * (sd - 0.5) * 7;
+            const fs = 1.5 + sd * 1.8;
+            ctx.globalAlpha = heat * (0.5 + sd * 0.4);
+            ctx.fillStyle = sd > 0.5 ? '#ffd9a0' : '#ff8a3a';
+            ctx.fillRect(fx - fs / 2, fy - fs / 2, fs, fs);
         }
+        ctx.globalAlpha = 1;
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.spin);
-        // aura quente
-        ctx.globalAlpha = 0.30 + heat * 0.35;
+        // aura quente que apaga junto com a brasa
+        ctx.globalAlpha = 0.26 + heat * 0.34;
         ctx.fillStyle = this.fragGlow;
         ctx.beginPath();
-        ctx.arc(0, 0, sz * 0.9, 0, Math.PI * 2);
+        ctx.arc(0, 0, sz * 0.95, 0, Math.PI * 2);
         ctx.fill();
-        // corpo do detrito (rocha ardósia)
+        // corpo do destroço (rocha ardósia escura)
         ctx.globalAlpha = 1;
-        ctx.fillStyle = '#4a4560';
+        ctx.fillStyle = '#3d3852';
         ctx.beginPath();
         for (let i = 0; i < this.frag.length; i++) {
             const vx = this.frag[i][0] * sz, vy = this.frag[i][1] * sz;
@@ -7007,17 +7367,24 @@ class Projectile {
         }
         ctx.closePath();
         ctx.fill();
-        // aresta em brasa + face iluminada
-        ctx.strokeStyle = 'rgba(255,' + Math.round(140 + heat * 80) + ',60,' + (0.45 + heat * 0.5).toFixed(2) + ')';
-        ctx.lineWidth = 1.6;
+        // aresta em BRASA esfriando (laranja viva -> roxa morta)
+        ctx.strokeStyle = 'rgba(255,' + Math.round(120 + heat * 110) + ',50,' + (0.40 + heat * 0.55).toFixed(2) + ')';
+        ctx.lineWidth = 1.8;
         ctx.stroke();
-        ctx.fillStyle = 'rgba(255,190,110,' + (heat * 0.35).toFixed(2) + ')';
+        // face iluminada pelo calor (triângulo interno)
+        ctx.fillStyle = 'rgba(255,190,110,' + (heat * 0.40).toFixed(2) + ')';
         ctx.beginPath();
         ctx.moveTo(this.frag[0][0] * sz, this.frag[0][1] * sz);
         ctx.lineTo(this.frag[1][0] * sz, this.frag[1][1] * sz);
         ctx.lineTo(0, 0);
         ctx.closePath();
         ctx.fill();
+        // cravejado de luz no núcleo quando recém-nascido
+        if (heat > 0.55) {
+            ctx.globalAlpha = (heat - 0.55) * 1.6;
+            ctx.fillStyle = '#ffe9c8';
+            ctx.fillRect(-sz * 0.14, -sz * 0.14, sz * 0.28, sz * 0.28);
+        }
         ctx.restore();
     }
 
@@ -7274,6 +7641,7 @@ function initGame() {
     // [LAYOUT] marca o body como mobile: hints de teclado somem, hint de joystick aparece
     if (window.isMobileDevice) {
         document.body.classList.add('mobile');
+        document.body.classList.add('in-menu'); // [v6] cenário com blur leve atrás do menu
         const pb = document.getElementById('pause-btn-ingame');
         if (pb) pb.innerText = 'PAUSE'; // sem "(ESC)" no celular
     }
@@ -7296,7 +7664,7 @@ function initGame() {
         el.className = `char-card ${isUnlocked ? '' : 'char-locked'}`; if (index === 0) el.classList.add('selected');
         
         el.innerHTML = `<img src="Assets/mage${c.id}.png" onerror="this.style.display='none';this.parentElement.classList.add('img-missing')" style="width:64px;height:64px;display:block;margin:0 auto;object-fit:contain;" alt="Mage ${c.id}">
-            <p>${c.name}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px">${c.cost} Souls</p>` : ''}`;
+            <p>${c.name}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px" title="${c.cost} Souls">${c.cost} &#9671;</p>` : ''}`;
             
         el.onclick = () => {
             audioManager.playWav('botton'); 
@@ -7328,7 +7696,7 @@ function initGame() {
         el.className = `char-card ${isUnlocked ? '' : 'char-locked'}`; if (window.selectedStaff === s.id) el.classList.add('selected');
         
         el.innerHTML = `<img src="Assets/cajado${s.id}.png" onerror="this.style.display='none';this.parentElement.classList.add('img-missing')" style="width:44px;height:84px;display:block;margin:0 auto;object-fit:contain;" alt="Cajado ${s.id}">
-            <p>${s.name}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px">${s.cost} Souls</p>` : ''}`;
+            <p>${s.name}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px" title="${s.cost} Souls">${s.cost} &#9671;</p>` : ''}`;
             
         el.onclick = () => {
             audioManager.playWav('botton'); 
@@ -7352,18 +7720,31 @@ function initGame() {
 
 function startGame() {
     audioManager.playWav('botton');
-    audioManager.play('principal'); 
+    audioManager.play('principal');
+    const mm = document.getElementById('main-menu');
+    if (mm.classList.contains('launching')) return; // já lançando
+    // [v6] SEQUÊNCIA DE LANÇAMENTO: a interface despenca, o blur do cenário
+    // sai, um flash engole a tela e o cenário faz um warp de aproximação
+    mm.classList.add('launching');
+    document.body.classList.remove('in-menu');
+    const flash = document.getElementById('launch-flash');
+    if (flash) { flash.classList.remove('go'); void flash.offsetWidth; flash.classList.add('go'); }
+    audioManager.playSfx('dash');
     if (window.isMobileDevice && document.documentElement.requestFullscreen) {
         document.documentElement.requestFullscreen().catch(() => {});
         setTimeout(() => { fitGameToScreen(); if (window.positionMobileControls) window.positionMobileControls(); }, 600);
     }
-    document.getElementById('hud-top-left').style.display = 'block'; 
-    document.getElementById('pause-btn-ingame').style.display = 'block'; 
-    document.getElementById('perk-list-btn').style.display = 'block'; 
-    document.getElementById('stats-btn').style.display = 'block'; 
-    document.getElementById('souls-container').style.opacity = '1';
-    document.getElementById('main-menu').classList.add('hidden'); 
-    game.start(window.selectedChar);
+    setTimeout(() => {
+        document.getElementById('hud-top-left').style.display = 'block'; 
+        document.getElementById('pause-btn-ingame').style.display = 'block'; 
+        document.getElementById('perk-list-btn').style.display = 'block'; 
+        document.getElementById('stats-btn').style.display = 'block'; 
+        document.getElementById('souls-container').style.opacity = '1';
+        mm.classList.add('hidden');
+        mm.classList.remove('launching');
+        game.start(window.selectedChar);
+        game.launchWarp(); // [v6] zoom-out cinematográfico do cenário
+    }, 800);
 }
 
 function confirmBossWave() { document.getElementById('boss-confirm-menu').classList.add('hidden'); game.triggerConfirmedBossWave(); }
@@ -7390,6 +7771,60 @@ function confirmGiveUp() {
  */
 window.isMobileDevice = (('ontouchstart' in window) || navigator.maxTouchPoints > 0) && window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
 
+// [v6] SÍMBOLO DA ALMA — a chama espectral do HUD (e do Santuário):
+// corpo de névoa curvado, núcleo luminoso, dois olhos vazios e
+// rabinhos de bruma subindo. Desenhado uma vez, no carregamento.
+(function drawSoulIcon() {
+    const cv = document.getElementById('soul-icon');
+    if (!cv) return;
+    const g = cv.getContext('2d');
+    const W = cv.width, H = cv.height;
+    const cx = W / 2;
+    g.clearRect(0, 0, W, H);
+    // halo
+    const halo = g.createRadialGradient(cx, H * 0.42, 2, cx, H * 0.42, W * 0.62);
+    halo.addColorStop(0, 'rgba(120,190,255,0.55)');
+    halo.addColorStop(0.55, 'rgba(77,166,255,0.20)');
+    halo.addColorStop(1, 'rgba(77,166,255,0)');
+    g.fillStyle = halo;
+    g.fillRect(0, 0, W, H);
+    // rabinhos de bruma (2 liras subindo)
+    g.strokeStyle = 'rgba(140,200,255,0.35)';
+    g.lineWidth = 2; g.lineCap = 'round';
+    g.beginPath(); g.moveTo(cx - 7, H * 0.78); g.quadraticCurveTo(cx - 13, H * 0.62, cx - 8, H * 0.50); g.stroke();
+    g.beginPath(); g.moveTo(cx + 7, H * 0.78); g.quadraticCurveTo(cx + 13, H * 0.60, cx + 7, H * 0.46); g.stroke();
+    // corpo da alma: gota espectral (cabeça redonda, saia de névoa)
+    const body = g.createLinearGradient(0, H * 0.22, 0, H * 0.92);
+    body.addColorStop(0, '#eef8ff');
+    body.addColorStop(0.45, '#9fd0ff');
+    body.addColorStop(1, 'rgba(77,166,255,0.25)');
+    g.fillStyle = body;
+    g.beginPath();
+    g.moveTo(cx, H * 0.14);
+    g.bezierCurveTo(cx + 10, H * 0.26, cx + 12, H * 0.44, cx + 9, H * 0.62);
+    g.bezierCurveTo(cx + 8, H * 0.76, cx + 5, H * 0.86, cx + 2, H * 0.90);
+    g.lineTo(cx - 2, H * 0.90);
+    g.bezierCurveTo(cx - 6, H * 0.84, cx - 9, H * 0.72, cx - 9, H * 0.58);
+    g.bezierCurveTo(cx - 12, H * 0.42, cx - 10, H * 0.26, cx, H * 0.14);
+    g.closePath();
+    g.fill();
+    // chama interna (o núcleo arde)
+    const core = g.createRadialGradient(cx, H * 0.40, 1, cx, H * 0.40, W * 0.30);
+    core.addColorStop(0, 'rgba(255,255,255,0.95)');
+    core.addColorStop(0.6, 'rgba(210,235,255,0.35)');
+    core.addColorStop(1, 'rgba(210,235,255,0)');
+    g.fillStyle = core;
+    g.beginPath(); g.arc(cx, H * 0.40, W * 0.30, 0, Math.PI * 2); g.fill();
+    // olhos vazios (alma antiga)
+    g.fillStyle = '#0b1626';
+    g.beginPath(); g.ellipse(cx - 4.6, H * 0.40, 1.7, 2.6, -0.18, 0, Math.PI * 2); g.fill();
+    g.beginPath(); g.ellipse(cx + 4.6, H * 0.40, 1.7, 2.6, 0.18, 0, Math.PI * 2); g.fill();
+    // brilho nos olhos (centelha)
+    g.fillStyle = 'rgba(160,220,255,0.9)';
+    g.fillRect(cx - 5.1, H * 0.385, 1, 1);
+    g.fillRect(cx + 4.1, H * 0.385, 1, 1);
+})();
+
 window.mobileControls = { moveX: 0, aimActive: false, aimDX: 0, aimDY: -1 };
 window.updateMobileAim = null;
 
@@ -7413,6 +7848,7 @@ function fitGameToScreen() {
 }
 fitGameToScreen();
 window.addEventListener('resize', () => { fitGameToScreen(); setTimeout(fitGameToScreen, 300); });
+document.body.classList.add('in-menu'); // [v6] blur leve do cenário no menu (desktop e mobile)
 window.addEventListener('orientationchange', () => { fitGameToScreen(); setTimeout(fitGameToScreen, 300); });
 if (window.visualViewport) window.visualViewport.addEventListener('resize', fitGameToScreen);
 
@@ -7433,12 +7869,12 @@ if (window.isMobileDevice) {
         // nao colados ao canvas. Funciona em retrato, paisagem, com ou sem tela cheia,
         // em qualquer aparelho. Layout salvo em fracoes (fx/fy/size) da viewport.
         const defaultLayout = {
-            move: { fx: 0.035, fy: 0.66, size: 0.34 },  // joystick: canto esquerdo inferior
-            jump: { fx: 0.875, fy: 0.04, size: 0.32 },  // PULAR: canto direito SUPERIOR
-            aim:  { fx: 0.85,  fy: 0.70, size: 0.30 }   // mira manual: canto direito inferior
+            move: { fx: 0.035, fy: 0.64, size: 0.34 },  // joystick: canto esquerdo inferior
+            jump: { fx: 0.865, fy: 0.74, size: 0.32 },  // [v6] PULAR: canto direito INFERIOR
+            aim:  { fx: 0.865, fy: 0.36, size: 0.28 }   // [v6] mira manual: direita, ACIMA do pular
         };
         let layout;
-        try { layout = JSON.parse(localStorage.getItem('mobileControlsLayoutV3')) || defaultLayout; }
+        try { layout = JSON.parse(localStorage.getItem('mobileControlsLayoutV4')) || defaultLayout; }
         catch (err) { layout = defaultLayout; }
         ['move', 'jump', 'aim'].forEach(k => { if (!layout[k]) layout[k] = { ...defaultLayout[k] }; });
 
@@ -7505,9 +7941,9 @@ if (window.isMobileDevice) {
         function closeControlsEditor(save) {
             if (save) {
                 clampLayout();
-                localStorage.setItem('mobileControlsLayoutV3', JSON.stringify(layout));
+                localStorage.setItem('mobileControlsLayoutV4', JSON.stringify(layout));
             } else {
-                try { layout = JSON.parse(localStorage.getItem('mobileControlsLayoutV3')) || defaultLayout; }
+                try { layout = JSON.parse(localStorage.getItem('mobileControlsLayoutV4')) || defaultLayout; }
                 catch (err) { layout = defaultLayout; }
                 ['move', 'jump', 'aim'].forEach(k => { if (!layout[k]) layout[k] = { ...defaultLayout[k] }; });
             }
@@ -7667,6 +8103,25 @@ if (window.isMobileDevice) {
             return;
         }
 
+        // [v6] TOQUE-TRAVA: se o dedo marcou um inimigo, a mira fica NELE
+        // até ele morrer (aí volta sozinha pro automático)
+        const fLock = mc.forcedLock;
+        if (fLock) {
+            if (fLock.dead) {
+                mc.forcedLock = null;
+            } else {
+                mc.lockedEnemy = fLock;
+                const lx = fLock.x + fLock.width / 2;
+                const ly = fLock.y + fLock.height / 2;
+                if (mc.aimX === undefined) { mc.aimX = lx; mc.aimY = ly; }
+                mc.aimX += (lx - mc.aimX) * 0.3;
+                mc.aimY += (ly - mc.aimY) * 0.3;
+                game.input.mouse.x = mc.aimX;
+                game.input.mouse.y = mc.aimY;
+                return;
+            }
+        }
+
         let nearest = null, minDist = Infinity;
         game.enemies.forEach(e => {
             if (e.dead || e.y < -30) return;
@@ -7690,6 +8145,31 @@ if (window.isMobileDevice) {
         game.input.mouse.x = mc.aimX;
         game.input.mouse.y = mc.aimY;
     };
+
+    // [v6] TOCAR num inimigo = travar a mira nele. Toque no vazio = destrava.
+    (function tapLockInit() {
+        const cv = document.getElementById('gameCanvas');
+        cv.addEventListener('touchstart', (ev) => {
+            if (window.aimJoystickEnabled) return;
+            if (typeof game === 'undefined' || !game || game.state !== 'PLAYING') return;
+            const rect = cv.getBoundingClientRect();
+            const sx = rect.width / cv.width, sy = rect.height / cv.height;
+            let hit = null, bestD = 1e9;
+            for (const en of game.enemies) {
+                if (en.dead || en.y < -40) continue;
+                const ex = rect.left + (en.x + en.width / 2) * sx;
+                const ey = rect.top + (en.y + en.height / 2) * sy;
+                for (let i = 0; i < ev.changedTouches.length; i++) {
+                    const tc = ev.changedTouches[i];
+                    const d = Math.hypot(tc.clientX - ex, tc.clientY - ey);
+                    const rad = Math.max(54, en.width * 0.85 * sx);
+                    if (d < rad && d < bestD) { bestD = d; hit = en; }
+                }
+            }
+            window.mobileControls.forcedLock = hit;
+            if (hit) audioManager.playSfx('select');
+        }, { passive: true });
+    })();
 }
 
 /**
@@ -7711,6 +8191,160 @@ function updateFpsButtons() {
     document.getElementById('fps-240').classList.toggle('active', window.renderFpsCap === 240);
     document.getElementById('fps-max').classList.toggle('active', window.renderFpsCap === 0);
 }
+// [v6] MANUAL "COMO JOGAR" — só aparece no celular (botão ? do menu)
+function toggleHowTo() {
+    const el = document.getElementById('howto-menu');
+    if (el.classList.contains('hidden')) {
+        buildHowTo();
+        el.classList.remove('hidden');
+        el.classList.remove('closing');
+    } else {
+        el.classList.add('closing');
+        setTimeout(() => { el.classList.add('hidden'); el.classList.remove('closing'); }, 200);
+    }
+}
+function buildHowTo() {
+    const c = document.getElementById('howto-content');
+    const row = (ico, b, txt) => '<div class="ht-row"><div class="ht-ico">' + ico + '</div><div><b>' + b + '</b><br>' + txt + '</div></div>';
+    c.innerHTML = currentLang === 'pt' ? [
+        row('🎯', 'MIRA AUTOMÁTICA', 'Seu cajado mira sozinho no inimigo mais próximo. Você só precisa se mover e desviar.'),
+        row('👆', 'TOCAR NUM INIMIGO = TRAVAR', 'Toque com o dedo em cima de um inimigo e a mira trava NELE até ele morrer. Toque no vazio para destravar.'),
+        row('🕹️', 'JOYSTICK (ESQUERDA)', 'Arraste o joystick da esquerda para andar. Arraste pra cima enquanto anda para pular.'),
+        row('⬆️', 'BOTÃO PULAR (DIREITA, EMBAIXO)', 'O botão azul no canto direito inferior faz o mago pular.'),
+        row('🃏', 'CARTAS DE UPGRADE', 'Ao fim de cada onda, escolha uma carta: são poderes permanentes da sua run.'),
+        row('⏸️', 'PAUSE', 'O botão PAUSE no topo congela o jogo. Por lá você também encontra CONFIGURAÇÕES (som e quadros por segundo).'),
+        row('🛠️', 'EDITAR CONTROLES', 'No menu inicial, em EDITAR CONTROLES, arraste os botões para onde preferir e ajuste o tamanho.')
+    ].join('') : [
+        row('🎯', 'AUTO AIM', 'Your staff aims at the nearest enemy by itself. Just move and dodge.'),
+        row('👆', 'TAP AN ENEMY = LOCK ON', 'Tap an enemy with your finger and the aim locks ON IT until it dies. Tap empty space to unlock.'),
+        row('🕹️', 'JOYSTICK (LEFT)', 'Drag the left joystick to walk. Flick it upwards while moving to jump.'),
+        row('⬆️', 'JUMP BUTTON (RIGHT, BOTTOM)', 'The blue button on the bottom-right corner makes the mage jump.'),
+        row('🃏', 'UPGRADE CARDS', 'At the end of each wave, pick a card: permanent powers for your run.'),
+        row('⏸️', 'PAUSE', 'The PAUSE button on top freezes the game. Settings (sound & FPS) live there too.'),
+        row('🛠️', 'EDIT CONTROLS', 'In the main menu, EDIT CONTROLS lets you drag and resize the buttons.')
+    ].join('');
+}
+
+// [v6] PREVIEW DO PERSONAGEM — o mago selecionado em destaque, GRANDE e
+// nítido à direita da tela inicial (fora do blur). Troca de visual na hora
+// quando você escolhe personagem/cajado — modo "barbie" kkkk
+(function heroPreviewInit() {
+    const cv = document.getElementById('hero-preview');
+    if (!cv) return;
+    const g = cv.getContext('2d');
+    let running = false;
+    function drawFallbackMage(gx, py, heroH) {
+        // mago P&B procedural (usado se a imagem do personagem não carregar)
+        const w = heroH * 0.55;
+        const x = gx - w / 2;
+        g.fillStyle = '#e8e8ec';
+        g.beginPath(); // capuz
+        g.moveTo(gx, py);
+        g.quadraticCurveTo(x - w * 0.1, py + heroH * 0.32, x + w * 0.08, py + heroH * 0.52);
+        g.lineTo(gx + w * 0.42, py + heroH * 0.52);
+        g.quadraticCurveTo(gx + w * 0.58, py + heroH * 0.30, gx, py);
+        g.fill();
+        g.fillStyle = '#0a0a10'; // rosto na sombra
+        g.beginPath();
+        g.ellipse(gx, py + heroH * 0.24, w * 0.13, heroH * 0.085, 0, 0, Math.PI * 2);
+        g.fill();
+        g.fillStyle = '#fff'; // olhos
+        g.fillRect(gx - w * 0.10, py + heroH * 0.225, w * 0.05, heroH * 0.028);
+        g.fillRect(gx + w * 0.05, py + heroH * 0.225, w * 0.05, heroH * 0.028);
+        g.fillStyle = '#c9c9d2'; // manto
+        g.beginPath();
+        g.moveTo(x + w * 0.06, py + heroH * 0.50);
+        g.lineTo(gx + w * 0.44, py + heroH * 0.50);
+        g.quadraticCurveTo(gx + w * 0.56, py + heroH * 0.9, gx + w * 0.30, py + heroH * 0.98);
+        g.lineTo(gx - w * 0.30, py + heroH * 0.98);
+        g.quadraticCurveTo(gx - w * 0.56, py + heroH * 0.9, x + w * 0.06, py + heroH * 0.50);
+        g.fill();
+        g.fillStyle = '#7d7d8a'; // dobras do manto
+        g.fillRect(gx - w * 0.34, py + heroH * 0.68, w * 0.10, heroH * 0.28);
+        g.fillRect(gx + w * 0.24, py + heroH * 0.64, w * 0.09, heroH * 0.32);
+        g.fillStyle = '#3a3a44'; // cinto
+        g.fillRect(gx - w * 0.40, py + heroH * 0.60, w * 0.80, heroH * 0.045);
+    }
+    function draw() {
+        if (!running) return;
+        const t = Date.now() / 1000;
+        const W = cv.width, H = cv.height;
+        g.clearRect(0, 0, W, H);
+        const charIdx = window.selectedChar || 1;
+        const staffIdx = window.selectedStaff || 1;
+        const bob = Math.sin(t * 1.4) * 7;
+        const gx = W * 0.52, gy = H - 30;
+        // sombra + pedestal de luz
+        g.save();
+        g.globalAlpha = 0.30;
+        g.fillStyle = '#000';
+        g.beginPath(); g.ellipse(gx, gy + 9, 92 - bob * 2, 15, 0, 0, Math.PI * 2); g.fill();
+        g.restore();
+        const ped = g.createRadialGradient(gx, gy + 2, 4, gx, gy + 2, 115);
+        ped.addColorStop(0, 'rgba(255,255,255,0.16)');
+        ped.addColorStop(1, 'rgba(255,255,255,0)');
+        g.fillStyle = ped;
+        g.beginPath(); g.ellipse(gx, gy + 5, 115, 26, 0, 0, Math.PI * 2); g.fill();
+        // o MAGO (grande!)
+        const heroH = 300, heroW = heroH * (62 / 83);
+        const py = gy - heroH + bob * 0.4;
+        const img = ASSETS.images['mage' + charIdx];
+        if (img && img.complete && img.naturalHeight !== 0) {
+            g.drawImage(img, gx - heroW / 2 - heroW * 0.10, py, heroW, heroH);
+        } else {
+            drawFallbackMage(gx - heroW * 0.10, py, heroH);
+        }
+        // cajado segurado (balançando de leve)
+        const ang = -Math.PI / 2 + Math.sin(t * 0.55) * 0.13;
+        const pivotX = gx + heroW * 0.30, pivotY = py + heroH * 0.86;
+        const sH = heroH * 1.18;
+        const sImg = ASSETS.images['cajado' + staffIdx];
+        g.save();
+        g.translate(pivotX, pivotY);
+        g.rotate(ang + Math.PI / 2);
+        if (sImg && sImg.complete && sImg.naturalHeight !== 0) {
+            const w2 = sH * (sImg.naturalWidth / sImg.naturalHeight);
+            g.drawImage(sImg, -w2 / 2, -sH + 10, w2, sH);
+        } else {
+            g.fillStyle = '#d8d8de'; g.fillRect(-4, -sH + 10, 8, sH);
+        }
+        g.restore();
+        // orbe de energia na ponta do cajado
+        const ox = pivotX + Math.cos(ang) * sH * 0.94;
+        const oy = pivotY + Math.sin(ang) * sH * 0.94;
+        const pulse = 0.75 + Math.sin(t * 2.2) * 0.25;
+        const og = g.createRadialGradient(ox, oy, 1, ox, oy, 30 * pulse);
+        og.addColorStop(0, 'rgba(255,255,255,0.95)');
+        og.addColorStop(0.35, 'rgba(190,220,255,0.35)');
+        og.addColorStop(1, 'rgba(120,180,255,0)');
+        g.fillStyle = og;
+        g.beginPath(); g.arc(ox, oy, 30 * pulse, 0, Math.PI * 2); g.fill();
+        // faíscas subindo ao redor do mago
+        if (!heroPreviewInit.sparks) {
+            heroPreviewInit.sparks = [];
+            for (let i = 0; i < 10; i++) heroPreviewInit.sparks.push({ x: Math.random(), y: Math.random(), v: 0.05 + Math.random() * 0.1, ph: Math.random() * 6.28, s: 1.5 + Math.random() * 2 });
+        }
+        g.fillStyle = '#ffffff';
+        for (let i = 0; i < heroPreviewInit.sparks.length; i++) {
+            const sp = heroPreviewInit.sparks[i];
+            sp.y -= sp.v / 60;
+            if (sp.y < 0) { sp.y = 1; sp.x = Math.random(); }
+            g.globalAlpha = 0.10 + Math.abs(Math.sin(t * 1.6 + sp.ph)) * 0.30;
+            g.fillRect(sp.x * W + Math.sin(t + sp.ph) * 8, sp.y * (gy - 50) + 24, sp.s, sp.s);
+        }
+        g.globalAlpha = 1;
+        requestAnimationFrame(draw);
+    }
+    // só anima com o menu visível (economia de bateria/CPU)
+    const mm = document.getElementById('main-menu');
+    new MutationObserver(() => {
+        const vis = !mm.classList.contains('hidden');
+        if (vis && !running) { running = true; requestAnimationFrame(draw); }
+        if (!vis) running = false;
+    }).observe(mm, { attributes: true, attributeFilter: ['class'] });
+    if (!mm.classList.contains('hidden')) { running = true; requestAnimationFrame(draw); }
+})();
+
 function toggleSettingsMenu() {
     const el = document.getElementById('settings-menu');
     if (el.classList.contains('hidden')) {
