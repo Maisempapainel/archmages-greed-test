@@ -507,11 +507,13 @@
         .card-title { font-family: var(--f-body); font-weight: 700; }
         .card-desc { font-family: var(--f-body); font-size: clamp(9px, 1.4vw, 11px); line-height: 1.55; color: #b5b5b5; }
         #upgrade-container.choosing .upgrade-card:not(.picked) { opacity: 0.12; transform: scale(0.94); transition: opacity 0.3s, transform 0.3s; pointer-events: none; }
-        .upgrade-card.picked { animation: cardPicked 0.46s cubic-bezier(0.2, 0.9, 0.3, 1) forwards; }
+        /* [v5] carta escolhida: brilha e evapora — SEM escala (nada de texto
+           gigante/bugado nem autoscroll do carrossel no celular) */
+        .upgrade-card.picked { animation: cardPicked 0.5s cubic-bezier(0.3, 0.8, 0.4, 1) forwards; }
         @keyframes cardPicked {
-            0% { transform: scale(1); filter: brightness(1); }
-            30% { transform: scale(1.14); filter: brightness(2.4) drop-shadow(0 0 26px rgba(255,255,255,0.9)); }
-            100% { transform: scale(0.92); filter: brightness(2.8); opacity: 0; }
+            0% { filter: brightness(1); }
+            24% { filter: brightness(2.1) drop-shadow(0 0 16px rgba(255,255,255,0.85)); }
+            100% { filter: brightness(2.55); opacity: 0; transform: translateY(-5px); }
         }
         #timer-bar-container { clip-path: polygon(6px 0, 100% 0, 100% calc(100% - 6px), calc(100% - 6px) 100%, 0 100%, 0 6px);
             background: #161616; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.35); }
@@ -672,6 +674,29 @@
         #perk-modal.closing { animation: modalOut 0.18s ease-in forwards; }
         @keyframes modalIn { from { opacity: 0; transform: translate(-50%, -46%) scale(0.9); } to { opacity: 1; transform: translate(-50%, -50%) scale(1); } }
         @keyframes modalOut { from { opacity: 1; transform: translate(-50%, -50%) scale(1); } to { opacity: 0; transform: translate(-50%, -55%) scale(0.93); } }
+    </style>
+
+    <style id="v5-ruins">
+        /* ================= v5 — RUÍNAS, DETRITOS & POLIMENTO ================= */
+
+        /* [v5] Perk escolhida: o nome CAI da posição da própria carta,
+           sutilmente pra baixo, e evapora num fade — elegante e legível */
+        .perk-announce {
+            position: fixed; z-index: 2600; pointer-events: none;
+            transform: translate(-50%, -50%);
+            font-family: var(--f-disp); font-weight: 700;
+            font-size: clamp(13px, 2.4vw, 19px);
+            letter-spacing: 2.5px; text-transform: uppercase; color: #fff;
+            text-shadow: 0 0 14px rgba(255,255,255,0.75), 0 2px 8px rgba(0,0,0,0.85);
+            white-space: nowrap;
+            animation: perkDrop 1.5s cubic-bezier(0.25, 0.5, 0.4, 1) forwards;
+        }
+        @keyframes perkDrop {
+            0%   { opacity: 0; transform: translate(-50%, -66%) scale(0.94); }
+            14%  { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+            62%  { opacity: 0.85; }
+            100% { opacity: 0; transform: translate(-50%, calc(-50% + 58px)) scale(1.04); }
+        }
     </style>
 </head>
 <body>
@@ -1683,6 +1708,8 @@ class Game {
         this.lightningEffects = [];
         this.floatingTexts = []; 
         
+        this.simTime = 0; // [v5] relógio do MUNDO: só anda com o jogo rodando (pausa de verdade)
+
         // [PERFORMANCE] qualidade adaptativa (Perf ajusta esses valores em tempo real)
         this.particleCap = 900;
         this.explosionScale = 1;
@@ -1730,78 +1757,184 @@ class Game {
         terrain.width = this.width;
         terrain.height = this.height;
         const g = terrain.getContext('2d');
-        const BRICK_W = 40, BRICK_H = 20;
 
-        // Sombra de profundidade nas bordas da plataforma
+        // [v5] pedra arredondada — cantos suaves (nada de minecraft)
+        const rrect = (x, y, w, h, rad) => {
+            g.beginPath();
+            g.moveTo(x + rad, y);
+            g.lineTo(x + w - rad, y);
+            g.arcTo(x + w, y, x + w, y + rad, rad);
+            g.lineTo(x + w, y + h - rad);
+            g.arcTo(x + w, y + h, x + w - rad, y + h, rad);
+            g.lineTo(x + rad, y + h);
+            g.arcTo(x, y + h, x, y + h - rad, rad);
+            g.lineTo(x, y + rad);
+            g.arcTo(x, y, x + rad, y, rad);
+            g.closePath();
+        };
+
+        // sombra de profundidade + brilho arcano por baixo da plataforma
         this.blocks.forEach(b => {
-            g.fillStyle = 'rgba(0,0,0,0.4)';
-            g.fillRect(b.x + 3, b.y + 4, b.w, b.h);
+            g.fillStyle = 'rgba(120,85,220,0.10)';
+            rrect(b.x - 3, b.y + 9, b.w + 6, b.h, 15); g.fill();
+            g.fillStyle = 'rgba(0,0,0,0.5)';
+            rrect(b.x + 4, b.y + 6, b.w, b.h, 12); g.fill();
         });
+
+        // PRNG determinístico — o padrão do piso é sempre o mesmo
+        let seedT = 555555;
+        const rt = () => { seedT = (seedT * 16807) % 2147483647; return seedT / 2147483647; };
 
         this.blocks.forEach(b => {
             g.save();
-            g.beginPath();
-            g.rect(b.x, b.y, b.w, b.h);
+            rrect(b.x, b.y, b.w, b.h, 12);
             g.clip();
-            g.fillStyle = '#050505';
-            g.fillRect(b.x, b.y, b.w, b.h);
 
-            let row = 0;
-            for (let y = b.y; y < b.y + b.h; y += BRICK_H) {
-                let offset = (row % 2 === 0) ? 0 : BRICK_W / 2;
-                let col = 0;
-                for (let x = b.x - BRICK_W + offset; x < b.x + b.w; x += BRICK_W) {
-                    // Variação de tom por tijolo
-                    const rand = ((col * 7 + row * 13 + b.x) % 11) / 11;
-                    let shade = `rgb(${24 + Math.floor(rand * 12)}, ${24 + Math.floor(rand * 10)}, ${26 + Math.floor(rand * 10)})`;
-                    g.fillStyle = shade;
-                    g.fillRect(x + 1, y + 1, BRICK_W - 2, BRICK_H - 2);
-
-                    // Highlight na parte de cima do tijolo
-                    g.fillStyle = 'rgba(255,255,255,0.14)';
-                    g.fillRect(x + 1, y + 1, BRICK_W - 2, 2);
-
-                    // Sombra sutil na parte de baixo
-                    g.fillStyle = 'rgba(0,0,0,0.25)';
-                    g.fillRect(x + 1, y + BRICK_H - 3, BRICK_W - 2, 2);
-
-                    // Rachadura em alguns tijolos (determinístico)
-                    if ((col * 5 + row * 3 + b.y) % 7 === 0) {
-                        g.strokeStyle = 'rgba(0,0,0,0.4)';
-                        g.lineWidth = 1;
-                        g.beginPath();
-                        g.moveTo(x + 5 + rand * 10, y + 3);
-                        g.lineTo(x + 8 + rand * 12, y + BRICK_H - 4);
-                        g.stroke();
-                    }
-
-                    // Pontinho de textura
-                    if ((col + row) % 4 === 0) {
-                        g.fillStyle = 'rgba(255,255,255,0.06)';
-                        g.fillRect(x + 8, y + 8, 3, 3);
-                    }
-                    col++;
-                }
-                row++;
+            // ===== FACE SUPERIOR 3D — a plataforma vista de cima, em leve perspectiva =====
+            const capH = Math.min(9, b.h * 0.22);
+            const capG = g.createLinearGradient(0, b.y, 0, b.y + capH);
+            capG.addColorStop(0, '#57526e');
+            capG.addColorStop(0.7, '#3a3650');
+            capG.addColorStop(1, '#262338');
+            g.fillStyle = capG;
+            g.fillRect(b.x, b.y, b.w, capH);
+            // juntas da face de cima (deslocadas das pedras de baixo — leitura de profundidade)
+            g.strokeStyle = 'rgba(0,0,0,0.35)';
+            g.lineWidth = 1;
+            let sx = b.x + 40 + Math.floor(rt() * 50);
+            while (sx < b.x + b.w - 20) {
+                g.beginPath();
+                g.moveTo(sx, b.y + 1);
+                g.lineTo(sx + (rt() < 0.5 ? 3 : -3), b.y + capH - 1);
+                g.stroke();
+                sx += 70 + Math.floor(rt() * 80);
             }
+            // brilho especular varrendo a face de cima
+            const capShine = g.createLinearGradient(b.x, b.y, b.x + b.w, b.y + capH);
+            capShine.addColorStop(0, 'rgba(255,255,255,0)');
+            capShine.addColorStop(0.28, 'rgba(255,255,255,0.14)');
+            capShine.addColorStop(0.5, 'rgba(255,255,255,0.02)');
+            capShine.addColorStop(1, 'rgba(255,255,255,0)');
+            g.fillStyle = capShine;
+            g.fillRect(b.x, b.y, b.w, capH);
+
+            // aresta luminosa entre a face de cima e a frente (o "palco")
+            g.strokeStyle = 'rgba(255,255,255,0.55)';
+            g.lineWidth = 1.2;
+            g.beginPath(); g.moveTo(b.x + 12, b.y + capH + 0.5); g.lineTo(b.x + b.w - 12, b.y + capH + 0.5); g.stroke();
+
+            // ===== FRENTE: base escura =====
+            const baseG = g.createLinearGradient(0, b.y + capH, 0, b.y + b.h);
+            baseG.addColorStop(0, '#1d1b29');
+            baseG.addColorStop(1, '#07060b');
+            g.fillStyle = baseG;
+            g.fillRect(b.x, b.y + capH, b.w, b.h - capH);
+
+            // ===== PEDRAS DA FRENTE — tamanhos BEM variados, alinhamento quebrado =====
+            const tight = b.w < 150; // torres laterais: pedras justas tipo alvenaria
+            const gapBase = tight ? 5 : 7;
+            const radCap = tight ? 8 : 12;
+            let y = b.y + capH + 4;
+            while (y < b.y + b.h - 8) {
+                const th = 25 + Math.floor(rt() * 13);
+                const y1 = Math.min(b.y + b.h - 6, y + th);
+                if (y1 - y < 12) break;
+                let x = b.x + 6 - Math.floor(rt() * 56);
+                while (x < b.x + b.w - 16) {
+                    const tw = 48 + Math.floor(rt() * 62); // 48..110: curtas e longas misturadas
+                    const x0 = Math.max(b.x + 6, x);
+                    const x1 = Math.min(b.x + b.w - 6, x + tw);
+                    if (x1 - x0 >= 24) {
+                        // jitter vertical: quebra o alinhamento de fileira
+                        const jit = tight ? 0 : Math.floor(rt() * 5) - 2;
+                        const sy = Math.max(b.y + capH + 3, Math.min(y1 - 12, y + 3 + jit));
+                        const w0 = x1 - x0, h0 = y1 - sy;
+                        const rndT = rt();
+                        const lig = 22 + Math.floor(rndT * 26); // contraste FORTE entre pedras
+                        const rad = Math.min(radCap, Math.min(w0, h0) * 0.42);
+
+                        // pedra (gradiente vertical)
+                        const tile = g.createLinearGradient(0, sy, 0, y1);
+                        tile.addColorStop(0, 'rgb(' + (lig + 22) + ',' + (lig + 19) + ',' + (lig + 32) + ')');
+                        tile.addColorStop(0.5, 'rgb(' + (lig + 8) + ',' + (lig + 7) + ',' + (lig + 17) + ')');
+                        tile.addColorStop(1, 'rgb(' + Math.max(9, lig - 6) + ',' + Math.max(9, lig - 5) + ',' + Math.max(11, lig + 1) + ')');
+                        g.fillStyle = tile;
+                        rrect(x0, sy, w0, h0, rad);
+                        g.fill();
+
+                        // bisel forte: luz em cima, sombra embaixo (volume)
+                        g.strokeStyle = 'rgba(255,255,255,0.18)';
+                        g.lineWidth = 2;
+                        g.beginPath(); g.moveTo(x0 + rad, sy + 1); g.lineTo(x0 + w0 - rad, sy + 1); g.stroke();
+                        g.strokeStyle = 'rgba(0,0,0,0.5)';
+                        g.beginPath(); g.moveTo(x0 + rad, y1 - 1); g.lineTo(x0 + w0 - rad, y1 - 1); g.stroke();
+
+                        // brilho especular (pedra polida)
+                        g.fillStyle = 'rgba(255,255,255,0.10)';
+                        g.beginPath();
+                        g.ellipse(x0 + w0 * 0.3, sy + h0 * 0.32, w0 * 0.14, h0 * 0.10, -0.5, 0, Math.PI * 2);
+                        g.fill();
+
+                        // rachadura ocasional (jagged)
+                        if (rt() < 0.15) {
+                            g.strokeStyle = 'rgba(0,0,0,0.5)';
+                            g.lineWidth = 1;
+                            g.beginPath();
+                            let cxr = x0 + 7 + rndT * (w0 - 14), cyr = sy + 3;
+                            g.moveTo(cxr, cyr);
+                            for (let sg = 0; sg < 3; sg++) {
+                                cxr += (rt() - 0.5) * 16;
+                                cyr += (h0 - 7) / 3;
+                                g.lineTo(cxr, cyr);
+                            }
+                            g.stroke();
+                        }
+
+                        // runa em LOSANGO gravada (pontas, não quadrado minecraft)
+                        if (rt() < 0.11) {
+                            const rcx = x0 + w0 / 2, rcy = sy + h0 / 2;
+                            const rr2 = Math.min(w0, h0) * 0.22;
+                            g.save();
+                            g.translate(rcx, rcy);
+                            g.rotate(Math.PI / 4);
+                            g.strokeStyle = 'rgba(185,150,255,0.24)';
+                            g.lineWidth = 1.3;
+                            g.strokeRect(-rr2, -rr2, rr2 * 2, rr2 * 2);
+                            g.restore();
+                            g.fillStyle = 'rgba(210,180,255,0.32)';
+                            g.fillRect(rcx - 1.2, rcy - 1.2, 2.4, 2.4);
+                        }
+                    }
+                    x += tw + gapBase + Math.floor(rt() * 6);
+                }
+                y = y1 + gapBase;
+            }
+
+            // fundo do bloco afunda (vinheta interna)
+            const vin = g.createLinearGradient(0, b.y + b.h - 46, 0, b.y + b.h);
+            vin.addColorStop(0, 'rgba(0,0,0,0)');
+            vin.addColorStop(1, 'rgba(0,0,0,0.55)');
+            g.fillStyle = vin;
+            g.fillRect(b.x, b.y + b.h - 46, b.w, 46);
             g.restore();
 
-            // Borda externa branca
-            g.strokeStyle = '#fff';
-            g.lineWidth = 2;
-            g.strokeRect(b.x, b.y, b.w, b.h);
-
-            // Linha de topo brilhante
-            g.strokeStyle = 'rgba(255,255,255,0.85)';
-            g.lineWidth = 3;
-            g.beginPath();
-            g.moveTo(b.x, b.y + 1.5);
-            g.lineTo(b.x + b.w, b.y + 1.5);
+            // contorno chanfrado suave
+            g.strokeStyle = 'rgba(255,255,255,0.17)';
+            g.lineWidth = 1.5;
+            rrect(b.x - 0.75, b.y - 0.75, b.w + 1.5, b.h + 1.5, 12.5);
             g.stroke();
 
-            // Sombra projetada abaixo da borda
-            g.fillStyle = 'rgba(0,0,0,0.3)';
-            g.fillRect(b.x, b.y + 4, b.w, 3);
+            // aresta superior luminosa — o "palco" da gameplay
+            g.save();
+            g.strokeStyle = 'rgba(255,255,255,0.92)';
+            g.lineWidth = 2.5;
+            g.shadowColor = 'rgba(255,255,255,0.5)';
+            g.shadowBlur = 8;
+            g.beginPath();
+            g.moveTo(b.x + 13, b.y + 1.2);
+            g.lineTo(b.x + b.w - 13, b.y + 1.2);
+            g.stroke();
+            g.restore();
         });
 
         this.terrainCanvas = terrain;
@@ -1943,7 +2076,7 @@ class Game {
                 if (typeof o[k] === 'number' && o[k] !== 0) o[k] += ms;
             }
         };
-        sh(this, ['lastSpawnTime', 'lastThunderTime', 'lastMeteorSpawn', 'meteorWaveStartTime', 'streakLastKill', 'showTeleportZonesUntil']);
+        sh(this, ['lastSpawnTime', 'lastThunderTime', 'lastMeteorSpawn', 'meteorWaveStartTime', 'streakLastKill', 'showTeleportZonesUntil', '_bgMeteorNext']);
         if (this.player) {
             sh(this.player, ['lastShot', 'invulnUntil', 'dashActiveUntil', 'dashCooldownUntil', 'hurtFlashUntil', 'healingFatigueUntil', 'muzzleFlashUntil', 'coyoteTimeUntil', 'jumpBufferUntil', 'laserCooldown', 'laserTimer', 'laserLastTick', 'teleportCooldown', 'manaShieldCooldown']);
             if (this.player.orb) this.player.orb.lastShot += ms;
@@ -2615,6 +2748,7 @@ class Game {
 
     update() {
         if (!this.player) return;
+        this.simTime += (window.timeScale || 1) / 240; // [v5] congela na pausa: fase dos inimigos não pula
 
         if (this.state === 'BOSS_DEATH_CINEMATIC') {
             window.timeScale = 0.22;
@@ -2963,6 +3097,29 @@ class Game {
         }
     }
 
+    // [v5] DETRITOS de verdade: lascas poligonais irregulares girando,
+    // com gravidade e aresta quente — na morte de inimigos e nos fragmentos
+    createDebris(x, y, baseColor, count, size, speed, duration) {
+        count = Math.round(count * this.explosionScale);
+        for (let i = 0; i < count; i++) {
+            if (this.particles.length >= this.particleCap) break;
+            const p = ObjectPool.getParticle(x, y, baseColor, size * (0.6 + Math.random() * 0.8), duration * (0.7 + Math.random() * 0.6), 1);
+            const a = Math.random() * Math.PI * 2;
+            const sp = speed * (0.4 + Math.random() * 0.9);
+            p.vx = Math.cos(a) * sp; p.vy = Math.sin(a) * sp - 1.2;
+            p.verts = [];
+            const n = 3 + Math.floor(Math.random() * 2);
+            for (let v = 0; v < n; v++) {
+                const va = (v / n) * Math.PI * 2 + Math.random() * 0.8;
+                p.verts.push([Math.cos(va) * (0.5 + Math.random() * 0.5), Math.sin(va) * (0.5 + Math.random() * 0.5)]);
+            }
+            p.rot = Math.random() * Math.PI * 2;
+            p.vrot = (Math.random() - 0.5) * 0.4;
+            p.grav = 0.09;
+            this.particles.push(p);
+        }
+    }
+
     spawnShockwave(x, y, maxR, color, duration = 350, lineWidth = 3) {
         if (this.shockwaves.length < 24) this.shockwaves.push(new Shockwave(x, y, maxR, color, duration, lineWidth));
     }
@@ -3067,6 +3224,103 @@ class Game {
         ctx.restore();
     }
     
+    // [v5] RAIO DIZIMADOR — canhão de energia hi-tech em camadas: névoa violeta,
+    // corpo rubi, núcleo branco-quente, pulsos viajando, arcos elétricos laterais
+    // e boca de emissão com anel girando. Muito além de "uma linha grossa".
+    drawDecimatorBeam(ctx, x0, y0, x1, y1) {
+        const now = Date.now();
+        const age = 4000 - (this.player.laserTimer - now);
+        const warm = Math.min(1, age / 160); // carga inicial rápida
+        const fade = Math.max(0, Math.min(1, (this.player.laserTimer - now) / 260)); // baixa final
+        const wob = 0.82 + Math.sin(now / 43) * 0.13 + Math.sin(now / 17) * 0.05;
+        const W = 26 * warm * wob * (0.35 + 0.65 * fade);
+        const a = warm * (0.35 + 0.65 * fade);
+        if (W < 0.5) return;
+
+        ctx.save();
+        ctx.lineCap = 'round';
+
+        // 1) névoa de energia (halo largo)
+        ctx.globalAlpha = 0.20 * a;
+        ctx.strokeStyle = '#7a2bff';
+        ctx.lineWidth = W * 2.3;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+
+        // 2) corpo do feixe
+        ctx.globalAlpha = 0.75 * a;
+        ctx.strokeStyle = '#ff2b4a';
+        ctx.lineWidth = W;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+
+        // 3) interior derretido
+        ctx.globalAlpha = 0.9 * a;
+        ctx.strokeStyle = '#ff9d6e';
+        ctx.lineWidth = W * 0.5;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+
+        // 4) núcleo branco-quente com glow
+        ctx.globalAlpha = a;
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = Math.max(1.5, W * 0.2);
+        ctx.shadowColor = 'rgba(255,120,150,0.9)';
+        ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.shadowBlur = 0;
+
+        // 5) pulsos de energia viajando dentro do feixe
+        ctx.globalAlpha = 0.8 * a;
+        ctx.strokeStyle = '#ffd9e6';
+        ctx.lineWidth = Math.max(1, W * 0.16);
+        ctx.setLineDash([26, 120]);
+        ctx.lineDashOffset = -(now / 6) % 146;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.lineDashOffset = -(now / 11 + 73) % 146;
+        ctx.globalAlpha = 0.45 * a;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+        ctx.setLineDash([]);
+
+        // 6) arcos elétricos laterais (renascem a cada quadro — vivos)
+        const nx = -(y1 - y0), ny = (x1 - x0);
+        const nl = Math.hypot(nx, ny) || 1;
+        const ux = nx / nl, uy = ny / nl;
+        ctx.strokeStyle = 'rgba(255,255,255,0.6)';
+        ctx.lineWidth = 1.3;
+        for (let arc = 0; arc < 3; arc++) {
+            if (Math.random() < 0.35) continue;
+            const t0 = 0.08 + Math.random() * 0.72;
+            const px2 = x0 + (x1 - x0) * t0, py2 = y0 + (y1 - y0) * t0;
+            const side = Math.random() < 0.5 ? -1 : 1;
+            const len = W * (0.8 + Math.random() * 1.6) * side;
+            ctx.globalAlpha = (0.35 + Math.random() * 0.4) * a;
+            ctx.beginPath();
+            ctx.moveTo(px2, py2);
+            let ax = px2, ay = py2;
+            for (let s2 = 0; s2 < 3; s2++) {
+                ax += (x1 - x0) * 0.012 + ux * len * (0.25 + Math.random() * 0.35);
+                ay += (y1 - y0) * 0.012 + uy * len * (0.25 + Math.random() * 0.35);
+                ctx.lineTo(ax, ay);
+            }
+            ctx.stroke();
+        }
+
+        // 7) boca do canhão: anel de emissão girando + clarão
+        ctx.globalAlpha = a;
+        const err = 16 + Math.sin(now / 90) * 3;
+        ctx.strokeStyle = '#ff9d6e';
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.ellipse(x0, y0, err, err * 0.4, Math.atan2(y1 - y0, x1 - x0) + now / 300, 0, Math.PI * 2);
+        ctx.stroke();
+        const fg2 = ctx.createRadialGradient(x0, y0, 1, x0, y0, err * 2.2);
+        fg2.addColorStop(0, 'rgba(255,255,255,0.9)');
+        fg2.addColorStop(0.4, 'rgba(255,120,150,0.35)');
+        fg2.addColorStop(1, 'rgba(255,60,120,0)');
+        ctx.fillStyle = fg2;
+        ctx.beginPath(); ctx.arc(x0, y0, err * 2.2, 0, Math.PI * 2); ctx.fill();
+
+        ctx.restore();
+    }
+
     addFloatingText(x, y, text, color = null, size = 12) {
         const colors = ['red', '#4da6ff', '#00ff00']; 
         const c = color || colors[Math.floor(Math.random() * colors.length)];
@@ -3180,8 +3434,22 @@ class Game {
                 if (this.player) {
                     this.spawnShockwave(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, 130, '#ffffff', 460, 3);
                     this.createExplosion(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, 'white', 16, 5, 4, 700);
-                    this.addFloatingText(this.player.x, this.player.y - 46, perkName.toUpperCase(), '#ffffff', 13);
                 }
+                // [v5] o nome da perk CAI da posição da PRÓPRIA carta, sutil,
+                // desce um pouco e evapora no fade (sem gigante, sem ir pro centro)
+                try {
+                    const rect = card.getBoundingClientRect();
+                    const ann = document.createElement('div');
+                    ann.className = 'perk-announce';
+                    ann.textContent = perkName;
+                    document.body.appendChild(ann);
+                    // clamp: a caixa INTEIRA fica dentro da tela (celular em retrato)
+                    const aw = ann.offsetWidth || 160;
+                    const cx = Math.max(aw / 2 + 8, Math.min(window.innerWidth - aw / 2 - 8, Math.round(rect.left + rect.width / 2)));
+                    ann.style.left = Math.round(cx) + 'px';
+                    ann.style.top = Math.round(rect.top + rect.height * 0.38) + 'px';
+                    setTimeout(() => ann.remove(), 1600);
+                } catch (e) { /* fallback silencioso */ }
 
                 setTimeout(() => {
                     menu.classList.add('hidden');
@@ -3259,25 +3527,11 @@ class Game {
             s.beginPath(); s.arc(nb[0], nb[1], nb[2], 0, Math.PI * 2); s.fill();
         }
 
-        // planeta distante com anel (silhueta roxa)
-        const plx = 330, ply = 118, plr = 26;
-        s.save();
-        s.translate(plx, ply);
-        s.rotate(0.35);
-        s.strokeStyle = 'rgba(196,166,255,0.28)';
-        s.lineWidth = 2;
-        s.beginPath(); s.ellipse(0, 0, plr * 1.75, plr * 0.42, 0, 0, Math.PI * 2); s.stroke();
-        s.fillStyle = '#0d0916';
-        s.beginPath(); s.arc(0, 0, plr, 0, Math.PI * 2); s.fill();
-        s.strokeStyle = 'rgba(196,166,255,0.20)';
-        s.lineWidth = 1;
-        s.beginPath(); s.arc(0, 0, plr, 0, Math.PI * 2); s.stroke();
-        s.strokeStyle = 'rgba(220,200,255,0.42)';
-        s.lineWidth = 2;
-        s.beginPath(); s.ellipse(0, 0, plr * 1.75, plr * 0.42, 0, 0.15, Math.PI - 0.15); s.stroke();
-        s.restore();
+        // [v5] o "saturno" da esquerda foi REMOVIDO — o céu agora é só estrelas
+        // e o buraco negro grandão da direita (muito mais limpo e separado)
 
         // estrelas deterministicas em 3 profundidades (30% delas violeta)
+        this.starTwinkle = [];
         for (let i = 0; i < 175; i++) {
             const x = Math.floor(rnd() * this.width);
             const y = Math.floor(rnd() * this.height * 0.78);
@@ -3292,56 +3546,188 @@ class Game {
                 s.fillRect(x - 3, y + sz / 2 - 0.5, sz + 6, 1);
                 s.fillRect(x + sz / 2 - 0.5, y - 3, 1, sz + 6);
             }
+            // [v5] estrelas VIVAS: as mais brilhantes piscam (fraco <-> forte)
+            if (depth > 0.45 && this.starTwinkle.length < 90) {
+                this.starTwinkle.push({ x: x, y: y, sz: sz, violet: violet, base: a,
+                    sp: 0.4 + rnd() * 1.0, ph: rnd() * Math.PI * 2, amp: 0.22 + rnd() * 0.38 });
+            }
         }
         this.skyCanvas = sky;
 
         // ===== [v4] BURACO NEGRO SUPERMASSIVO no fundao (pre-renderizado) =====
         this.blackHole = this.buildBlackHole(1080, 168, 102);
 
-        // ===== TORRES EM SILHUETA (2 camadas de parallax — profundidade) =====
+        // ===== [v5] CIDADE EM RUÍNAS (2 camadas de parallax) =====
+        // prédios DESENHADOS de verdade: castelos com ameias, torres de coroa
+        // cônica, casas de telhado danificado, topos arrancados, rachaduras,
+        // janelas em arco (violeta) e focos de brasa que tremulam em tempo real
         const W = this.width + 128;
-        const mkTowers = (color, winAlpha, minW, maxW, minH, maxH, gapMin, gapMax, seed0) => {
+        const mkRuins = (seed0, o) => {
             const c = document.createElement('canvas');
             c.width = W; c.height = this.height;
             const g = c.getContext('2d');
             let sd = seed0;
             const r = () => { sd = (sd * 16807) % 2147483647; return sd / 2147483647; };
-            let x = 0;
-            while (x < W) {
-                const w = minW + r() * (maxW - minW);
-                const h = minH + r() * (maxH - minH);
+            const buildings = [], fires = [];
+            let x = 4;
+            while (x < W - 24) {
+                const w = o.minW + r() * (o.maxW - o.minW);
+                const h = o.minH + r() * (o.maxH - o.minH);
                 const by = this.height - h;
-                g.fillStyle = color;
-                g.fillRect(x, by, w, h);
+                const kind = r();
+                const broken = r() < 0.42;
+                const b = { x: x, w: w, top: by, hits: 0 };
+                buildings.push(b);
+
+                // corpo em gradiente (topo levemente mais claro — banhado pelo cosmos)
+                const bodyG = g.createLinearGradient(0, by - 30, 0, this.height);
+                bodyG.addColorStop(0, o.cTop);
+                bodyG.addColorStop(1, o.cBot);
+                g.fillStyle = bodyG;
+
                 g.beginPath();
-                g.moveTo(x, by);
-                g.lineTo(x + w / 2, by - 16 - r() * 30);
-                g.lineTo(x + w, by);
+                g.moveTo(x, this.height);
+                g.lineTo(x, by + 5);
+                if (broken) {
+                    // topo RUPTO: dentes irregulares de parede despencada
+                    let cxp = x;
+                    const steps = 3 + Math.floor(r() * 3);
+                    for (let st = 0; st < steps; st++) {
+                        const nx = x + (w * (st + 1)) / steps;
+                        g.lineTo(cxp + (nx - cxp) * 0.5, by - 3 - r() * 13);
+                        g.lineTo(nx, by + 3 + r() * 11);
+                        cxp = nx;
+                    }
+                    g.lineTo(x + w, by + 8);
+                } else if (kind < 0.34) {
+                    // AMEIAS de castelo — merlões inteiros e pedaços em falta
+                    let cxp = x;
+                    const merl = 4 + Math.floor(w / 24);
+                    for (let m = 0; m < merl; m++) {
+                        const nx = x + (w * (m + 1)) / merl;
+                        const mid = cxp + (nx - cxp) * 0.5;
+                        if (r() < 0.7) {
+                            g.lineTo(mid - 4, by + 5);
+                            g.lineTo(mid - 4, by - 7 - r() * 4);
+                            g.lineTo(mid + 4, by - 7 - r() * 4);
+                            g.lineTo(mid + 4, by + 5);
+                        } else {
+                            g.lineTo(mid - 4, by + 5);
+                            g.lineTo(mid - 1, by - 3 - r() * 4);
+                            g.lineTo(mid + 3, by + 2);
+                        }
+                        g.lineTo(nx, by + 5 + r() * 3);
+                        cxp = nx;
+                    }
+                    g.lineTo(x + w, by + 8);
+                } else if (kind < 0.62) {
+                    // TORRE com coroa cônica (às vezes despencada)
+                    if (r() < 0.65) {
+                        g.lineTo(x + w * 0.16, by - 2);
+                        g.lineTo(x + w * 0.5, by - 22 - r() * 26);
+                        g.lineTo(x + w * 0.84, by - 2);
+                    } else {
+                        g.lineTo(x + w * 0.3, by - 4 - r() * 8);
+                        g.lineTo(x + w * 0.66, by + 3 + r() * 6);
+                    }
+                    g.lineTo(x + w, by + 8);
+                } else {
+                    // casa/forte com telhado danificado
+                    g.lineTo(x + w * 0.22, by - 9 - r() * 9);
+                    g.lineTo(x + w * 0.5, by - 2 - r() * 5);
+                    g.lineTo(x + w * 0.76, by - 10 - r() * 8);
+                    g.lineTo(x + w, by + 8);
+                }
+                g.lineTo(x + w, this.height);
                 g.closePath();
                 g.fill();
-                if (r() < 0.42) {
-                    const ax = x + w * (0.25 + r() * 0.5);
-                    const at = by - 40 - r() * 26;
-                    g.fillRect(ax - 1, at, 2, 44);
-                    g.fillStyle = `rgba(255,255,255,${(0.35 + r() * 0.3).toFixed(3)})`;
-                    g.fillRect(ax - 2, at - 4, 4, 4);
-                    g.fillStyle = color;
+                g.strokeStyle = o.rim;
+                g.lineWidth = 1;
+                g.stroke();
+
+                // RACHADURAS descendo pela fachada
+                const nCr = 1 + Math.floor(r() * 2);
+                for (let cr = 0; cr < nCr; cr++) {
+                    let cxx = x + 6 + r() * (w - 12);
+                    let cyy = by + 6 + r() * 12;
+                    g.strokeStyle = 'rgba(0,0,0,0.55)';
+                    g.lineWidth = 1 + r();
+                    g.beginPath();
+                    g.moveTo(cxx, cyy);
+                    const segs = 3 + Math.floor(r() * 3);
+                    for (let sg = 0; sg < segs; sg++) {
+                        cxx += (r() - 0.5) * 14;
+                        cyy += 10 + r() * 18;
+                        g.lineTo(cxx, cyy);
+                    }
+                    g.stroke();
                 }
-                // [v4] janelas violeta — cidade arcana aos pes do buraco negro
-                g.fillStyle = `rgba(205,170,255,${winAlpha})`;
-                const cols = Math.max(1, Math.floor(w / 17));
-                const rows = Math.floor(h / 25);
-                for (let cxx = 0; cxx < cols; cxx++) {
-                    for (let ry = 0; ry < rows; ry++) {
-                        if (r() < 0.15) g.fillRect(x + 7 + cxx * 17, by + 13 + ry * 25, 4, 6);
+
+                // JANELAS em arco — algumas acesas (violeta), outras mortas
+                const cols = Math.max(1, Math.floor((w - 14) / 20));
+                const rows = Math.max(1, Math.floor((h - 32) / 26));
+                const spread = cols > 1 ? (w - 16) / (cols - 1) : 0;
+                for (let wx = 0; wx < cols; wx++) {
+                    for (let wy = 0; wy < rows; wy++) {
+                        const jx = x + 8 + wx * spread;
+                        const jy = by + 17 + wy * 26;
+                        const lit = r() < 0.2;
+                        g.fillStyle = lit ? 'rgba(205,170,255,' + (0.2 + r() * 0.3).toFixed(2) + ')' : 'rgba(0,0,0,0.5)';
+                        g.fillRect(jx, jy, 6, 9);
+                        g.beginPath();
+                        g.arc(jx + 3, jy, 3, Math.PI, Math.PI * 2);
+                        g.fill();
                     }
                 }
-                x += w + gapMin + r() * gapMax;
+
+                // BRASA viva (glow tremulando em tempo real, bem leve)
+                if (r() < o.fireChance) fires.push({ x: x + 5 + r() * (w - 10), y: by + 8 + r() * Math.min(h - 24, 64), r: 10 + r() * 13, ph: r() * 6.28 });
+
+                // pedrinhos de entulho na base
+                g.fillStyle = o.cTop;
+                for (let rb = 0; rb < 4; rb++) {
+                    const rx = x + r() * (w + 12) - 6;
+                    const rs = 2 + r() * 4;
+                    g.fillRect(rx, this.height - rs - r() * 6, rs, rs);
+                }
+
+                x += w + o.gapMin + r() * (o.gapMax - o.gapMin);
             }
-            return c;
+            return { canvas: c, buildings: buildings, fires: fires };
         };
-        this.towersFar = mkTowers('#1a1426', 0.14, 55, 120, 160, 340, 10, 60, 20250101);
-        this.towersNear = mkTowers('#0e0a17', 0.18, 80, 190, 90, 250, 16, 90, 13371337);
+        this.cityFar = mkRuins(20250101, { minW: 46, maxW: 108, minH: 150, maxH: 322, gapMin: 8, gapMax: 50, cTop: '#231a38', cBot: '#0c0916', rim: 'rgba(150,110,230,0.17)', fireChance: 0.2 });
+        this.cityNear = mkRuins(13371337, { minW: 68, maxW: 178, minH: 78, maxH: 238, gapMin: 14, gapMax: 82, cTop: '#171021', cBot: '#050308', rim: 'rgba(120,90,190,0.14)', fireChance: 0.3 });
+
+        // ===== [v5] LINHA DO HORIZONTE — a fronteira que separa cidade e cosmos =====
+        const hc = document.createElement('canvas');
+        hc.width = this.width; hc.height = 175;
+        const hg = hc.getContext('2d');
+        const hgr = hg.createLinearGradient(0, 0, 0, 175);
+        hgr.addColorStop(0, 'rgba(0,0,0,0)');
+        hgr.addColorStop(0.4, 'rgba(12,7,24,0.40)');
+        hgr.addColorStop(0.62, 'rgba(8,4,16,0.62)');
+        hgr.addColorStop(1, 'rgba(4,2,9,0.82)');
+        hg.fillStyle = hgr;
+        hg.fillRect(0, 0, this.width, 175);
+        const hline = hg.createLinearGradient(0, 0, this.width, 0);
+        hline.addColorStop(0, 'rgba(150,105,255,0)');
+        hline.addColorStop(0.5, 'rgba(175,130,255,0.28)');
+        hline.addColorStop(1, 'rgba(150,105,255,0)');
+        hg.fillStyle = hline;
+        hg.fillRect(0, 66, this.width, 2);
+        this.horizonCanvas = hc;
+
+        // ===== [v5] sprite do brilho de brasa (fogo leve das ruínas) =====
+        const fc2 = document.createElement('canvas');
+        fc2.width = fc2.height = 64;
+        const fgc = fc2.getContext('2d');
+        const fgr = fgc.createRadialGradient(32, 36, 2, 32, 36, 30);
+        fgr.addColorStop(0, 'rgba(255,190,90,0.55)');
+        fgr.addColorStop(0.35, 'rgba(255,120,30,0.26)');
+        fgr.addColorStop(1, 'rgba(255,80,0,0)');
+        fgc.fillStyle = fgr;
+        fgc.fillRect(0, 0, 64, 64);
+        this.fireGlowCanvas = fc2;
 
         // ===== BLOB DE NEBLINA =====
         const fc = document.createElement('canvas');
@@ -3353,6 +3739,14 @@ class Game {
         fg.fillStyle = grad;
         fg.fillRect(0, 0, 640, 200);
         this.fogCanvas = fc;
+
+        // ===== [v5] METEOROS DE FUNDO — caem raramente e destroem a cidade PRA SEMPRE =====
+        this.bgMeteors = [];
+        this.bgBits = [];
+        this.citySmoke = [];
+        this.bgSmokePuffs = [];
+        this.cityBurns = []; // crateras em brasa (glow permanente dos impactos)
+        this._bgMeteorNext = performance.now() + 14000 + Math.random() * 22000;
     }
 
     // [v4] BURACO NEGRO SUPERMASSIVO estilo Gargantua: sombra (horizonte de
@@ -3587,8 +3981,79 @@ class Game {
         return { canvas: c, x: bx, y: by, shadowR: shadowR };
     }
 
-    // [v3] Fundo em camadas: ceu, estrelas/lua, grade hi-tech, torres (parallax),
-    // aurora do chefe, glow pulsante e neblina — tudo P&B e quase de graa custo.
+    // [v5] METEORO DE FUNDO atinge uma construção: buraco irregular no canvas
+    // da cidade (permanente até resetar a partida), cicatriz queimada, brasas,
+    // entulho novo na base e fumaça que sobe dali para sempre.
+    bgMeteorImpact(m, off) {
+        const b = m.target;
+        if (b && this.cityNear) {
+            b.hits = (b.hits || 0) + 1;
+            const g = this.cityNear.canvas.getContext('2d');
+            const cx = m.tx - off, cy = m.ty;
+            const r = 13 + b.hits * 6;
+            g.save();
+            g.globalCompositeOperation = 'destination-out';
+            g.beginPath();
+            for (let a = 0; a < 10; a++) {
+                const an = (a / 10) * Math.PI * 2;
+                const rr = r * (0.6 + Math.random() * 0.55);
+                const px2 = cx + Math.cos(an) * rr, py2 = cy + Math.sin(an) * rr;
+                if (a === 0) g.moveTo(px2, py2); else g.lineTo(px2, py2);
+            }
+            g.closePath();
+            g.fill();
+            if (b.hits >= 2) {
+                // segundo impacto arranca mais o topo do prédio
+                g.beginPath();
+                g.moveTo(b.x + b.w * 0.18, b.top + 30);
+                g.lineTo(b.x + b.w * 0.36, b.top - 8);
+                g.lineTo(b.x + b.w * 0.55, b.top + 12);
+                g.lineTo(b.x + b.w * 0.72, b.top - 5);
+                g.lineTo(b.x + b.w * 0.84, b.top + 30);
+                g.closePath();
+                g.fill();
+            }
+            g.restore();
+            // cicatriz queimada permanente + brasas nas bordas
+            const sc = g.createRadialGradient(cx, cy, 2, cx, cy, r * 1.9);
+            sc.addColorStop(0, 'rgba(0,0,0,0.85)');
+            sc.addColorStop(0.55, 'rgba(10,6,18,0.5)');
+            sc.addColorStop(1, 'rgba(10,6,18,0)');
+            g.fillStyle = sc;
+            g.beginPath(); g.arc(cx, cy, r * 1.9, 0, Math.PI * 2); g.fill();
+            for (let a = 0; a < 12; a++) {
+                const an = Math.random() * Math.PI * 2;
+                const rr = r * (0.75 + Math.random() * 0.45);
+                g.fillStyle = 'rgba(255,120,40,' + (0.22 + Math.random() * 0.38).toFixed(2) + ')';
+                g.fillRect(cx + Math.cos(an) * rr, cy + Math.sin(an) * rr, 1.5 + Math.random() * 2, 1.5 + Math.random() * 2);
+            }
+            // entulho novo caído na base
+            g.fillStyle = '#191227';
+            for (let rb = 0; rb < 7; rb++) {
+                const rx = b.x + Math.random() * b.w;
+                const rs = 2 + Math.random() * 4;
+                g.fillRect(rx, this.height - rs - Math.random() * 8, rs, rs);
+            }
+            // fumaça persistente subindo dos escombros + cratera em brasa permanente
+            if (this.citySmoke.length < 7) this.citySmoke.push({ cx: cx, cy: cy - 2, next: 0 });
+            if (this.cityBurns.length < 10) this.cityBurns.push({ cx: cx, cy: cy, r: r * 1.15, ph: Math.random() * 6.28 });
+        }
+        // detritos voando (curto e sutil — não atrapalha a gameplay)
+        for (let i = 0; i < 10; i++) {
+            const a = -Math.PI / 2 + (Math.random() - 0.5) * 2.4;
+            const sp = 0.06 + Math.random() * 0.12;
+            this.bgBits.push({
+                x: m.tx, y: m.ty,
+                vx: Math.cos(a) * sp, vy: Math.sin(a) * sp,
+                life: 550 + Math.random() * 550,
+                size: 1.5 + Math.random() * 2.4,
+                color: ['#8a7db0', '#3d3358', '#ff9a40', '#c9bce8'][Math.floor(Math.random() * 4)]
+            });
+        }
+    }
+
+    // [v3] Fundo em camadas: ceu, estrelas/lua, grade hi-tech, ruínas (parallax),
+    // aurora do chefe, glow pulsante e neblina — leve e quase de graça.
     drawBackground(g) {
         const t = Date.now() / 1000;
         const isBoss = this.isBossWave;
@@ -3603,6 +4068,21 @@ class Game {
         g.fillRect(0, 0, this.width, this.height);
 
         if (this.skyCanvas) g.drawImage(this.skyCanvas, 0, 0);
+
+        // [v5] estrelas VIVAS: cintilam de fraco a forte (sutil, não atrapalha)
+        if (this.starTwinkle) {
+            const nTw = [76, 48, 26][Perf.level] || 48;
+            g.save();
+            for (let i = 0; i < this.starTwinkle.length && i < nTw; i++) {
+                const st = this.starTwinkle[i];
+                const tw = st.base + Math.sin(t * st.sp + st.ph) * st.amp;
+                if (tw <= 0.03) continue;
+                g.globalAlpha = Math.min(1, tw);
+                g.fillStyle = st.violet ? '#caacff' : '#ffffff';
+                g.fillRect(st.x, st.y, st.sz, st.sz);
+            }
+            g.restore();
+        }
 
         // [v4] BURACO NEGRO SUPERMASSIVO — o "ceu" do cenario, vivo e respirando
         if (this.blackHole) {
@@ -3636,6 +4116,69 @@ class Game {
             g.arc(bh.x, bh.y, bh.shadowR + 4 + Math.sin(t * 1.15) * 2, 0, Math.PI * 2);
             g.stroke();
             g.restore();
+
+            // [v5] DISTORÇÕES GRAVITACIONAIS ANIMADAS — o espaço ao redor ferve
+            // 1) ondas de lente: arcos que nascem no horizonte e se expandem
+            for (let i = 0; i < 3; i++) {
+                const lp = (t * 0.40 + i / 3) % 1;
+                const lr = bh.shadowR + 5 + lp * bh.shadowR * 1.12;
+                const la = (1 - lp) * 0.26;
+                if (la <= 0.02) continue;
+                g.save();
+                g.globalAlpha = la;
+                g.strokeStyle = '#c9adff';
+                g.lineWidth = 1.3;
+                g.beginPath();
+                g.ellipse(bh.x, bh.y, lr, lr * 0.94, 0, 0, Math.PI * 2);
+                g.stroke();
+                g.restore();
+            }
+            // 2) matéria caindo em espiral e se ESPAGUETIFICANDO ao entrar
+            const infN = [12, 8, 5][Perf.level] || 8;
+            for (let i = 0; i < infN; i++) {
+                const seedA = i * 1.618;
+                const life = (t * 0.15 + i / infN) % 1;
+                const ang = seedA + t * (0.5 + (i % 3) * 0.15) + life * 2.6;
+                const rr = bh.shadowR * (2.3 - life * 1.26) + Math.sin(t * 2 + seedA) * 4;
+                const ex = Math.cos(ang) * rr;
+                const ey = Math.sin(ang) * rr * 0.30;
+                const fx = bh.x + ex * bCos - ey * bSin;
+                const fy = bh.y + ex * bSin + ey * bCos;
+                const fa = 0.5 - life * 0.28;
+                if (fa <= 0.04) continue;
+                const stretch = 1 + life * 3.4;
+                const fsz = 2 + (1 - life) * 2;
+                g.save();
+                g.globalAlpha = fa;
+                g.translate(fx, fy);
+                g.rotate(bRot + ang + Math.PI / 2);
+                g.fillStyle = life > 0.7 ? '#fff6ff' : '#b892ff';
+                g.fillRect(-fsz * stretch / 2, -fsz / 2, fsz * stretch, fsz);
+                g.restore();
+            }
+            // 3) o próprio anel VIBRA (espaço-tempo tremendo ao redor do horizonte)
+            g.save();
+            g.globalAlpha = 0.26 + Math.sin(t * 2.2) * 0.10;
+            g.strokeStyle = '#e9dcff';
+            g.lineWidth = 1;
+            g.beginPath();
+            g.ellipse(bh.x, bh.y, bh.shadowR + 7 + Math.sin(t * 1.7) * 2.5, (bh.shadowR + 7) * 0.96 + Math.cos(t * 1.3) * 2.5, 0, 0, Math.PI * 2);
+            g.stroke();
+            g.restore();
+            // 4) rastros de luz lenteados girando devagar ao redor do anel
+            for (let i = 0; i < 3; i++) {
+                const la = t * 0.12 + i * 2.1;
+                const lrx = bh.shadowR * 1.5 + Math.sin(t * 0.4 + i) * 9;
+                const lrr = Math.hypot(Math.cos(la) * lrx, Math.sin(la) * lrx * 0.93);
+                g.save();
+                g.globalAlpha = 0.20 + Math.sin(t * 1.1 + i * 2) * 0.08;
+                g.strokeStyle = '#d9c6ff';
+                g.lineWidth = 1.2;
+                g.beginPath();
+                g.arc(bh.x, bh.y, lrr, la - 0.16, la + 0.16);
+                g.stroke();
+                g.restore();
+            }
         }
 
         const px = (this.player && this.state !== 'MENU') ? (this.player.x + this.player.width / 2) : this.width / 2 + Math.sin(t * 0.06) * 240;
@@ -3649,8 +4192,165 @@ class Game {
         g.stroke();
         g.restore();
 
-        if (this.towersFar) g.drawImage(this.towersFar, -64 - (px - this.width / 2) * 0.012, 0);
-        if (this.towersNear) g.drawImage(this.towersNear, -64 - (px - this.width / 2) * 0.030, 0);
+        // [v5] linha do horizonte — cidade contra-luz, separada do buraco negro
+        if (this.horizonCanvas) {
+            g.save();
+            g.globalAlpha = 0.85 + Math.sin(t * 0.3) * 0.15;
+            g.drawImage(this.horizonCanvas, 0, 396);
+            g.restore();
+        }
+        if (this.cityFar) g.drawImage(this.cityFar.canvas, -64 - (px - this.width / 2) * 0.012, 0);
+        if (this.cityNear) g.drawImage(this.cityNear.canvas, -64 - (px - this.width / 2) * 0.030, 0);
+
+        // [v5] brasas vivas nas ruínas — fogo LEVE tremulando (bem de fundo)
+        if (this.fireGlowCanvas) {
+            const offF = -64 - (px - this.width / 2) * 0.012;
+            const offN = -64 - (px - this.width / 2) * 0.030;
+            const drawFires = (layer, off) => {
+                for (let i = 0; i < layer.fires.length; i++) {
+                    const f = layer.fires[i];
+                    const fl = 0.5 + Math.sin(t * (2.1 + (i % 4) * 0.5) + f.ph) * 0.3 + Math.sin(t * 7.7 + f.ph * 3) * 0.14;
+                    const d = f.r * 3.1 * (0.9 + fl * 0.22);
+                    g.save();
+                    g.globalAlpha = 0.24 + fl * 0.18;
+                    g.drawImage(this.fireGlowCanvas, off + f.x - d / 2, f.y - d / 2, d, d);
+                    g.restore();
+                }
+            };
+            if (this.cityFar) drawFires(this.cityFar, offF);
+            if (this.cityNear) drawFires(this.cityNear, offN);
+        }
+
+        // [v5] crateras de meteoro em BRASA — o brilho do impacto é permanente
+        if (this.cityBurns && this.cityBurns.length) {
+            const offB = -64 - (px - this.width / 2) * 0.030;
+            for (let i = 0; i < this.cityBurns.length; i++) {
+                const bb = this.cityBurns[i];
+                const fl = 0.6 + Math.sin(t * (1.8 + (i % 3) * 0.4) + bb.ph) * 0.25 + Math.sin(t * 9.1 + bb.ph) * 0.15;
+                const d = bb.r * 3.2 * (0.85 + fl * 0.25);
+                g.save();
+                g.globalAlpha = 0.24 + fl * 0.18;
+                g.drawImage(this.fireGlowCanvas, offB + bb.cx - d / 2, bb.cy - d / 2, d, d);
+                g.restore();
+            }
+        }
+
+        // ===== [v5] METEOROS DE FUNDO (de tempos em tempos, posição/direção variáveis) =====
+        // Ao atingir uma construção: destroço PERMANENTE até resetar a partida
+        const nowMs = performance.now();
+        const bgDt = Math.min(50, nowMs - (this._bgT || nowMs)); this._bgT = nowMs;
+        const bgAlive = !this.paused && this.state !== 'PAUSED';
+        if (this.cityNear && bgAlive && nowMs > (this._bgMeteorNext || Infinity) && this.bgMeteors.length < 2) {
+            this._bgMeteorNext = nowMs + 26000 + Math.random() * 44000;
+            const cands = this.cityNear.buildings.filter(b => b.hits < 2);
+            if (cands.length > 0) {
+                const b = cands[Math.floor(Math.random() * cands.length)];
+                const off = -64 - (px - this.width / 2) * 0.030;
+                const tx = off + b.x + b.w * (0.25 + Math.random() * 0.5);
+                const ty = b.top + 8 + Math.random() * 16 + b.hits * 14;
+                const dirX = (Math.random() < 0.5 ? -1 : 1) * (0.28 + Math.random() * 0.34);
+                const dl = Math.hypot(dirX, 1);
+                const dist = 340 + Math.random() * 170;
+                this.bgMeteors.push({
+                    x: tx - (dirX / dl) * dist, y: ty - (1 / dl) * dist,
+                    ux: dirX / dl, uy: 1 / dl,
+                    speed: 0.20 + Math.random() * 0.10,
+                    tx: tx, ty: ty, target: b, hit: false, trail: []
+                });
+            }
+        }
+        for (let i = this.bgMeteors.length - 1; i >= 0; i--) {
+            const m = this.bgMeteors[i];
+            if (bgAlive && !m.hit) {
+                m.x += m.ux * m.speed * bgDt;
+                m.y += m.uy * m.speed * bgDt;
+                m.trail.push({ x: m.x, y: m.y });
+                if (m.trail.length > 9) m.trail.shift();
+                if (m.y >= m.ty || Math.hypot(m.tx - m.x, m.ty - m.y) < 9) {
+                    // chegou na altura do alvo (sempre desce) ou passou rente: IMPACTO
+                    m.hit = true; m.hitAt = nowMs;
+                    this.bgMeteorImpact(m, -64 - (px - this.width / 2) * 0.030);
+                } else if (m.y > this.height + 20) {
+                    m.hit = true; m.hitAt = nowMs; m.target = null;
+                }
+            }
+            const fadeHit = m.hit ? Math.max(0, 1 - (nowMs - m.hitAt) / 480) : 1;
+            if (m.hit && fadeHit <= 0) { this.bgMeteors.splice(i, 1); continue; }
+            g.save();
+            // rastro de fogo
+            for (let ti = 0; ti < m.trail.length; ti++) {
+                const tp = m.trail[ti];
+                g.globalAlpha = (ti / m.trail.length) * 0.45 * fadeHit;
+                g.fillStyle = ti > 6 ? '#ffd9a0' : '#ff9a40';
+                const tsz = 1.5 + (ti / m.trail.length) * 3.5;
+                g.fillRect(tp.x - tsz / 2, tp.y - tsz / 2, tsz, tsz);
+            }
+            // corpo (pedra pequena em chamas)
+            g.globalAlpha = 0.9 * fadeHit;
+            g.fillStyle = '#ff9a40';
+            g.fillRect(m.x - 4, m.y - 4, 8, 8);
+            g.globalAlpha = 0.95 * fadeHit;
+            g.fillStyle = '#fff2dd';
+            g.fillRect(m.x - 2, m.y - 2.5, 4.5, 5);
+            g.restore();
+            // anel do impacto (sutil, some rápido)
+            if (m.hit) {
+                const ip = Math.min(1, (nowMs - m.hitAt) / 450);
+                if (ip < 1) {
+                    g.save();
+                    g.globalAlpha = (1 - ip) * 0.5;
+                    g.strokeStyle = '#ffcf9a';
+                    g.lineWidth = 1.6;
+                    g.beginPath();
+                    g.arc(m.tx, m.ty, 4 + ip * 30, 0, Math.PI * 2);
+                    g.stroke();
+                    g.restore();
+                }
+            }
+        }
+
+        // [v5] fumaça persistente subindo dos escombros (muito sutil)
+        if (this.citySmoke && this.citySmoke.length) {
+            for (let i = 0; i < this.citySmoke.length; i++) {
+                const site = this.citySmoke[i];
+                if (bgAlive && nowMs > (site.next || 0) && this.bgSmokePuffs.length < 26) {
+                    site.next = nowMs + 750 + Math.random() * 550;
+                    this.bgSmokePuffs.push({ cx: site.cx + (Math.random() - 0.5) * 10, cy: site.cy,
+                        vx: (Math.random() - 0.5) * 0.006, vy: -(0.007 + Math.random() * 0.013),
+                        life: 4200 + Math.random() * 2600, max: 6800, size: 3 + Math.random() * 4 });
+                }
+            }
+            for (let i = this.bgSmokePuffs.length - 1; i >= 0; i--) {
+                const p = this.bgSmokePuffs[i];
+                if (bgAlive) {
+                    p.cx += p.vx * bgDt; p.cy += p.vy * bgDt; p.life -= bgDt;
+                    if (p.life <= 0) { this.bgSmokePuffs.splice(i, 1); continue; }
+                }
+                const k = Math.max(0, p.life / p.max);
+                const offN2 = -64 - (px - this.width / 2) * 0.030;
+                g.save();
+                g.globalAlpha = 0.045 + k * 0.05;
+                g.fillStyle = '#b9a9d6';
+                const psz = p.size * (1.7 - k * 0.7);
+                g.fillRect(offN2 + p.cx - psz / 2, p.cy - psz / 2, psz, psz);
+                g.restore();
+            }
+        }
+
+        // [v5] detritos do impacto caindo (curto e discreto)
+        for (let i = this.bgBits.length - 1; i >= 0; i--) {
+            const bp = this.bgBits[i];
+            if (bgAlive) {
+                bp.vy += 0.0011 * bgDt;
+                bp.x += bp.vx * bgDt; bp.y += bp.vy * bgDt; bp.life -= bgDt;
+                if (bp.life <= 0 || bp.y > this.height + 10) { this.bgBits.splice(i, 1); continue; }
+            }
+            g.save();
+            g.globalAlpha = Math.min(1, bp.life / 500) * 0.8;
+            g.fillStyle = bp.color;
+            g.fillRect(bp.x, bp.y, bp.size, bp.size);
+            g.restore();
+        }
 
         if (isBoss) {
             g.save();
@@ -3866,17 +4566,7 @@ class Game {
             const endX = centerX + Math.cos(angle) * 2000; const endY = centerY + Math.sin(angle) * 2000;
             
             if (this.player.laserActive) {
-                ctx.save();
-                ctx.strokeStyle = 'red';
-                ctx.lineWidth = 25;
-                ctx.lineCap = 'round';
-                ctx.globalAlpha = 0.6 + Math.sin(Date.now() / 50) * 0.4; 
-                ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
-                ctx.strokeStyle = 'white';
-                ctx.lineWidth = 8;
-                ctx.globalAlpha = 0.9;
-                ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke();
-                ctx.restore();
+                this.drawDecimatorBeam(ctx, centerX, centerY, endX, endY);
             } else {
                 ctx.save(); ctx.strokeStyle = 'red'; ctx.lineWidth = 1; ctx.globalAlpha = 0.4; 
                 ctx.beginPath(); ctx.moveTo(centerX, centerY); ctx.lineTo(endX, endY); ctx.stroke(); ctx.restore();
@@ -4849,6 +5539,7 @@ class Player {
         const now = Date.now();
         
         if (this.laserActive) {
+            game.addShake(1.6); // [v5] o canhão vibra a tela (sutil)
             if (now > this.laserTimer) {
                 this.laserActive = false;
             } else if (now - this.laserLastTick >= 500) {
@@ -5261,9 +5952,9 @@ class Enemy {
         if (twTier === 1) timeWarpFactor = 0.9; if (twTier === 2) timeWarpFactor = 0.85; if (twTier === 3) timeWarpFactor = 0.8;
 
         if (this.y < this.targetY) this.y += 1.4 * timeWarpFactor * window.timeScale; 
-        else this.y += Math.sin(Date.now() / 500 + this.movePhase) * 0.2 * timeWarpFactor * window.timeScale;
+        else this.y += Math.sin(game.simTime * 2 + this.movePhase) * 0.2 * timeWarpFactor * window.timeScale;
 
-        const time = Date.now() / 1000; let desiredX = this.anchorX + Math.sin(time + this.movePhase) * 80;
+        const time = game.simTime; let desiredX = this.anchorX + Math.sin(time + this.movePhase) * 80;
         this.x += ((desiredX - this.x) * 0.035) * timeWarpFactor * window.timeScale;
 
         let separationX = 0; let separationY = 0; let count = 0;
@@ -5385,7 +6076,10 @@ class Enemy {
         const deathColor = this.isGolden ? '#ffd700' : 'white';
         // [JUICE] anel de choque na morte
         game.spawnShockwave(this.x + this.width / 2, this.y + this.height / 2, this.isGolden ? 70 : 46, deathColor, 320, 2.5);
-        for (let i = 0; i < 5; i++) game.createParticle(this.x + 15, this.y + 15, deathColor, 6);
+        // [v5] detritos de verdade: lascas irregulares girando + poeira residual
+        game.createDebris(this.x + this.width / 2, this.y + this.height / 2, '#565073', 6, 5, 4.2, 950);
+        game.createDebris(this.x + this.width / 2, this.y + this.height / 2, deathColor, 3, 3.2, 5.5, 620);
+        for (let i = 0; i < 4; i++) game.createParticle(this.x + 15, this.y + 15, deathColor, 6);
         if (this.isGolden) {
             for (let i = 0; i < 4; i++) game.createParticle(this.x + 15, this.y + 15, '#ffaa00', 8);
         }
@@ -5548,11 +6242,11 @@ class Boss extends Enemy {
 
         const prog = Math.min(1, game.wave / 1000);
         const rageMult = this.enraged ? 1.28 : 1; // [JUICE] furia: movimento acelerado
-        const time = Date.now() / (2000 - prog * 900); 
+        const time = (game.simTime * 1000) / (2000 - prog * 900); 
         const waveX = Math.sin(time) * (250 + prog * 120); 
         let desiredX = this.anchorX + waveX;
         this.x += ((desiredX - this.x) * (this.moveSpeedLat * (1 + prog * 2) * rageMult)) * timeWarpFactor * window.timeScale;
-        this.y += (((this.targetY - this.y) * (0.035 * (1 + prog * 1.2))) + Math.sin(Date.now()/300)*0.5) * timeWarpFactor * window.timeScale;
+        this.y += (((this.targetY - this.y) * (0.035 * (1 + prog * 1.2))) + Math.sin(game.simTime * 3.34)*0.5) * timeWarpFactor * window.timeScale;
         
         if (this.y > game.height / 2.5) {
             this.y -= 1.5 * timeWarpFactor * window.timeScale;
@@ -5628,7 +6322,7 @@ class Boss extends Enemy {
             const ringOffset = Math.random() * Math.PI;
             for (let i = 0; i < ringCount; i++) {
                 const angle = ringOffset + (i / ringCount) * Math.PI * 2;
-                game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: ringSpeed, isBossAttack: true }));
+                game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: ringSpeed, isBossAttack: true, rgbBoss: true }));
             }
             game.addShake(4);
             return;
@@ -5643,7 +6337,7 @@ class Boss extends Enemy {
         const baseAngle = Math.atan2(alvoY - centerY, alvoX - centerX);
         for (let i = 0; i < shotCount; i++) {
             const angle = baseAngle + (i - (shotCount - 1) / 2) * 0.2;
-            game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: projSpeed, isBossAttack: true }));
+            game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: projSpeed, isBossAttack: true, rgbBoss: true }));
         }
     }
 
@@ -6027,6 +6721,59 @@ const EnemyBulletFX = {
 
         this.cache[color] = c;
         return c;
+    },
+
+    // [v5] projéteis do CHEFE: a mesma textura parametrizada por MATIZ — a cor
+    // RGB gira devagar no MESMO projétil (12 buckets pré-renderizados = grátis)
+    hueCache: {},
+    getHue(hue) {
+        const b = Math.floor((((hue % 360) + 360) % 360) / 30) * 30;
+        if (this.hueCache[b]) return this.hueCache[b];
+        const size = 64, cx = size / 2;
+        const c = document.createElement('canvas');
+        c.width = c.height = size;
+        const g = c.getContext('2d');
+        let glow = g.createRadialGradient(cx, cx, 6, cx, cx, cx);
+        glow.addColorStop(0, 'hsla(' + b + ',95%,60%,0.32)');
+        glow.addColorStop(0.35, 'hsla(' + b + ',95%,60%,0.12)');
+        glow.addColorStop(0.65, 'hsla(' + b + ',95%,60%,0.04)');
+        glow.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = glow;
+        g.fillRect(0, 0, size, size);
+        g.strokeStyle = 'hsla(' + b + ',95%,65%,0.16)';
+        g.lineWidth = 1;
+        g.beginPath(); g.arc(cx, cx, 17, 0, Math.PI * 2); g.stroke();
+        let body = g.createRadialGradient(cx - 5, cx - 5, 2, cx, cx, 15);
+        body.addColorStop(0, 'hsl(' + b + ',100%,92%)');
+        body.addColorStop(0.2, 'hsl(' + b + ',100%,92%)');
+        body.addColorStop(0.45, 'hsl(' + b + ',95%,55%)');
+        body.addColorStop(0.75, 'hsl(' + b + ',95%,55%)');
+        body.addColorStop(0.92, 'hsl(' + b + ',90%,22%)');
+        g.fillStyle = body;
+        g.beginPath(); g.arc(cx, cx, 15, 0, Math.PI * 2); g.fill();
+        g.strokeStyle = 'hsl(' + b + ',90%,22%)';
+        g.lineWidth = 2.5;
+        g.beginPath(); g.arc(cx, cx, 15, 0, Math.PI * 2); g.stroke();
+        g.strokeStyle = 'hsla(' + b + ',95%,75%,0.4)';
+        g.lineWidth = 1;
+        for (let i = 0; i < 2; i++) {
+            g.beginPath();
+            g.arc(cx + Math.cos(i * 3.1) * 3, cx + Math.sin(i * 3.1) * 3, 6 + i * 3, i, i + Math.PI * 1.2);
+            g.stroke();
+        }
+        g.strokeStyle = 'rgba(255,255,255,0.25)';
+        g.lineWidth = 1;
+        g.beginPath(); g.arc(cx, cx, 10, 0, Math.PI * 2); g.stroke();
+        for (let i = 0; i < 8; i++) {
+            const a = (i / 8) * Math.PI * 2 + 0.3;
+            const r = 3 + (i % 4) * 2.5;
+            g.fillStyle = 'hsla(' + b + ',100%,85%,0.7)';
+            g.beginPath(); g.arc(cx + Math.cos(a) * r, cx + Math.sin(a) * r, 0.8 + (i % 3) * 0.5, 0, Math.PI * 2); g.fill();
+        }
+        g.fillStyle = 'rgba(255,255,255,0.4)';
+        g.beginPath(); g.ellipse(cx - 4, cx - 5, 3, 2, -0.5, 0, Math.PI * 2); g.fill();
+        this.hueCache[b] = c;
+        return c;
     }
 };
 class Projectile {
@@ -6047,6 +6794,22 @@ class Projectile {
         this.homingTier = stats.homingTier || 0; this.isCold = stats.isCold || false; this.canBounce = stats.bouncing || false; this.bouncesLeft = this.canBounce ? 1 : 0;
         this.chainTier = stats.chainTier || 0; this.hasChained = false;
         this.isBossAttack = stats.isBossAttack || false;
+        this.rgbBoss = stats.rgbBoss || false; // [v5] projétil do boss: cor RGB girando
+        this.hueSeed = Math.random() * 360;
+        this._rgbNow = this.hueSeed;
+        this.spin = Math.random() * Math.PI * 2;
+        if (this.isFragment) {
+            // [v5] fragmento = DETRITO de verdade: polígono irregular quente
+            this.frag = [];
+            const fn = 3 + Math.floor(Math.random() * 3);
+            for (let i = 0; i < fn; i++) {
+                const fa = (i / fn) * Math.PI * 2 + Math.random() * 0.7;
+                this.frag.push([Math.cos(fa) * (0.5 + Math.random() * 0.5), Math.sin(fa) * (0.5 + Math.random() * 0.5)]);
+            }
+            this.fragSpin = (Math.random() - 0.5) * 0.5;
+            this.fragGlow = Math.random() < 0.5 ? '#ff9a40' : '#c9a2ff';
+            this.bornAt = Date.now();
+        } else { this.frag = null; }
         this.isHomingActive = false; this.target = null;
         this.aimTarget = stats.aimTarget || null;
         this.isCrit = stats.isCritShot || false;
@@ -6101,6 +6864,10 @@ class Projectile {
 
     update() {
         this.frameCount++;
+        if (this.frag) {
+            this.spin += this.fragSpin * window.timeScale;
+            if (this.frameCount % 14 === 0) game.createParticle(this.x, this.y, 'rgba(255,150,70,0.55)', 2, 300, 0.3);
+        }
         if (this.frameCount % 3 === 0) {
             this.history.push({ x: this.x, y: this.y });
             // [PERFORMANCE] rastro encurta nos modos equilibrado/performance (full = identico ao antes)
@@ -6203,6 +6970,57 @@ class Projectile {
         audioManager.playSfx('shatter');
     }
 
+    // [v5] fragmento-detrito: lasca irregular girando, quente, esfriando
+    drawFragment(ctx) {
+        const age = Date.now() - (this.bornAt || 0);
+        const heat = Math.max(0, 1 - age / 900); // esfria com o tempo
+        const sz = this.radius * 3.2;
+        if (this.history.length > 1) {
+            ctx.save();
+            ctx.lineCap = 'round';
+            for (let i = 0; i < this.history.length - 1; i++) {
+                const p1 = this.history[i], p2 = this.history[i + 1];
+                const tt = (i + 1) / this.history.length;
+                ctx.globalAlpha = tt * 0.5;
+                ctx.strokeStyle = heat > 0.3 ? '#ff9a40' : '#9a8cc0';
+                ctx.lineWidth = Math.max(1, sz * 0.4 * tt);
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            }
+            ctx.restore();
+        }
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(this.spin);
+        // aura quente
+        ctx.globalAlpha = 0.30 + heat * 0.35;
+        ctx.fillStyle = this.fragGlow;
+        ctx.beginPath();
+        ctx.arc(0, 0, sz * 0.9, 0, Math.PI * 2);
+        ctx.fill();
+        // corpo do detrito (rocha ardósia)
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = '#4a4560';
+        ctx.beginPath();
+        for (let i = 0; i < this.frag.length; i++) {
+            const vx = this.frag[i][0] * sz, vy = this.frag[i][1] * sz;
+            if (i === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+        }
+        ctx.closePath();
+        ctx.fill();
+        // aresta em brasa + face iluminada
+        ctx.strokeStyle = 'rgba(255,' + Math.round(140 + heat * 80) + ',60,' + (0.45 + heat * 0.5).toFixed(2) + ')';
+        ctx.lineWidth = 1.6;
+        ctx.stroke();
+        ctx.fillStyle = 'rgba(255,190,110,' + (heat * 0.35).toFixed(2) + ')';
+        ctx.beginPath();
+        ctx.moveTo(this.frag[0][0] * sz, this.frag[0][1] * sz);
+        ctx.lineTo(this.frag[1][0] * sz, this.frag[1][1] * sz);
+        ctx.lineTo(0, 0);
+        ctx.closePath();
+        ctx.fill();
+        ctx.restore();
+    }
+
     checkCollision(rect) {
         return (this.x > rect.x && this.x < rect.x + rect.width && this.y > rect.y && this.y < rect.y + rect.height);
     }
@@ -6215,7 +7033,7 @@ class Projectile {
                 const p1 = this.history[i]; const p2 = this.history[i + 1];
                 const t = (i + 1) / this.history.length;
                 ctx.globalAlpha = t * (this.isPlayer ? 0.45 : 0.30);
-                ctx.strokeStyle = this.color;
+                ctx.strokeStyle = (!this.isPlayer && this.rgbBoss) ? ('hsla(' + (this._rgbNow | 0) + ',95%,65%,1)') : this.color;
                 ctx.lineWidth = Math.max(1, this.radius * 1.8 * t);
                 ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
 
@@ -6249,9 +7067,33 @@ class Projectile {
             ctx.drawImage(StaffBulletSprites.ring(), -rd / 2, -rd / 2, rd, rd);
             ctx.restore();
         } else if (!this.isPlayer) {
-            // Projétil inimigo com textura
+            // [v5] orbe de energia: núcleo texturizado + anel orbital girando;
+            // projéteis do CHEFE ciclam RGB devagar no MESMO projétil
             let d = this.radius * (this.isBossAttack ? 6.5 : 5.5) * pulse;
-            ctx.drawImage(EnemyBulletFX.get(this.color), this.x - d / 2, this.y - d / 2, d, d);
+            let sprite;
+            if (this.rgbBoss) {
+                const hue = (this.hueSeed + Date.now() / 33) % 360; // ~30°/s: perceptível, nunca abrupto
+                this._rgbNow = hue;
+                sprite = EnemyBulletFX.getHue(hue);
+            } else {
+                sprite = EnemyBulletFX.get(this.color);
+            }
+            ctx.drawImage(sprite, this.x - d / 2, this.y - d / 2, d, d);
+            const ringR = d * 0.62;
+            const ra = Date.now() / 160 + this.hueSeed;
+            ctx.save();
+            ctx.strokeStyle = this.rgbBoss ? ('hsla(' + (this._rgbNow | 0) + ',95%,75%,0.55)') : 'rgba(255,255,255,0.30)';
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.ellipse(this.x, this.y, ringR, ringR * 0.42, ra, 0, Math.PI * 2);
+            ctx.stroke();
+            if (Perf.level === 0) {
+                const ox = Math.cos(ra) * ringR, oy = Math.sin(ra) * ringR * 0.42;
+                ctx.fillStyle = this.rgbBoss ? ('hsl(' + (this._rgbNow | 0) + ',100%,85%)') : '#ffffff';
+                ctx.globalAlpha = 0.85;
+                ctx.fillRect(this.x + ox - 1, this.y + oy - 1, 2, 2);
+            }
+            ctx.restore();
         } else {
             // Cometa branco (cajado 1)
             let sprite = BulletSprites.get(this.color, this.isPlayer);
@@ -6264,18 +7106,36 @@ class Projectile {
 class Particle {
     constructor(x, y, color, size, duration, speedMult = 1) { this.reset(x, y, color, size, duration, speedMult); }
     reset(x, y, color, size, duration = 500, speedMult = 1) {
-        this.x = x; this.y = y; 
-        this.vx = (Math.random() - 0.5) * 5 * speedMult; 
+        this.x = x; this.y = y;
+        this.vx = (Math.random() - 0.5) * 5 * speedMult;
         this.vy = (Math.random() - 0.5) * 5 * speedMult;
         this.spawnTime = Date.now(); this.duration = duration; this.size = size; this.color = color; this.dead = false;
+        // [v5] detrito opcional: lasca irregular girando com gravidade
+        this.verts = null; this.rot = 0; this.vrot = 0; this.grav = 0;
     }
     update() {
-        this.x += this.vx * window.timeScale; 
-        this.y += this.vy * window.timeScale; 
-        this.size *= (1 - 0.05 * window.timeScale); 
+        this.x += this.vx * window.timeScale;
+        this.y += this.vy * window.timeScale;
+        if (this.verts) { this.rot += this.vrot * window.timeScale; this.vy += this.grav * window.timeScale; }
+        this.size *= (1 - 0.05 * window.timeScale);
         if (Date.now() - this.spawnTime > this.duration) this.dead = true;
     }
-    draw(ctx) { ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size); }
+    draw(ctx) {
+        if (this.verts) {
+            ctx.save();
+            ctx.translate(this.x, this.y);
+            ctx.rotate(this.rot);
+            ctx.fillStyle = this.color;
+            ctx.beginPath();
+            for (let i = 0; i < this.verts.length; i++) {
+                const vx = this.verts[i][0] * this.size, vy = this.verts[i][1] * this.size;
+                if (i === 0) ctx.moveTo(vx, vy); else ctx.lineTo(vx, vy);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        } else { ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size); }
+    }
 }
 
 class LightningBeam {
