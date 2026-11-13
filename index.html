@@ -1868,13 +1868,16 @@ const audioManager = {
         if (!this._rumble) return;
         this._rumble.master.gain.setTargetAtTime(0, this.context.currentTime, 0.3);
     },
-    // RISADAS do fim: os PRIMEIROS 15s de Assets/risadas.mp3 em loop (o arquivo
-    // tem 30s, mas reinicia do começo aos 15s, como pedido). Sem o arquivo,
-    // entra uma risada maligna PROCEDURAL (WebAudio) no mesmo esquema de loop.
+    // RISADAS do fim: [v11] UMA ÚNICA VEZ — toca SÓ os primeiros 15s do
+    // Assets/risadas.mp3 (o arquivo tem 30s; aos 15s ele PARA, sem reiniciar).
+    // Começa no instante em que o mago é engolido junto com o último pedaço
+    // de plataforma e cobre o apagão + a frase final. Sem o arquivo, entra uma
+    // risada maligna PROCEDURAL (WebAudio) no mesmo esquema (uma leva de 15s).
     _laughSynth: null,
     startLaughs() {
         this.init();
         this._laughLoopOn = true;
+        this._laughStartAt = Date.now();
         const vol = this.sfxVol();
         if (ASSETS.audio._risadasOk) {
             const a = ASSETS.audio.risadas;
@@ -1883,12 +1886,16 @@ const audioManager = {
                 a.volume = Math.min(1, vol * 1.15);
                 a.muted = this.isMuted;
                 a.play().catch(() => this._startLaughSynth());
-                // [LOOP 15s] o arquivo tem 30s, mas aos 15s volta pro começo
+                // [v11] UMA VEZ SÓ: aos 15s o áudio PAUSA (não volta pro começo)
                 if (this._laughInterval) clearInterval(this._laughInterval);
                 this._laughInterval = setInterval(() => {
-                    if (!this._laughLoopOn) return;
+                    if (!this._laughLoopOn) { clearInterval(this._laughInterval); this._laughInterval = null; return; }
                     try {
-                        if (a.currentTime >= 15) { a.currentTime = 0; a.play().catch(() => {}); }
+                        if (ASSETS.audio.risadas.currentTime >= 15) {
+                            ASSETS.audio.risadas.pause();
+                            clearInterval(this._laughInterval);
+                            this._laughInterval = null;
+                        }
                     } catch (e) { }
                 }, 250);
             } catch (e) { this._startLaughSynth(); }
@@ -1924,9 +1931,10 @@ const audioManager = {
             }
         };
         const round = () => {
-            if (!self._laughLoopOn) { self._laughSynth = null; return; }
+            // [v11] uma leva de 15s e CALE A BOCA (sem loop infinito)
+            if (!self._laughLoopOn || Date.now() - (self._laughStartAt || 0) > 15000) { self._laughSynth = null; return; }
             laughOnce(ctx.currentTime + 0.05);
-            self._laughSynth = setTimeout(round, 1500 + Math.random() * 900); // ~ciclo de 15s/10
+            self._laughSynth = setTimeout(round, 1500 + Math.random() * 900);
         };
         round();
     },
@@ -2728,9 +2736,17 @@ class Game {
         // [v10] teto GLOBAL de projéteis (a wave 2000 é o limite de dificuldade;
         // nada de mil projéteis simultâneos numa wave 9999)
         this.maxBullets = 340;
+        // [v11] teto de projéteis INIMIGOS: conta só os tiros deles — os do
+        // jogador (que não têm teto) não podem mais deixar os chefes mudos
+        // (era o bug do /perk all: o mago lotava o pool e o chefe "esquecia" de atirar)
+        this.maxEnemyBullets = 260;
 
         // [v10] CRATERAS DE METEORO (gameplay): marca no chão que esfria e some
         this.meteorCraters = [];
+        // [v11] IMPACTO PREMIUM do meteoro: clarão laranja, anel de poeira no
+        // plano do chão e PEDRAS EM BRASA quicando pelo cenário
+        this.meteorRocks = [];
+        this.meteorImpacts = [];
         this.frenzyDustCap = 0;
         
         this.player = null;
@@ -3212,13 +3228,48 @@ class Game {
                 wv = 10000;
                 this.addFloatingText(this.width / 2, this.height / 2 - 30, TEXTS[currentLang].waveLimit, '#ff4444', 13);
             }
-            this.wave = wv;
-            this.enemies.forEach(e => e.dead = true);
+            if (wv < 1) wv = 1;
+            // [v11] TELEPORTE LIMPO: mata a wave atual SEM efeitos colaterais —
+            // devolve os inimigos pro pool, fecha TODOS os menus/estados
+            // pendentes (perks, confirmação de chefe, cinemática de morte) e
+            // zera os eventos. Nada de "wave bugada" por pular de vez.
+            this.enemies.forEach(e => {
+                e.dead = true;
+                if (e.type !== 'boss' && e.type !== 'miniboss') ObjectPool.releaseEnemy(e);
+            });
+            this.enemies = [];
             this.enemiesToSpawn = 0;
             this.meteors = [];
+            this.meteorHitThisWave = false;
+            this.waveLock = false;
+            this.clearAllBullets();
+            this.cinematicBoss = null;
+            this.cinematicShards = [];
+            this.wave = wv;
             this.state = 'PLAYING';
+            this.paused = false;
+            this._freezeAt = 0;
+            const fechar = ['upgrade-menu', 'boss-confirm-menu', 'pause-menu', 'gameover-screen'];
+            for (const id of fechar) {
+                const el = document.getElementById(id);
+                if (el) el.classList.add('hidden');
+            }
+            document.getElementById('fade-overlay').style.opacity = 0;
             this.addFloatingText(this.width/2, this.height/2, TEXTS[currentLang].waveJump + ' ' + this.wave, "yellow");
             this.startWave();
+        } else if (parts[0] === '/meteor') {
+            // [v11] /METEOR [segundos]: chuva de meteoros SOB DEMANDA (padrão 10s)
+            // pra testar quando quiser — funciona em qualquer wave, chefe incluso.
+            const dur = Math.min(60, Math.max(3, parseInt(parts[1]) || 10)) * 1000;
+            this.isMeteorWave = true;
+            this.meteorWaveStartTime = Date.now();
+            this.meteorWaveDuration = dur;
+            this.lastMeteorSpawn = 0; // o primeiro cai JÁ
+            document.getElementById('meteor-warning').style.display = 'block';
+            audioManager.playSfx('meteor_alert');
+            setTimeout(() => { document.getElementById('meteor-warning').style.display = 'none'; }, Math.min(dur, 20000));
+            this.addFloatingText(this.width / 2, this.height / 2 - 30,
+                (currentLang === 'pt' ? 'CHUVA DE METEOROS! ' : 'METEOR SHOWER! ') + (dur / 1000) + 's', '#ff8833', 15);
         } else if (parts[0] === '/perk' && parts[1]) {
             const perkId = parts[1];
             const allPerks = [...UPGRADES_DB.common, ...UPGRADES_DB.uncommon, ...UPGRADES_DB.epic, ...UPGRADES_DB.legendary];
@@ -3372,6 +3423,7 @@ class Game {
         this.isMeteorWave = false;
         this.isGoldenWave = false;
         this.meteors = [];
+        this.meteorWaveDuration = 0; // [v11] a chuva NATIVA dura 20s — não herda a duração de um /meteor
         this.lastMeteorSpawn = Date.now();
         let eventShown = false;
 
@@ -3729,7 +3781,12 @@ class Game {
                 y = -50 - (i % 2) * 40;
                 break;
             case 'v': {
-                const offset = Math.ceil(i / 2);
+                // [v11] FILEIRAS CÍCLICAS: nas waves gigantes (200+) o offset antigo
+                // crescia com o índice e os últimos da fila nasciam a ~9.000px
+                // ACIMA da tela — descendo a 1,4px/tick, a wave ficava MINUTOS
+                // "vazia" (era o bug do /wave 501). Agora o V tem 7 fileiras que
+                // se repetem: todo mundo entra perto e visível.
+                const offset = Math.ceil((i % 14) / 2);
                 const lado = (i % 2 === 1) ? 1 : -1;
                 x = W / 2 + lado * offset * 85;
                 y = -60 - offset * 38;
@@ -3752,6 +3809,7 @@ class Game {
             }
         }
         x = Math.max(30, Math.min(W - 65, x));
+        y = Math.max(-380, y); // [v11] rede de segurança: ninguém nasce fora do alcance
         return { x: x, y: y };
     }
 
@@ -4479,13 +4537,25 @@ class Game {
         this.bullets = [];
     }
 
+    // [v11] quantos projéteis INIMIGOS estão vivos agora (o teto de fogo
+    // inimigo conta só eles — os tiros do jogador vivem à parte)
+    enemyBulletCount() {
+        let n = 0;
+        const bs = this.bullets;
+        for (let i = 0; i < bs.length; i++) if (!bs[i].isPlayer) n++;
+        return n;
+    }
+
     // ===== GERENCIAR METEOROS =====
     manageMeteors() {
         if (!this.isMeteorWave) return;
         
-        // Para de chover meteoros após 20 segundos
-        if (Date.now() - (this.meteorWaveStartTime || 0) > 20000) {
+        // Para de chover meteoros após a duração da chuva (20s padrão; /meteor
+        // escolhe os seus — padrão 10s)
+        const meteorDur = this.meteorWaveDuration || 20000;
+        if (Date.now() - (this.meteorWaveStartTime || 0) > meteorDur) {
             this.isMeteorWave = false;
+            this.meteorWaveDuration = 0;
             this.meteors = [];
             document.getElementById('meteor-warning').style.display = 'none';
             return;
@@ -4535,6 +4605,20 @@ class Game {
                     // EJETA de terra/pedra: lascas escuras voando pra cima e pros lados
                     this.createDebris(m.x, m.targetY - 4, '#3a2e45', 8, 5, 5.5, 900);
                     this.createDebris(m.x, m.targetY - 4, '#584a66', 5, 3.6, 6.5, 750);
+                    // [v11] IMPACTO PREMIUM: clarão laranja + anel de poeira no
+                    // plano do chão + PEDRAS EM BRASA quicando pelo cenário
+                    this.spawnMeteorImpactFX(m.x, m.targetY, intensity);
+                    // [v11] SKID de poeira: terra rasteira correndo pelo chão pros lados
+                    for (let sk = 0; sk < 10; sk++) {
+                        if (this.particles.length >= this.particleCap) break;
+                        const lado = Math.random() < 0.5 ? -1 : 1;
+                        const p2 = ObjectPool.getParticle(m.x + lado * 8, m.targetY - 3,
+                            'rgba(150,135,175,0.55)', 3 + Math.random() * 4, 460 + Math.random() * 300, 0);
+                        p2.vx = lado * (2.2 + Math.random() * 4.5);
+                        p2.vy = -(0.3 + Math.random() * 1.4);
+                        p2.grav = 0.055;
+                        this.particles.push(p2);
+                    }
                     for (let pe = 0; pe < 14; pe++) {
                         if (this.particles.length >= this.particleCap) break;
                         const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
@@ -4572,6 +4656,100 @@ class Game {
         }
     }
     
+    // [v11] IMPACTO PREMIUM DO METEORO: o momento em que a rocha beija o chão
+    // ganha (1) um CLARÃO laranja curtíssimo, (2) um ANEL DE POEIRA achatado
+    // correndo pelo plano do chão (não é onda circular: é poeira de solo em
+    // perspectiva) e (3) PEDRAS EM BRASA que voam, caem, QUICAM e esfriam
+    // de branco-quente pra pedra morta.
+    spawnMeteorImpactFX(x, y, intensity) {
+        if (!this.meteorImpacts) this.meteorImpacts = [];
+        if (!this.meteorRocks) this.meteorRocks = [];
+        this.meteorImpacts.push({ x: x, y: y, born: Date.now(), dur: 640, r: 78 + intensity * 46 });
+        const nRocks = 5 + Math.floor(intensity * 5);
+        for (let i = 0; i < nRocks && this.meteorRocks.length < 42; i++) {
+            const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.3;
+            const sp = 2.6 + Math.random() * 4.6;
+            this.meteorRocks.push({
+                x: x + (Math.random() - 0.5) * 10, y: y - 6,
+                vx: Math.cos(ang) * sp, vy: Math.sin(ang) * sp,
+                gy: (this.groundBelow(x, y) !== null ? this.groundBelow(x, y) : y) + 2,
+                rot: Math.random() * Math.PI * 2, vrot: (Math.random() - 0.5) * 0.4,
+                sz: 2.6 + Math.random() * 3.4,
+                born: Date.now(), dur: 2100 + Math.random() * 1300,
+                bounced: false
+            });
+        }
+    }
+
+    drawMeteorImpactFX(ctx) {
+        if (!this.meteorImpacts && !this.meteorRocks) return;
+        const now = Date.now();
+        // 1) clarão + anel de poeira
+        if (this.meteorImpacts) {
+            for (let i = this.meteorImpacts.length - 1; i >= 0; i--) {
+                const im = this.meteorImpacts[i];
+                const t = (now - im.born) / im.dur;
+                if (t >= 1) { this.meteorImpacts.splice(i, 1); continue; }
+                ctx.save();
+                // clarão: núcleo branco-quente morrendo rápido
+                if (t < 0.42) {
+                    const k = 1 - t / 0.42;
+                    ctx.globalCompositeOperation = 'lighter';
+                    const fl = ctx.createRadialGradient(im.x, im.y - 4, 2, im.x, im.y - 4, im.r * (0.55 + k * 0.3));
+                    fl.addColorStop(0, 'rgba(255,250,235,' + (0.85 * k).toFixed(3) + ')');
+                    fl.addColorStop(0.4, 'rgba(255,160,70,' + (0.5 * k).toFixed(3) + ')');
+                    fl.addColorStop(1, 'rgba(255,90,20,0)');
+                    ctx.fillStyle = fl;
+                    ctx.beginPath(); ctx.ellipse(im.x, im.y - 4, im.r * 1.15, im.r * 0.6, 0, 0, Math.PI * 2); ctx.fill();
+                }
+                // anel de poeira: elipse ACHATADA expandindo no plano do chão
+                const rx = 16 + t * (im.r * 1.35);
+                const fade = Math.pow(1 - t, 1.6);
+                ctx.globalAlpha = 0.4 * fade;
+                ctx.strokeStyle = '#b7a8cf';
+                ctx.lineWidth = 3.4 * (1 - t) + 0.8;
+                ctx.beginPath(); ctx.ellipse(im.x, im.y, rx, rx * 0.3, 0, 0, Math.PI * 2); ctx.stroke();
+                ctx.globalAlpha = 0.2 * fade;
+                ctx.lineWidth = 1.6;
+                ctx.beginPath(); ctx.ellipse(im.x, im.y, rx * 0.66, rx * 0.2, 0, 0, Math.PI * 2); ctx.stroke();
+                ctx.restore();
+            }
+        }
+        // 2) pedras em brasa: física + desenho (esfriam branco -> laranja -> pedra)
+        if (this.meteorRocks) {
+            const dt = Math.min(50, now - (this._rockT || now)) / 16.7; this._rockT = now;
+            for (let i = this.meteorRocks.length - 1; i >= 0; i--) {
+                const r = this.meteorRocks[i];
+                if (now - r.born > r.dur) { this.meteorRocks.splice(i, 1); continue; }
+                r.vy += 0.16 * dt;
+                r.x += r.vx * dt; r.y += r.vy * dt;
+                r.rot += r.vrot * dt;
+                if (r.y >= r.gy - r.sz * 0.5 && r.vy > 0) {
+                    r.y = r.gy - r.sz * 0.5;
+                    if (!r.bounced) { r.vy = -(1.6 + Math.random() * 2.2); r.vx *= 0.55; r.vrot *= 0.5; r.bounced = true; }
+                    else { r.vy = 0; r.vx *= 0.86; r.vrot *= 0.8; }
+                }
+                const life = (now - r.born) / r.dur;
+                const heat = Math.max(0, 1 - life * 1.45);
+                ctx.save();
+                ctx.translate(r.x, r.y);
+                ctx.rotate(r.rot);
+                ctx.fillStyle = heat > 0.55 ? '#fff3d6' : (heat > 0.22 ? '#ff9440' : '#6f6187');
+                ctx.fillRect(-r.sz / 2, -r.sz / 2, r.sz, r.sz * 0.8);
+                if (heat > 0.05) {
+                    ctx.globalCompositeOperation = 'lighter';
+                    ctx.globalAlpha = heat * 0.8;
+                    const gg = ctx.createRadialGradient(0, 0, 0.5, 0, 0, r.sz * 2.2);
+                    gg.addColorStop(0, 'rgba(255,170,80,0.8)');
+                    gg.addColorStop(1, 'rgba(255,90,20,0)');
+                    ctx.fillStyle = gg;
+                    ctx.fillRect(-r.sz * 2.2, -r.sz * 2.2, r.sz * 4.4, r.sz * 4.4);
+                }
+                ctx.restore();
+            }
+        }
+    }
+
     drawMeteors(ctx) {
         this.meteors.forEach(m => {
             if (m.state === 'telegraph') {
@@ -6108,16 +6286,44 @@ class Game {
         g.stroke();
         g.restore();
 
+        // [v11] O CÉU ADOECE CONFORME AS WAVES PASSAM: um véu rubro-violeta cada
+        // vez mais denso — na wave 1 é imperceptível, na 9999 o céu inteiro está
+        // em brasa. É o anúncio silencioso do fim, o tempo TODO da partida.
+        {
+            let fkPre = Math.max(0, Math.min(1, (this.wave - 1) / 9998));
+            if (fkPre > 0.02 && this.state !== 'MENU') {
+                const sg2 = g.createLinearGradient(0, 0, 0, this.height);
+                sg2.addColorStop(0, 'rgba(122,22,58,' + (fkPre * 0.22).toFixed(3) + ')');
+                sg2.addColorStop(0.6, 'rgba(62,12,52,' + (fkPre * 0.15).toFixed(3) + ')');
+                sg2.addColorStop(1, 'rgba(12,4,18,' + (fkPre * 0.10).toFixed(3) + ')');
+                g.fillStyle = sg2;
+                g.fillRect(0, 0, this.width, this.height);
+            }
+            // [v11] O VAZIO DO FINALE: quando o buraco negro supermassivo já cobre
+            // o céu, o que sobra de estrelas/horizonte atrás dele MORRE em preto
+            // (fica ATRÁS do buraco e da cidade — eles continuam por cima)
+            if (this.state === 'FINALE' && this.finale && (this.finale.voidAlpha || 0) > 0.003) {
+                g.fillStyle = 'rgba(2,1,7,' + Math.min(1, this.finale.voidAlpha).toFixed(3) + ')';
+                g.fillRect(0, 0, this.width, this.height);
+            }
+        }
+
         // [v6] BURACO NEGRO SUPERMASSIVO — o espaço-tempo distorcendo AO VIVO
         if (this.blackHole) {
             const bh = this.blackHole;
-            // [v10] O ANÚNCIO DO FIM: da wave 9000 à 9999 o buraco negro CRESCE
-            // progressivamente (chegando ao DOBRO do tamanho) e DESLIZA pro
-            // CENTRO do cenário — o pano de fundo virando o protagonista
-            const fk = Math.max(0, Math.min(1, (this.wave - 9000) / 999));
-            const R = bh.shadowR * (1 + fk);
-            const bx = bh.x + (this.width / 2 - bh.x) * fk;
-            const by = bh.y + (330 - bh.y) * fk;
+            // [v11] O ANÚNCIO DO FIM AGORA É A PARTIDA INTEIRA: o buraco negro
+            // cresce WAVE POR WAVE desde a wave 1 — onde ele é o tamanho padrão
+            // lá no fundo à direita — até a 9999, onde chega ao DOBRO do tamanho
+            // bem no CENTRO da tela (era pra ter sido assim desde a v10: o ramp
+            // antigo só ligava na wave 9000 e as waves 2000/4000/5000 ficavam
+            // iguais). E no FINALE ele continua crescendo MUITO mais, como se
+            // estivesse se APROXIMANDO pra engolir tudo (bhGrow).
+            const fk = Math.max(0, Math.min(1, (this.wave - 1) / 9998));
+            const bhGrow = (this.finale && this.finale.bhGrow) || 0;
+            const R = bh.shadowR * (1 + fk + bhGrow);
+            const bkc = Math.min(1, fk + bhGrow); // posição: para no CENTRO
+            const bx = bh.x + (this.width / 2 - bh.x) * bkc;
+            const by = bh.y + (this.height / 2 - bh.y) * bkc;
             const bNow = performance.now();
             const bDt = Math.min(50, bNow - (this._bhLastT || bNow)) / 1000;
             this._bhLastT = bNow;
@@ -6126,9 +6332,12 @@ class Game {
             const proj = (ex, ey) => [bx + ex * cosR - ey * sinR, by + ex * sinR + ey * cosR];
 
             // 0) bruma violeta respirando (o campo gravitacional "pesa" no ar)
+            // [v11] escala junto com R (antes ficava no tamanho nativo e o disco
+            // de acreção crescia enquanto o halo ficava pequeno)
             g.save();
             g.globalAlpha = 0.85 + Math.sin(bt * 0.3) * 0.12;
-            g.drawImage(bh.haze, bx - bh.haze.width / 2, by - bh.haze.height / 2);
+            const hzS = bh.haze.width * (R / bh.shadowR);
+            g.drawImage(bh.haze, bx - hzS / 2, by - hzS / 2, hzS, hzS);
             g.restore();
 
             const lim = [64, 44, 28][Perf.level] || 44;
@@ -6227,8 +6436,13 @@ class Game {
             g.restore();
 
             // ===== a SOMBRA: horizonte de eventos, preto absoluto =====
+            // [v11] O FIX DO HORIZONTE COLADO: o sprite da sombra agora escala
+            // JUNTO com R (antes ele ficava no tamanho nativo de 102px — por isso
+            // na wave alta o disco de acreção crescia e o horizonte ficava
+            // "colado" pequeno, lendo como um anel SUPER LONGE do buraco).
+            // Tudo cresce JUNTO e GRUDADO: sombra, disco, halo, photon ring.
             const breathe = 1 + Math.sin(bt * 0.55) * 0.008;
-            const sw = bh.sprite.width * breathe;
+            const sw = bh.sprite.width * (R / bh.shadowR) * breathe;
             g.drawImage(bh.sprite, bx - sw / 2, by - sw / 2, sw, sw);
             // PHOTON RING: círculo PERFEITO, fininho e aderente à borda —
             // a assinatura óptica do horizonte (sem blur: aderente e uniforme)
@@ -6425,12 +6639,29 @@ class Game {
         }
 
 
+        // [v11] SINGULARIDADE: no fim do FINALE o horizonte de eventos SOME —
+        // a luz do disco morre, o céu morre, tudo vira o vazio. Esse véu fica
+        // DEPOIS do buraco negro (mata o brilho residual) e ANTES da cidade
+        // (os últimos prédios de pé continuam visíveis até serem comidos).
+        if (this.state === 'FINALE' && this.finale) {
+            const dA = (this.finale.bhDiskAlpha != null) ? this.finale.bhDiskAlpha : 1;
+            if (dA < 0.999) {
+                g.fillStyle = 'rgba(2,1,7,' + (1 - dA).toFixed(3) + ')';
+                g.fillRect(0, 0, this.width, this.height);
+            }
+        }
+
         // [v5] linha do horizonte — cidade contra-luz, separada do buraco negro
+        // [v11] no FINALE a linha do horizonte morre junto com a cidade
         if (this.horizonCanvas) {
-            g.save();
-            g.globalAlpha = 0.85 + Math.sin(t * 0.3) * 0.15;
-            g.drawImage(this.horizonCanvas, 0, 396);
-            g.restore();
+            let hA = 0.85 + Math.sin(t * 0.3) * 0.15;
+            if (this.finale) hA *= Math.max(0, 1 - (this.finale.cityK || 0) * 1.4);
+            if (hA > 0.01) {
+                g.save();
+                g.globalAlpha = hA;
+                g.drawImage(this.horizonCanvas, 0, 396);
+                g.restore();
+            }
         }
         if (this.cityFar) g.drawImage(this.cityFar.canvas, -64 - (px - this.width / 2) * 0.012, 0);
         if (this.cityNear) g.drawImage(this.cityNear.canvas, -64 - (px - this.width / 2) * 0.030, 0);
@@ -6472,7 +6703,7 @@ class Game {
         // Ao atingir uma construção: destroço PERMANENTE até resetar a partida
         const nowMs = performance.now();
         const bgDt = Math.min(50, nowMs - (this._bgT || nowMs)); this._bgT = nowMs;
-        const bgAlive = !this.paused && this.state !== 'PAUSED';
+        const bgAlive = !this.paused && this.state !== 'PAUSED' && this.state !== 'FINALE'; // [v11] no fim do mundo a cidade não se reergue e não chove meteoro de fundo
         if (this.cityNear && bgAlive && nowMs > (this._bgMeteorNext || Infinity) && this.bgMeteors.length < 2) {
             // [v9] intervalo: 1-2 min base; no FRENESIMO encurta (até -45%);
             // em waves de CHEFE (50+) chove BEM mais (o cenário participa da luta)
@@ -6745,7 +6976,9 @@ class Game {
         }
 
         // [v9] FRENESIMO: faixas de energia coloridas varrendo o céu (sutil, com teto)
-        if (F > 0.04) {
+        // [v11] ...mas NÃO no fim do mundo: o vazio é vazio (nada de faixas de
+        // energia varrendo o nada depois que o buraco negro comeu o céu)
+        if (F > 0.04 && this.state !== 'FINALE') {
             g.save();
             g.globalCompositeOperation = 'lighter';
             for (let bi = 0; bi < 3; bi++) {
@@ -6761,7 +6994,7 @@ class Game {
             g.restore();
         }
 
-        if (isBoss) {
+        if (isBoss && this.state !== 'FINALE') { // [v11] auroras também morrem no fim do mundo
             g.save();
             g.globalCompositeOperation = 'lighter';
             // [v9] FRENESIMO: no boss as AURORAS se multiplicam (com teto)
@@ -6780,19 +7013,26 @@ class Game {
 
         const pulseSpeed = (isBoss ? 600 : 1100) / (1 + F * 1.2); // [v9] pulsa mais rápido no frenesimo
         const pulse = Math.min(0.32, Math.max(0, 0.10 + Math.sin(Date.now() / pulseSpeed) * 0.05) * (1 + F * 0.9));
-        g.save();
-        g.globalAlpha = pulse;
-        g.drawImage(BgGlow.get(isBoss ? (hue + 40) % 360 : 272), 0, 0, this.width, this.height);
-        g.restore();
-
-        if (this.fogCanvas) {
-            const w = 640;
-            for (let i = 0; i < 3; i++) {
-                const fx = ((t * (9 + i * 5) + i * 760) % (this.width + w)) - w;
-                g.drawImage(this.fogCanvas, fx, this.height - 168, w, 185);
-            }
+        // [v11] o glow ambiente também desiste quando o universo já era
+        if (this.state !== 'FINALE') {
+            g.save();
+            g.globalAlpha = pulse;
+            g.drawImage(BgGlow.get(isBoss ? (hue + 40) % 360 : 272), 0, 0, this.width, this.height);
+            g.restore();
         }
-        this.drawWeather(g, true); // [v7] clima (fundo): relâmpagos iluminando as ruínas
+
+        // [v11] no FINALE a neblina e o clima morrem: só o vazio, o buraco
+        // negro e o mundo sendo engolido (nada de névoa flutuando no nada)
+        if (this.state !== 'FINALE') {
+            if (this.fogCanvas) {
+                const w = 640;
+                for (let i = 0; i < 3; i++) {
+                    const fx = ((t * (9 + i * 5) + i * 760) % (this.width + w)) - w;
+                    g.drawImage(this.fogCanvas, fx, this.height - 168, w, 185);
+                }
+            }
+            this.drawWeather(g, true); // [v7] clima (fundo): relâmpagos iluminando as ruínas
+        }
         if (_warp) g.restore(); // [v6] fim do warp de lançamento
     }
 
@@ -6887,7 +7127,8 @@ class Game {
             ctx.rotate(0.035 * k * (this.dmgTiltDir || 1));
             ctx.translate(-this.width / 2, -this.height / 2);
         }
-        this.drawBgDust(ctx); // [JUICE] poeira arcana de fundo
+        // [v11] no FINALE a poeira arcana morre: não há "ar" no fim do mundo
+        if (this.state !== 'FINALE') this.drawBgDust(ctx); // [JUICE] poeira arcana de fundo
         if (this.state === 'BOSS_DEATH_CINEMATIC') {
             // [v4] camera: aproxima do chefe morrendo e, apos a detonacao, volta suave
             let elapsed = Date.now() - this.cinematicStartTime;
@@ -6914,12 +7155,9 @@ class Game {
             ctx.translate(-camX + shakeX, -camY + shakeY);
         }
 
-        // [v10] FINALE: zoom cinematográfico no mago (últimas palavras / engolido)
-        if (this.state === 'FINALE' && this.finale && this.finale.zoom && this.finale.zoom !== 1) {
-            ctx.translate(this.width / 2, this.height / 2);
-            ctx.scale(this.finale.zoom, this.finale.zoom);
-            ctx.translate(-this.finale.zoomX, -this.finale.zoomY);
-        }
+        // [v11] FINALE: SEM zoom, SEM câmera fechando no mago — o drama é o
+        // mundo inteiro sendo engolido pelo buraco negro gigante do fundo.
+        // A câmera fica estática (só o tremor do fim do mundo).
 
         if (this.showTeleportZonesUntil && Date.now() < this.showTeleportZonesUntil) {
             ctx.save();
@@ -6939,7 +7177,7 @@ class Game {
         if (this.terrainCanvas) ctx.drawImage(this.terrainCanvas, 0, 0);
         // [v9] FRENESIMO: onda de brilho percorrendo o CHÃO (mais forte no boss)
         const Fz = this.frenzyLevel();
-        if (Fz > 0.04) {
+        if (Fz > 0.04 && this.state !== 'FINALE') {
             const tS = Date.now() / 1000;
             const sweep = ((tS * 230) % (this.width + 520)) - 260;
             const hueS = this.isBossWave ? 315 : 268;
@@ -6954,10 +7192,13 @@ class Game {
             ctx.fillRect(sweep - 150, 468, 300, 222);
             ctx.restore();
         }
-        this.drawKamiCraters(ctx); // [v7] crateras do kamikaze
-        this.drawMeteorCraters(ctx); // [v10] crateras de meteoro
-        this.drawWeather(ctx, false); // [v7] chuva de éter, poças e relâmpagos
-        this.drawShadows(ctx); // [v3] sombras 3D sob as entidades
+        if (this.state !== 'FINALE') { // [v11] decalques de gameplay não existem no fim do mundo
+            this.drawKamiCraters(ctx); // [v7] crateras do kamikaze
+            this.drawMeteorCraters(ctx); // [v10] crateras de meteoro
+            this.drawWeather(ctx, false); // [v7] chuva de éter, poças e relâmpagos
+            this.drawMeteorImpactFX(ctx); // [v11] clarão + poeira + pedras em brasa do impacto
+        }
+        if (!this.finaleHide) this.drawShadows(ctx); // [v3] sombras 3D sob as entidades (no engolido, nada projeta sombra)
         
         if (this.player && this.state !== 'MENU' && this.state !== 'BOSS_DEATH_CINEMATIC' && this.state !== 'FINALE') {
             const tip = this.player.getStaffTip();
@@ -8812,6 +9053,7 @@ class Enemy {
 
         let shootInterval = 2300 / fireRateMod;
         if (this.isGolden) shootInterval = shootInterval / 2;
+        shootInterval = Math.max(380, shootInterval); // [v11] piso absoluto: ninguém fica mudo
         this.currentShootInterval = shootInterval;
 
         if (!this.kamikaze && game.state !== 'BOSS_DEATH_CINEMATIC') {
@@ -8832,8 +9074,10 @@ class Enemy {
     shoot() {
         // [v9] ESPECTADOR: os inimigos nem te reconhecem — ninguém atira
         if (game.player.spectate) return;
-        // [v10] teto global de projéteis: com a tela cheia, espera a vez
-        if (game.bullets.length >= (game.maxBullets || 340)) return;
+        // [v10] teto de projéteis INIMIGOS: com a tela cheia, espera a vez
+        // [v11] ...mas conta só os tiros INIMIGOS (os do mago não contam — senão
+        // um /perk all deixava TODO MUNDO mudo, chefes inclusive)
+        if (game.enemyBulletCount() >= (game.maxEnemyBullets || 260)) return;
         const lead = Math.max(0, Math.min(1, (game.wave - 25) / 25));
         let alvoX = game.player.x + 15;
         const alvoY = game.player.y + 20;
@@ -8886,7 +9130,11 @@ class Enemy {
     
     applyCold() { 
         if (this.shieldActive) return;
-        this.coldStacks++; this.coldUntil = Date.now() + 8000; 
+        // [v11] TETO DE 3 STACS: com fire rate altíssimo (ex.: /perk all) o frio
+        // acumulava dezenas de stacs e o intervalo de tiro explodia pra MINUTOS —
+        // o inimigo ficava mudo pra sempre (era o "chefe que para de atacar").
+        // 3 stacs = 2x mais lento, no máximo: lê como "congelado", não "morto".
+        this.coldStacks = Math.min(3, this.coldStacks + 1); this.coldUntil = Date.now() + 8000; 
     }
 
     die() {
@@ -9053,13 +9301,13 @@ class Enemy {
         }
     }
 
-    // [v10] BARRA DE HP PREMIUM: pílula arredondada com moldura e brilho, cor
-    // do tipo, só aparece quando está machucada e FADE depois de 1,6s sem
-    // tomar dano (com pop ao levar hit)
+    // [v11] BARRA DE HP PREMIUM: pílula arredondada com moldura e brilho, cor
+    // do tipo. Agora SEMPRE VISÍVEL (o jogador mandou: ela nunca mais some —
+    // cheia ou machucada, o tempo todo; o pop ao levar hit continua)
     drawHpBar(ctx) {
         let hpRatio = Math.max(0, Math.min(1, this.hp / this.maxHp));
         const sinceHit = Date.now() - (this.lastHitTime || 0);
-        const barVis = hpRatio < 0.999 ? Math.max(0, 1 - Math.max(0, sinceHit - 1600) / 500) : 0;
+        const barVis = 1;
         if (barVis <= 0.02) return;
         const tipoC = { triangulo: '#ff5a20', losango: '#3c96ff', redondo: '#3cdc50' };
         let barC = this.isGolden ? '#ffd24d' : (this.kamikaze ? '#ff8855' : (tipoC[this.type] || '#9aa0c8'));
@@ -9208,7 +9456,9 @@ class Boss extends Enemy {
         // [v9] ESPECTADOR: o chefe nem percebe você
         if (game.player.spectate) return;
         // [v10] TETO GLOBAL DE PROJÉTEIS: acima disso o chefe segura a rajada
-        if (game.bullets.length >= (game.maxBullets || 340)) return;
+        // [v11] conta só os tiros INIMIGOS (bug do /perk all: chefe mudo)
+        const nEnemyBullets = game.enemyBulletCount();
+        if (nEnemyBullets >= (game.maxEnemyBullets || 260)) return;
         const centerX = this.x + this.width/2; const centerY = this.y + this.height/2;
         const lead = Math.max(0, Math.min(1, (game.wave - 25) / 25));
         let alvoX = game.player.x + 15 + game.player.vx * 85 * lead;
@@ -9224,7 +9474,7 @@ class Boss extends Enemy {
             const ringSpeed = projSpeed * 0.72;
             const ringOffset = Math.random() * Math.PI;
             for (let i = 0; i < ringCount; i++) {
-                if (i > 0 && game.bullets.length >= (game.maxBullets || 340)) break; // [v10] teto
+                if (i > 0 && nEnemyBullets + i >= (game.maxEnemyBullets || 260)) break; // [v10/v11] teto inimigo
                 const angle = ringOffset + (i / ringCount) * Math.PI * 2;
                 game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: ringSpeed, isBossAttack: true, rgbBoss: true }));
             }
@@ -9244,7 +9494,7 @@ class Boss extends Enemy {
 
         const baseAngle = Math.atan2(alvoY - centerY, alvoX - centerX);
         for (let i = 0; i < shotCount; i++) {
-            if (i > 0 && game.bullets.length >= (game.maxBullets || 340)) break; // [v10] teto
+            if (i > 0 && nEnemyBullets + i >= (game.maxEnemyBullets || 260)) break; // [v10/v11] teto inimigo
             const angle = baseAngle + (i - (shotCount - 1) / 2) * 0.2;
             game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: projSpeed, isBossAttack: true, rgbBoss: true }));
         }
@@ -11545,94 +11795,127 @@ class BloodyText {
     }
 }
 
-// [v10] wisp de névoa violeta do VAZIO (pré-renderizado)
-const FinaleVoid = {
-    _wisp: null,
-    wisp() {
-        if (this._wisp) return this._wisp;
-        const S = 300;
-        const c = document.createElement('canvas');
-        c.width = c.height = S;
-        const g = c.getContext('2d');
-        const grad = g.createRadialGradient(S / 2, S / 2, 4, S / 2, S / 2, S / 2);
-        grad.addColorStop(0, 'rgba(130,70,220,0.16)');
-        grad.addColorStop(0.5, 'rgba(90,45,180,0.07)');
-        grad.addColorStop(1, 'rgba(60,25,140,0)');
-        g.fillStyle = grad;
-        g.fillRect(0, 0, S, S);
-        this._wisp = c;
-        return c;
-    }
-};
+// ===== [v11] A MÁQUINA DO FIM DO MUNDO (métodos no Game) =====
+// A coreografia, NA ORDEM, do jeito que o chefão pediu:
+//   0. "WAVE 10.000" em sangue + o mago TELEPORTADO pro centro da plataforma
+//   1. A CIDADE é engolida DE CIMA PRA BAIXO (topos rachando, prédio por
+//      prédio, a cidade toda aos poucos) — a tela treme cada vez mais forte
+//   2. A PLATAFORMA RACHA, as laterais se soltam e tudo vira TIJOLO voando
+//      pro buraco — até sobrar só o mago no pedacinho do meio
+//   3. SINGULARIDADE: o buraco negro DO FUNDO (gigante, central) ocupa o céu
+//      inteiro e o horizonte de eventos SOME — só o maguinho no último chão,
+//      dizendo as últimas coisas
+//   4. O mago é ENGOLIDO junto com o último pedaço de plataforma — É AQUI
+//      que a risadas.mp3 toca (1x, só os primeiros 15s)
+//   5. A tela inteira fica PRETA
+//   6. A frase final sangrenta (com a risada ainda cobrindo)
+//   7. Reset + conquista suprema
+// O buraco negro é SEMPRE o do fundo (this.blackHole) — nada de círculo
+// fechando no mago, nada de buraco falso: o mundo INTEIRO é engolido por ELE.
 
-// ===== máquina de estados do fim do mundo (métodos no Game) =====
 Game.prototype.startFinale = function () {
     if (this.finale || this.finaleDone || !this.player) return;
     this.state = 'FINALE';
     this.finaleDone = true;
     document.body.classList.add('finale'); // HUD inteiro desliga (CSS)
     // limpa a arena: nada de inimigos, tiros ou meteoros no fim do mundo
-    this.enemies.forEach(e => { e.dead = true; });
+    this.enemies.forEach(e => {
+        e.dead = true;
+        if (e.type !== 'boss' && e.type !== 'miniboss') ObjectPool.releaseEnemy(e);
+    });
     this.enemies = [];
     this.enemiesToSpawn = 0;
     this.clearAllBullets();
     this.meteors = [];
+    if (this.meteorRocks) this.meteorRocks.length = 0;
+    if (this.meteorImpacts) this.meteorImpacts.length = 0;
     this.isMeteorWave = false;
     this.isGoldenWave = false;
+    this.floatingTexts.length = 0;
     this.flushSoulOrbs();
     this.waveLock = false;
     this.finaleHide = false;
     // silêncio: a trilha para, só o rumble do apocalipse resta
     try { if (audioManager.current) audioManager.current.pause(); } catch (e) { }
     DynamicMusic.stop();
-    audioManager.startFinaleRumble(0.2);
+    audioManager.startFinaleRumble(0.12);
 
     const T = TEXTS[currentLang];
     const now = Date.now();
+
+    // ===== O MAGO É TELEPORTADO pro CENTRO da plataforma (com clarão arcano) =====
+    const p = this.player;
+    const pcx = 200 + 1072 / 2;   // centro do piso principal (bloco do meio)
+    const pcy = 650;              // topo do piso
+    p.x = pcx - p.width / 2;
+    p.y = pcy - p.height;
+    p.vx = 0; p.vy = 0; p.grounded = true;
+    audioManager.playSfx('teleport');
+    for (let i = 0; i < 30 && this.particles.length < this.particleCap; i++) {
+        const pr = ObjectPool.getParticle(pcx + (Math.random() - 0.5) * 46, pcy - Math.random() * p.height,
+            Math.random() < 0.5 ? '#b48aff' : '#efe6ff', 2 + Math.random() * 3.4, 640, 0);
+        pr.vx = (Math.random() - 0.5) * 1.8; pr.vy = -0.5 - Math.random() * 1.4;
+        this.particles.push(pr);
+    }
+
+    // ===== A LINHA DO TEMPO DO FIM (ms) =====
+    const TITLE_DUR = 4600;     // "WAVE 10.000" sangrenta
+    const CITY_DUR = 21600;     // a cidade engolida de cima pra baixo
+    const PLAT_DUR = 20000;     // a plataforma rachando e virando tijolo
+    const SING_DUR = 6600;      // singularidade + últimas palavras
+    const SWALLOW_DUR = 3600;   // o engolido (mago + último pedaço)
+    const BLACK_DUR = 1000;     // o mundo vira escuridão
+    const END_DUR = 12000;      // a frase final sangrenta
+
     const f = {
         t0: now,
         speed: (window.finaleDebugSpeed || 1), // hook de teste: acelera o fim
-        lines: [T.fLine1, T.fLine2, T.fLine3, T.fLine4, T.fLine5, T.fLine6],
-        speech: [],
-        titleEnd: 4600,
-        speechEnd: 0,
-        destroyDur: 30000,
-        zoom: 1, zoomX: this.width / 2, zoomY: this.height / 2,
-        zoomBase: 1,
-        islandR: Math.hypot(this.width, this.height),
-        Rf: 96,
-        edgeDark: 0,
+        titleEnd: TITLE_DUR,
+        cityEnd: TITLE_DUR + CITY_DUR,
+        platEnd: TITLE_DUR + CITY_DUR + PLAT_DUR,
+        singEnd: TITLE_DUR + CITY_DUR + PLAT_DUR + SING_DUR,
+        swallowEnd: TITLE_DUR + CITY_DUR + PLAT_DUR + SING_DUR + SWALLOW_DUR,
+        blackEnd: TITLE_DUR + CITY_DUR + PLAT_DUR + SING_DUR + SWALLOW_DUR + BLACK_DUR,
+        endEnd: TITLE_DUR + CITY_DUR + PLAT_DUR + SING_DUR + SWALLOW_DUR + BLACK_DUR + END_DUR,
+        cityDur: CITY_DUR, platDur: PLAT_DUR,
+        // o buraco do fundo: cresce SEM PARAR durante o finale (como se
+        // aproximando) e o horizonte de eventos SOME na singularidade
+        bhGrow: 0, bhDiskAlpha: 1, voidAlpha: 0, cityK: 0,
+        // FALAS: as 6 do desespero ENQUANTO o mundo é engolido — começam no
+        // início da destruição e o ESPAÇAMENTO CRESCE (tem assunto até o
+        // fim da animação). Digitação LENTA (55ms/letra) e o balão some
+        // logo após terminar de digitar ("pouca coisa a mais" e desaparece).
+        speech: [
+            { text: T.fLine1, start: 5400 },
+            { text: T.fLine2, start: 11800 },
+            { text: T.fLine3, start: 19000 },
+            { text: T.fLine4, start: 27000 },
+            { text: T.fLine5, start: 35600 },
+            { text: T.fLine6, start: 44200 },
+            { text: T.fFinal1, start: TITLE_DUR + CITY_DUR + PLAT_DUR + 700, spd: 55, hold: 950 },
+            { text: T.fFinal2, start: TITLE_DUR + CITY_DUR + PLAT_DUR + 3200, spd: 40, hold: 1150 }
+        ],
         debris: [], streaks: [],
-        lastBrickAt: 0, lastStreakAt: 0, lastRumbleAt: 0, lastRumble: -1,
-        swallow: null,
-        blackAlpha: 0,
-        laughOn: false,
-        flashUntil: 0,
-        ended: false,
-        wisps: []
+        lastBoomAt: 0, lastShatterAt: 0, lastStreakAt: 0, lastRumbleAt: 0,
+        swallow: null, blackAlpha: 0, flashUntil: 0, laughOn: false,
+        ended: false
     };
-    // agenda das falas (typewriter): cada linha digita, segura e sai
-    let t = f.titleEnd + 500;
-    for (const txt of f.lines) {
-        const typeMs = 46 * txt.length;
-        f.speech.push({ text: txt, start: t, typeMs: typeMs, hold: 1050 });
-        t += typeMs + 1050 + 420;
+    for (const s of f.speech) {
+        s.spd = s.spd || 55;
+        s.hold = s.hold || 750;
+        s.typeMs = s.spd * s.text.length;
     }
-    f.speechEnd = t + 200;
-    // últimas palavras (com zoom)
-    const fw1 = 46 * T.fFinal1.length + 1250;
-    const fw2 = 30 * T.fFinal2.length + 1500;
-    f.words = [
-        { text: T.fFinal1, start: 0, typeMs: 46 * T.fFinal1.length, hold: 1250 },
-        { text: T.fFinal2, start: fw1, typeMs: 30 * T.fFinal2.length, hold: 1500 }
+    // a cidade preparada pra ser comida (delays/taxas por prédio)
+    f.cityPrep = [
+        this._finalePrepCity(this.cityFar, CITY_DUR, 0),
+        this._finalePrepCity(this.cityNear, CITY_DUR, 1)
     ];
-    f.wordsEnd = fw1 + fw2;
-    // névoas do vazio
-    for (let i = 0; i < 6; i++) {
-        f.wisps.push({ x: Math.random() * this.width, y: Math.random() * this.height,
-            vx: (Math.random() - 0.5) * 0.12, vy: (Math.random() - 0.5) * 0.12,
-            s: 220 + Math.random() * 260, a: 0.5 + Math.random() * 0.5 });
-    }
+    // as RACHADURAS da plataforma (polilinhas pré-geradas)
+    f.cracks = this._finaleBuildCracks();
+    f.crackDrawn = 0;
+    f.leftFront = 0;      // frente de devoração vindo da esquerda (px)
+    f.rightFront = 1472;  // ...e da direita
+    f.lastPieceDone = false;
     // texto sangrento do título e da frase final (em 2 linhas equilibradas)
     f.bloodTitle = new BloodyText(T.wave10k, Math.min(58, Math.floor(this.width / 22)), this.width / 2, this.height * 0.30);
     const splitMid = (txt) => {
@@ -11651,24 +11934,23 @@ Game.prototype.startFinale = function () {
     f.endingL1 = new BloodyText(eLines[0], eSize, this.width / 2, this.height * 0.42);
     f.endingL2 = new BloodyText(eLines[1], eSize, this.width / 2, this.height * 0.42 + eSize * 2.3);
     this.finale = f;
-    this.addShake(3);
+    this.addShake(2);
 };
 
-// helpers de fase
 Game.prototype._finaleT = function () {
     return (Date.now() - this.finale.t0) * (this.finale.speed || 1);
 };
+
 Game.prototype._finalePhase = function (e) {
     const f = this.finale;
-    if (e < f.titleEnd) return 0;                      // WAVE 10.000 sangrenta
-    if (e < f.speechEnd) return 1;                     // falas do mago
-    if (e < f.speechEnd + f.destroyDur) return 2;      // destruição (30s)
-    if (e < f.speechEnd + f.destroyDur + f.wordsEnd + 800) return 3; // zoom + últimas palavras
-    if (e < f.speechEnd + f.destroyDur + f.wordsEnd + 800 + 1400) return 4; // risadas começam
-    if (e < f.speechEnd + f.destroyDur + f.wordsEnd + 800 + 1400 + 3800) return 5; // engolido
-    if (e < f.speechEnd + f.destroyDur + f.wordsEnd + 800 + 1400 + 3800 + 700) return 6; // preto
-    if (e < f.speechEnd + f.destroyDur + f.wordsEnd + 800 + 1400 + 3800 + 700 + 15000) return 7; // frase final
-    return 8;                                          // apagão + reset
+    if (e < f.titleEnd) return 0;    // WAVE 10.000 sangrenta (teleporte feito)
+    if (e < f.cityEnd) return 1;     // a cidade engolida de cima pra baixo
+    if (e < f.platEnd) return 2;     // plataforma rachando e virando tijolo
+    if (e < f.singEnd) return 3;     // singularidade + últimas palavras
+    if (e < f.swallowEnd) return 4;  // o engolido (risadas 1x, 15s)
+    if (e < f.blackEnd) return 5;    // escuridão total
+    if (e < f.endEnd) return 6;      // a frase final
+    return 7;                        // reset
 };
 
 Game.prototype.finaleTick = function () {
@@ -11678,15 +11960,56 @@ Game.prototype.finaleTick = function () {
     const ph = this._finalePhase(e);
     const p = this.player;
     const now = Date.now();
-    if (ph !== f.lastPhase) {
-        // transições
-        if (ph === 4 && !f.laughOn) {
-            f.laughOn = true;
-            audioManager.startLaughs(); // risadas.mp3 (15s em loop) ou fallback procedural
+    const dtMs = Math.min(60, now - (f.lastTickAt || now)) * (f.speed || 1);
+    f.lastTickAt = now;
+
+    // ===== rumble (throttle de 220ms) =====
+    const setRumble = (lv) => {
+        if (now - f.lastRumbleAt > 220) {
+            f.lastRumbleAt = now;
+            audioManager.setFinaleRumble(lv);
         }
-        if (ph === 5 && !f.swallow) {
-            // começa o engolido: espiral do mago até o centro do buraco
-            const cx = this.width / 2, cy = this.height * 0.47;
+    };
+
+    if (ph === 0) {
+        // título: o mundo já sabe que acabou
+        const k = e / f.titleEnd;
+        this.shake = 0.8 + Math.random() * 0.8 + k * 1.2;
+        setRumble(0.12 + 0.22 * k);
+    } else if (ph === 1) {
+        // ===== A CIDADE SENDO ENGOLIDA (de cima pra baixo, aos poucos) =====
+        const k = (e - f.titleEnd) / f.cityDur;
+        f.cityK = k;
+        f.bhGrow = 0.95 * k;   // o buraco cresce enquanto devora
+        this.shake = 1.6 + 3.4 * k + Math.random() * 1.3; // fraco -> forte
+        setRumble(0.28 + 0.32 * k);
+        this._finaleEatCity(dtMs, k, now);
+        this._finaleSpawnStreak(now);
+    } else if (ph === 2) {
+        // ===== A PLATAFORMA: racha, solta as laterais e vira TIJOLO =====
+        const k = (e - f.cityEnd) / f.platDur;
+        f.bhGrow = 0.95 + Math.min(1, k * 1.15);
+        this.shake = 5.0 + 4.0 * k + Math.random() * 1.6;
+        setRumble(0.6 + 0.32 * k);
+        this._finaleEatPlatform(dtMs, k, now);
+        this._finaleSpawnStreak(now);
+    } else if (ph === 3) {
+        // ===== SINGULARIDADE: tudo vira o vazio, o horizonte de eventos SOME =====
+        const k = (e - f.platEnd) / (f.singEnd - f.platEnd);
+        f.bhGrow = 1.95 + 0.5 * Math.min(1, k / 0.55);
+        f.bhDiskAlpha = Math.max(0, 1 - k / 0.42); // o disco de luz morre
+        this.shake = 9.2 + Math.random() * 2.4;
+        setRumble(0.95);
+        this._finaleSpawnStreak(now);
+    } else if (ph === 4) {
+        // ===== O ENGOLIDO: o mago + o ÚLTIMO PEDAÇO (risadas AQUI, 1x 15s) =====
+        const k = (e - f.singEnd) / (f.swallowEnd - f.singEnd);
+        if (!f.swallow) {
+            if (!f.laughOn) {
+                f.laughOn = true;
+                audioManager.startLaughs(); // risadas.mp3 (1x, 15s) ou procedural
+            }
+            const cx = this.width / 2, cy = this.height / 2; // a boca: o buraco do fundo
             const px = p.x + p.width / 2, py = p.y + p.height / 2;
             f.swallow = {
                 cx: cx, cy: cy,
@@ -11696,84 +12019,18 @@ Game.prototype.finaleTick = function () {
             };
             this.finaleHide = true; // o mago agora é desenhado na mão (espiral)
         }
-        if (ph === 8 && !f.resetDone) {
-            f.resetDone = true;
-            audioManager.stopLaughs();
-            audioManager.stopFinaleRumble();
-        }
-        f.lastPhase = ph;
-    }
-
-    const dtMs = Math.min(60, now - (f.lastTickAt || now));
-    f.lastTickAt = now;
-
-    // ===== rumble (throttle de 220ms) =====
-    const setRumble = (lv) => {
-        f.rumble = lv;
-        if (now - f.lastRumbleAt > 220) {
-            f.lastRumbleAt = now;
-            audioManager.setFinaleRumble(lv);
-        }
-    };
-
-    if (ph === 0) {
-        const k = e / f.titleEnd;
-        this.shake = 1.2 + Math.random() * 1.2 + k * 1.5;
-        setRumble(0.22 + 0.3 * k);
-        f.edgeDark = 0.12 * k;
-    } else if (ph === 1) {
-        const k = (e - f.titleEnd) / (f.speechEnd - f.titleEnd);
-        this.shake = 1.4 + Math.random() * 0.9;
-        setRumble(0.5 + 0.18 * k);
-        f.edgeDark = 0.12 + 0.3 * k;
-    } else if (ph === 2) {
-        // DESTRUIÇÃO: o vazio fecha das bordas pra dentro (cada vez mais rápido)
-        const k = Math.max(0, Math.min(1, (e - f.speechEnd) / f.destroyDur));
-        const kE = Math.pow(k, 1.65);
-        const R0 = Math.hypot(this.width, this.height);
-        f.islandR = R0 - (R0 - f.Rf) * kE;
-        this.shake = 2.2 + 7.5 * k + Math.random() * 1.5;
-        setRumble(0.55 + 0.45 * k);
-        f.edgeDark = 0.42;
-        this._finaleConsumeBuildings();
-        this._finaleSpawnBricks(now);
-        this._finaleSpawnStreak(now);
-    } else if (ph === 3) {
-        // ZOOM no mago + últimas palavras
-        const wE = e - f.speechEnd - f.destroyDur;
-        const zoomIn = Math.min(1, wE / 1300);
-        const zoomOutK = Math.max(0, Math.min(1, (wE - (f.wordsEnd - 500)) / 900));
-        const ease = 1 - Math.pow(1 - zoomIn, 3);
-        f.zoom = 1 + 1.18 * ease;
-        f.zoomX = p.x + p.width / 2;
-        f.zoomY = p.y + p.height / 2;
-        this.shake = 5.5 + Math.random() * 2 + (wE > f.wordsEnd - 600 ? 5 : 0);
-        setRumble(1.0);
-        f.edgeDark = 0.42;
-        f.islandR = f.Rf;
-    } else if (ph === 4) {
-        // risadas: zoom volta, SHAKE frenético
-        const k = Math.max(0, Math.min(1, (e - f.speechEnd - f.destroyDur - f.wordsEnd - 800) / 1400));
-        f.zoom = 2.18 - 1.18 * k;
-        f.zoomX = p.x + p.width / 2;
-        f.zoomY = p.y + p.height / 2;
-        this.shake = 11 + Math.random() * 5; // frenético
-        setRumble(1.0);
-        f.islandR = f.Rf - 20 * k;
-        this._finaleSpawnStreak(now);
-    } else if (ph === 5) {
-        // ENGOLIDO: espiral dramática pro centro do buraco negro
-        const s = f.swallow;
-        const k = Math.max(0, Math.min(1, (e - f.speechEnd - f.destroyDur - f.wordsEnd - 800 - 1400) / 3800));
+        f.bhGrow = 2.45 + 0.3 * k;   // continua "se aproximando" até o fim
+        f.bhDiskAlpha = 0;
         const kE = k * k * (3 - 2 * k);
-        s.r = s.r * (1 - 0.0035 * (1 + k * 2.2) * dtMs / 4);  // raio fecha
+        const s = f.swallow;
+        s.r = s.r * (1 - 0.0042 * (1 + k * 2.4) * dtMs / 4);  // o raio fecha
         if (s.r < 2) s.r = 2;
         s.ang += (0.0026 + k * 0.011) * dtMs;                 // gira cada vez mais rápido
         s.spin += (0.004 + k * 0.02) * dtMs;
         s.scale = Math.max(0.04, 1 - kE * 0.97);
-        f.islandR = Math.max(14, f.Rf - 78 * kE);
-        this.shake = 9 + Math.random() * 6;
-        setRumble(1.0 - 0.75 * k);
+        this._finaleEatLastPiece(k);
+        this.shake = 10 + Math.random() * 5;
+        setRumble(1.0 - 0.7 * k);
         // rastro do mago sendo espaguetificado
         if (Math.random() < 0.7 && this.particles.length < this.particleCap) {
             const mx = s.cx + Math.cos(s.ang) * s.r;
@@ -11788,22 +12045,24 @@ Game.prototype.finaleTick = function () {
             f.swallowFlash = true;
             f.flashUntil = now + 420;
         }
-    } else if (ph === 6) {
-        const k = Math.max(0, Math.min(1, (e - f.speechEnd - f.destroyDur - f.wordsEnd - 800 - 1400 - 3800) / 700));
+    } else if (ph === 5) {
+        // a tela inteira fica PRETA
+        const k = (e - f.swallowEnd) / (f.blackEnd - f.swallowEnd);
         f.blackAlpha = k;
-        this.shake = 4 + Math.random() * 3;
-        setRumble(0.25);
+        this.shake = (3.5 + Math.random() * 2) * (1 - k);
+        setRumble(0.3 * (1 - k));
+    } else if (ph === 6) {
+        f.blackAlpha = 1;
+        this.shake = 0;
+        setRumble(0);
     } else if (ph === 7) {
         f.blackAlpha = 1;
         this.shake = 0;
         setRumble(0);
-        f.zoom = 1;
-    } else if (ph === 8) {
-        f.blackAlpha = 1;
-        this.shake = 0;
-        setRumble(0);
-        // o fim do fim: conquista suprema + reset pro menu (com toast após o reload)
-        const endK = e - (f.speechEnd + f.destroyDur + f.wordsEnd + 800 + 1400 + 3800 + 700 + 15000);
+        audioManager.stopLaughs();
+        audioManager.stopFinaleRumble();
+        // o fim do fim: conquista suprema + reset pro menu
+        const endK = e - f.endEnd;
         if (endK > 900 && !f.finalized) {
             f.finalized = true;
             f.ended = true;
@@ -11813,18 +12072,24 @@ Game.prototype.finaleTick = function () {
         }
     }
 
-    // detritos do vazio e estrelas sugadas continuam se movendo
+    // o vazio atrás de tudo (cresce junto com o buraco; 1 quando R ~ 612+)
+    f.voidAlpha = Math.max(0, Math.min(1, (f.bhGrow - 1.45) / 0.55));
+
+    // ===== destroços e riscos continuam voando pro buraco (espiral) =====
+    const ccx = this.width / 2, ccy = this.height / 2;
     for (let i = f.debris.length - 1; i >= 0; i--) {
         const d = f.debris[i];
-        d.x += d.vx * dtMs / 16; d.y += d.vy * dtMs / 16;
-        d.rot += d.vrot * dtMs / 16;
-        // espiral: puxa levemente pro centro do buraco
-        const dx = this.width / 2 - d.x, dy = this.height * 0.47 - d.y;
+        const dx = ccx - d.x, dy = ccy - d.y;
         const dd = Math.hypot(dx, dy) || 1;
-        d.vx += (dx / dd) * 0.004 * dtMs / 16;
-        d.vy += (dy / dd) * 0.004 * dtMs / 16;
+        // SUCÇÃO gravitacional + componente tangencial = espiral de verdade
+        const pull = 0.0032 * (dtMs / 16) * (1 + 620 / (dd + 90));
+        d.vx += (dx / dd) * pull + (-dy / dd) * pull * 0.6;
+        d.vy += (dy / dd) * pull + (dx / dd) * pull * 0.6;
+        d.x += d.vx * dtMs / 16;
+        d.y += d.vy * dtMs / 16;
+        d.rot += d.vrot * dtMs / 16;
         d.life -= dtMs;
-        if (d.life <= 0) f.debris.splice(i, 1);
+        if (d.life <= 0 || dd < 26) f.debris.splice(i, 1);
     }
     for (let i = f.streaks.length - 1; i >= 0; i--) {
         const s = f.streaks[i];
@@ -11832,77 +12097,271 @@ Game.prototype.finaleTick = function () {
         s.life -= dtMs;
         if (s.life <= 0) f.streaks.splice(i, 1);
     }
-    for (const w of f.wisps) {
-        w.x += w.vx * dtMs / 16; w.y += w.vy * dtMs / 16;
-        if (w.x < -w.s) w.x = this.width; if (w.x > this.width + w.s) w.x = -w.s;
-        if (w.y < -w.s) w.y = this.height; if (w.y > this.height + w.s) w.y = -w.s;
-    }
 };
 
-// prédios da cidade sendo DEVORADOS quando a borda do vazio passa por eles
-Game.prototype._finaleConsumeBuildings = function () {
+// prepara uma camada da cidade pra ser devorada: cada prédio ganha um DELAY
+// (a cidade é engolida AOS POUCOS, prédio por prédio) e uma taxa calibrada
+// pra todo mundo acabar de ser comido ~15% antes do fim da fase da cidade
+Game.prototype._finalePrepCity = function (layer, durMs, depth) {
+    if (!layer || !layer.buildings) return null;
+    const durS = (durMs / 1000) * 0.85;
+    for (const b of layer.buildings) {
+        b._h = this.height - b.top;
+        b._delay = Math.random() * 0.7;
+        b._rate = (b._h + 18) / Math.max(0.8, (1 - b._delay) * durS);
+        b._eatY = 0;
+        b._eraseY = 0;
+        b._eaten = false;
+    }
+    return { layer: layer, depth: depth };
+};
+
+// A CIDADE ENGOLENDO: mordidas dentadas de ~7px arrancam o TOPO de cada
+// prédio (a parte de cima rachando e sendo sugada) enquanto pedaços de
+// fachada — alguns com janela acesa — voam em espiral pro buraco
+Game.prototype._finaleEatCity = function (dt, k, now) {
     const f = this.finale;
-    if (!this.cityNear || !this.cityNear.buildings) return;
-    const p = this.player;
-    const pcx = p.x + p.width / 2, pcy = p.y + p.height / 2;
-    const offN = -64 - (pcx - this.width / 2) * 0.030;
-    const bs = this.cityNear.buildings;
-    for (let i = 0; i < bs.length; i++) {
-        const b = bs[i];
-        if (b._eaten) continue;
-        const sx = offN + b.x + b.w / 2;
-        const sy = b.top + 34;
-        if (Math.hypot(sx - pcx, sy - pcy) > f.islandR - 14) {
-            b._eaten = true;
-            // pedaços do prédio voando pro vazio (com janelas violeta acessas)
-            const n = 4 + Math.floor(Math.random() * 4);
-            for (let k = 0; k < n && f.debris.length < 90; k++) {
-                const dx = sx - pcx, dy = sy - pcy;
-                const dd = Math.hypot(dx, dy) || 1;
-                const ux = dx / dd, uy = dy / dd;
-                const sp = 1.4 + Math.random() * 2.4;
-                f.debris.push({
-                    x: sx + (Math.random() - 0.5) * b.w * 0.6, y: sy + (Math.random() - 0.5) * 40,
-                    vx: ux * sp + (Math.random() - 0.5) * 0.9,
-                    vy: uy * sp - Math.random() * 0.7,
-                    rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.09,
-                    w: 7 + Math.random() * 15, h: 5 + Math.random() * 10,
-                    lit: Math.random() < 0.4,
-                    color: ['#171021', '#050308', '#231a38'][Math.floor(Math.random() * 3)],
-                    life: 1700 + Math.random() * 1100
-                });
+    const cx = this.width / 2, cy = this.height / 2;
+    for (const cp of f.cityPrep) {
+        if (!cp) continue;
+        const layer = cp.layer;
+        const g = layer.canvas.getContext('2d');
+        const off = -64; // parallax: o mago está parado no centro
+        const far = cp.depth === 0;
+        for (const b of layer.buildings) {
+            if (b._eaten || k <= b._delay) continue;
+            b._eatY += b._rate * dt;
+            while (b._eatY - b._eraseY > 7) {
+                b._eraseY = Math.min(b._eatY, b._eraseY + 7);
+                const yA = b.top - 12 + b._eraseY - 7;
+                const yB = b.top - 12 + b._eraseY + 1;
+                g.save();
+                g.globalCompositeOperation = 'destination-out';
+                g.fillStyle = '#000'; // OPACO: sem isso o fillStyle sobrante apaga só pela metade
+                // bordas JAGGED: duas tiras dessincronizadas = topo arrancado
+                g.fillRect(b.x - 2 + Math.random() * 3, yA, b.w + 4, (yB - yA) * 0.55);
+                g.fillRect(b.x - 2 + Math.random() * 3, yA + (yB - yA) * 0.45, b.w + 4, (yB - yA) * 0.62);
+                g.restore();
+                // pedaços de fachada sugados (com janela acesa às vezes)
+                const nD = far ? 1 : (1 + (Math.random() < 0.6 ? 1 : 0));
+                for (let d = 0; d < nD && f.debris.length < 130; d++) {
+                    const dx = off + b.x + Math.random() * b.w;
+                    const dy = b.top + b._eraseY - Math.random() * 10;
+                    this._finaleSpawnDebris(dx, dy, cx, cy,
+                        far ? ['#231a38', '#0c0916'] : ['#171021', '#050308', '#231a38'],
+                        far ? 5 + Math.random() * 8 : 7 + Math.random() * 12,
+                        far ? 0.15 : 0.35, !far);
+                }
+            }
+            // o fogo da cidade morre junto com o pedaço engolido
+            const eatLine = b.top + b._eatY;
+            if (layer.fires) layer.fires = layer.fires.filter(fr => !(fr.x >= b.x - 2 && fr.x <= b.x + b.w + 2 && fr.y < eatLine));
+            if (b._eatY >= b._h + 14) {
+                b._eaten = true;
+                g.save();
+                g.globalCompositeOperation = 'destination-out';
+                g.fillStyle = '#000';
+                g.fillRect(b.x - 3, b.top - 14, b.w + 6, b._h + 22);
+                g.restore();
             }
         }
     }
+    // cicatrizes de meteoro/fumaça da cidade: morrem com seus prédios
+    if (this.cityBurns) this.cityBurns = this.cityBurns.filter(bb => !(bb.b && bb.b._eaten));
+    if (this.citySmoke) this.citySmoke = this.citySmoke.filter(sm => !(sm.b && sm.b._eaten));
+    // estrondos ocasionais (a cidade despedaçando)
+    if (now - f.lastBoomAt > 1400 + Math.random() * 1200) {
+        f.lastBoomAt = now;
+        audioManager.playSfx('bg_boom');
+    }
 };
 
-// tijolos do CHÃO arrancados quando a borda passa por eles
-Game.prototype._finaleSpawnBricks = function (now) {
+// pedaço de mundo (fachada/tijolo/janela) sugado em ESPIRAL pro buraco
+Game.prototype._finaleSpawnDebris = function (x, y, cx, cy, colors, sz, litK, withWindows) {
     const f = this.finale;
-    if (now - f.lastBrickAt < 620) return;
-    f.lastBrickAt = now;
-    const p = this.player;
-    const pcx = p.x + p.width / 2, pcy = p.y + p.height / 2;
-    const nB = 2 + Math.floor(Math.random() * 2);
-    for (let k = 0; k < nB && f.debris.length < 90; k++) {
-        const a = Math.random() * Math.PI * 2;
-        const bx = pcx + Math.cos(a) * f.islandR;
-        const by = pcy + Math.sin(a) * f.islandR;
-        if (by < 470 || by > this.height + 10) continue; // só na faixa do chão/plataformas
-        const dx = bx - pcx, dy = by - pcy;
-        const dd = Math.hypot(dx, dy) || 1;
-        const sp = 1.6 + Math.random() * 2.6;
-        f.debris.push({
-            x: bx, y: by,
-            vx: (dx / dd) * sp + (Math.random() - 0.5) * 0.8,
-            vy: (dy / dd) * sp - 1 - Math.random(),
-            rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.12,
-            w: 8 + Math.random() * 10, h: 4 + Math.random() * 5,
-            lit: Math.random() < 0.18,
-            color: ['#4a4258', '#332b44', '#262133'][Math.floor(Math.random() * 3)],
-            life: 1500 + Math.random() * 900
-        });
+    const dx = cx - x, dy = cy - y;
+    const dd = Math.hypot(dx, dy) || 1;
+    f.debris.push({
+        x: x, y: y,
+        vx: dx / dd * (0.5 + Math.random() * 0.9),
+        vy: dy / dd * (0.5 + Math.random() * 0.9) - 0.5,
+        rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.14,
+        w: sz, h: sz * (0.45 + Math.random() * 0.4),
+        lit: withWindows && Math.random() < litK,
+        hot: Math.random() < 0.14, // tijolos aquecidos pelo disco de acreção
+        color: colors[Math.floor(Math.random() * colors.length)],
+        life: 2200 + Math.random() * 1400
+    });
+};
+
+// uma mordida no chão/torre vira N TIJOLOS (FORMATO DE TIJOLO!) voando pro buraco
+Game.prototype._finaleBiteBricks = function (x, y, w, h, cx, cy) {
+    const f = this.finale;
+    const brickC = ['#4a4258', '#332b44', '#262133', '#3a3348'];
+    const n = 1 + Math.floor(w / 16);
+    for (let i = 0; i < n && f.debris.length < 130; i++) {
+        this._finaleSpawnDebris(x + Math.random() * w, y + Math.random() * h,
+            cx, cy, brickC, 9 + Math.random() * 12, 0, false);
     }
+};
+
+// RACHADURAS da plataforma: polilinhas dentadas pré-geradas nas juntas
+// críticas (torres laterais, degraus e bordas do piso). Elas CRESCEM na
+// primeira parte da fase — a terra gemendo antes de ceder.
+Game.prototype._finaleBuildCracks = function () {
+    const cracks = [];
+    const mk = (x0, y0, x1, y1, segs) => {
+        const pts = [];
+        for (let i = 0; i <= segs; i++) {
+            const t = i / segs;
+            pts.push([
+                x0 + (x1 - x0) * t + (Math.random() - 0.5) * 14,
+                y0 + (y1 - y0) * t + (Math.random() - 0.5) * 10
+            ]);
+        }
+        return { pts: pts, drawn: 0 };
+    };
+    // torre esquerda
+    cracks.push(mk(38, 494, 30, 688, 9));
+    cracks.push(mk(72, 492, 80, 688, 9));
+    cracks.push(mk(52, 500, 58, 620, 6));
+    cracks.push(mk(4, 566, 198, 578, 8));       // junta do degrau esquerdo
+    // torre direita (espelhada)
+    cracks.push(mk(1434, 494, 1442, 688, 9));
+    cracks.push(mk(1400, 492, 1392, 688, 9));
+    cracks.push(mk(1420, 500, 1414, 620, 6));
+    cracks.push(mk(1468, 566, 1274, 578, 8));   // junta do degrau direito
+    // bordas do piso principal (por onde ele vai ser comido)
+    cracks.push(mk(206, 652, 250, 688, 5));
+    cracks.push(mk(206, 688, 262, 652, 5));
+    cracks.push(mk(1266, 652, 1222, 688, 5));
+    cracks.push(mk(1266, 688, 1210, 652, 5));
+    return cracks;
+};
+
+// A PLATAFORMA: (1) rachaduras crescendo, (2) torres e degraus despedaçando
+// em TIJOLOS das pontas pra dentro, (3) o PISO comido dos dois lados até
+// sobrar só o pedacinho do meio — onde o mago está
+Game.prototype._finaleEatPlatform = function (dt, k, now) {
+    const f = this.finale;
+    const g = this.terrainCanvas.getContext('2d');
+    const cx = this.width / 2, cy = this.height / 2;
+
+    // ---- 1) RACHADURAS crescendo (0 -> 32% da fase) ----
+    if (k < 0.32) {
+        const ck = k / 0.32;
+        const want = Math.ceil(ck * 24); // segmentos de rachadura no total
+        let guard = 0;
+        while (f.crackDrawn < want && guard++ < 40) {
+            let advanced = false;
+            for (const c of f.cracks) {
+                if (c.drawn < c.pts.length - 1) {
+                    const a = c.pts[c.drawn], b2 = c.pts[c.drawn + 1];
+                    g.save();
+                    g.strokeStyle = 'rgba(4,2,9,0.85)';
+                    g.lineWidth = 2.4;
+                    g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b2[0], b2[1]); g.stroke();
+                    g.strokeStyle = 'rgba(190,170,235,0.10)';
+                    g.lineWidth = 0.8;
+                    g.beginPath(); g.moveTo(a[0] + 1.4, a[1]); g.lineTo(b2[0] + 1.4, b2[1]); g.stroke();
+                    g.restore();
+                    c.drawn++;
+                    advanced = true;
+                    f.crackDrawn++;
+                    if (f.crackDrawn >= want) break;
+                }
+            }
+            if (!advanced) break;
+        }
+        // poeira dos bolsões + som de pedra cedendo
+        if (Math.random() < 0.3 && this.particles.length < this.particleCap) {
+            const c = f.cracks[Math.floor(Math.random() * f.cracks.length)];
+            const pt = c.pts[Math.min(c.pts.length - 1, c.drawn)];
+            const pr = ObjectPool.getParticle(pt[0], pt[1], 'rgba(150,135,175,0.5)', 2 + Math.random() * 3, 520, 0);
+            pr.vx = (Math.random() - 0.5) * 0.8; pr.vy = -0.2 - Math.random() * 0.5;
+            this.particles.push(pr);
+        }
+        if (now - f.lastShatterAt > 2600) { f.lastShatterAt = now; audioManager.playSfx('shatter'); }
+        return;
+    }
+
+    // ---- 2) TORRES + DEGRAUS soltando em tijolos (32% -> 64%) ----
+    // ---- 3) PISO comido das pontas até o pedacinho (64% -> 100%) ----
+    const towersK = Math.max(0, Math.min(1, (k - 0.30) / 0.34));
+    const floorK = Math.max(0, Math.min(1, (k - 0.64) / 0.36));
+    const bite = (x, y, w, h) => {
+        g.save();
+        g.globalCompositeOperation = 'destination-out';
+        g.fillStyle = '#000'; // OPACO: apagar de verdade, não pela metade
+        g.fillRect(x, y, w, h);
+        g.restore();
+    };
+    if (towersK < 1) {
+        const targetL = 200 * towersK;
+        const targetR = 1472 - 200 * towersK;
+        let guard = 0;
+        while (f.leftFront < targetL && guard++ < 30) {
+            const w = 16 + Math.random() * 20;
+            bite(f.leftFront, 470, w + 1, 230);
+            this._finaleBiteBricks(f.leftFront, 470, w, 200, cx, cy);
+            f.leftFront += w;
+        }
+        guard = 0;
+        while (f.rightFront > targetR && guard++ < 30) {
+            const w = 16 + Math.random() * 20;
+            bite(f.rightFront - w, 470, w + 1, 230);
+            this._finaleBiteBricks(f.rightFront - w, 470, w, 200, cx, cy);
+            f.rightFront -= w;
+        }
+    }
+    if (floorK > 0) {
+        const targetL = 200 + 490 * floorK;   // 200 -> 690
+        const targetR = 1272 - 490 * floorK;  // 1272 -> 782
+        let guard = 0;
+        while (f.leftFront < targetL && guard++ < 30) {
+            const w = 20 + Math.random() * 22;
+            bite(f.leftFront, 644, w + 1, 60);
+            this._finaleBiteBricks(f.leftFront, 648, w, 46, cx, cy);
+            f.leftFront += w;
+        }
+        guard = 0;
+        while (f.rightFront > targetR && guard++ < 30) {
+            const w = 20 + Math.random() * 22;
+            bite(f.rightFront - w, 644, w + 1, 60);
+            this._finaleBiteBricks(f.rightFront - w, 648, w, 46, cx, cy);
+            f.rightFront -= w;
+        }
+    }
+    if (now - f.lastShatterAt > 2100) { f.lastShatterAt = now; audioManager.playSfx('shatter'); }
+    if (now - f.lastBoomAt > 3200) { f.lastBoomAt = now; audioManager.playSfx('bg_boom'); }
+};
+
+// o ÚLTIMO PEDAÇO de chão é engolido JUNTO com o mago (é aqui que a risada
+// começa): o pedacinho some em mordidas de tijolo enquanto ele espirala
+Game.prototype._finaleEatLastPiece = function (k) {
+    const f = this.finale;
+    if (f.lastPieceDone) return;
+    const g = this.terrainCanvas.getContext('2d');
+    const cx = this.width / 2, cy = this.height / 2;
+    const targetL = 690 + 92 * k;
+    const targetR = 782 - 92 * k;
+    let guard = 0;
+    while (f.leftFront < targetL && guard++ < 12) {
+        const w = 14 + Math.random() * 14;
+        g.save(); g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000';
+        g.fillRect(f.leftFront, 644, w + 1, 60); g.restore();
+        this._finaleBiteBricks(f.leftFront, 648, w, 46, cx, cy);
+        f.leftFront += w;
+    }
+    guard = 0;
+    while (f.rightFront > targetR && guard++ < 12) {
+        const w = 14 + Math.random() * 14;
+        g.save(); g.globalCompositeOperation = 'destination-out'; g.fillStyle = '#000';
+        g.fillRect(f.rightFront - w, 644, w + 1, 60); g.restore();
+        this._finaleBiteBricks(f.rightFront - w, 648, w, 46, cx, cy);
+        f.rightFront -= w;
+    }
+    if (k >= 1) f.lastPieceDone = true;
 };
 
 // estrelas distantes sendo SUGADAS pro buraco negro (riscos rápidos)
@@ -11910,7 +12369,7 @@ Game.prototype._finaleSpawnStreak = function (now) {
     const f = this.finale;
     if (now - f.lastStreakAt < 110 || f.streaks.length > 26) return;
     f.lastStreakAt = now;
-    const cx = this.width / 2, cy = this.height * 0.47;
+    const cx = this.width / 2, cy = this.height / 2;
     const a = Math.random() * Math.PI * 2;
     const d = 260 + Math.random() * 420;
     const x = cx + Math.cos(a) * d, y = cy + Math.sin(a) * d;
@@ -11924,144 +12383,79 @@ Game.prototype._finaleSpawnStreak = function (now) {
     });
 };
 
-// ===== DESENHO do fim do mundo (overlay em espaço de tela) =====
+// ===== [v11] DESENHO do fim do mundo — só o que fica POR CIMA do mundo =====
+// (o buraco negro é o DO FUNDO, gigante e central; nada de círculo fechando
+// no mago — o mundo inteiro é engolido por ele)
 Game.prototype.drawFinale = function (g) {
     const f = this.finale;
     if (!f) return;
     const e = this._finaleT();
     const ph = this._finalePhase(e);
-    const T = TEXTS[currentLang];
     const p = this.player;
-    // âncora da ILHA em espaço de TELA (acompanha o zoom das fases finais)
-    let pcx = p.x + p.width / 2, pcy = p.y + p.height / 2;
-    if (f.zoom && f.zoom > 1.05) {
-        pcx = this.width / 2 + (p.x + p.width / 2 - f.zoomX) * f.zoom;
-        pcy = this.height / 2 + (p.y + p.height / 2 - f.zoomY) * f.zoom;
-    }
 
-    // escurecimento das bordas crescendo (o vazio espiando)
-    if (f.edgeDark > 0.01 && ph < 6) {
-        const vg = g.createRadialGradient(this.width / 2, this.height / 2, this.height * 0.36,
-            this.width / 2, this.height / 2, Math.hypot(this.width, this.height) * 0.62);
-        vg.addColorStop(0, 'rgba(0,0,0,0)');
-        vg.addColorStop(1, 'rgba(2,1,6,' + f.edgeDark.toFixed(2) + ')');
-        g.fillStyle = vg;
-        g.fillRect(0, 0, this.width, this.height);
-    }
-
-    // ===== O VAZIO (a partir da destruição) =====
-    if (ph >= 2 && ph <= 5) {
-        const iR = f.islandR;
-        if (iR < 1650) {
-            // 1) tudo fora da ilha vira o buraco negro
+    // ===== destroços de mundo voando em espiral pro buraco =====
+    if (ph >= 1 && ph <= 4) {
+        const ccx = this.width / 2, ccy = this.height / 2;
+        for (const d of f.debris) {
+            const dx = ccx - d.x, dy = ccy - d.y;
+            const dd = Math.hypot(dx, dy) || 1;
+            const k = Math.min(1, d.life / 700);
+            // ESPAGUETIFICAÇÃO perto do horizonte: estica e afina
+            const stretch = 1 + Math.max(0, 1 - dd / 320) * 2.2;
             g.save();
-            g.beginPath();
-            g.rect(0, 0, this.width, this.height);
-            g.arc(pcx, pcy, Math.max(2, iR), 0, Math.PI * 2, true);
-            g.clip('evenodd');
-            g.fillStyle = '#020207';
-            g.fillRect(0, 0, this.width, this.height);
-            g.globalCompositeOperation = 'lighter';
-            // névoas violetas respirando no vazio
-            for (const w of f.wisps) {
-                g.globalAlpha = 0.5 + Math.sin(e / 900 + w.s) * 0.25;
-                g.drawImage(FinaleVoid.wisp(), w.x - w.s / 2, w.y - w.s / 2, w.s, w.s);
+            g.globalAlpha = k;
+            g.translate(d.x, d.y);
+            g.rotate(d.rot);
+            g.scale(stretch, 1 / Math.sqrt(stretch));
+            g.fillStyle = d.color;
+            g.fillRect(-d.w / 2, -d.h / 2, d.w, d.h);
+            if (d.lit) {
+                g.fillStyle = 'rgba(190,150,255,0.75)';
+                g.fillRect(-d.w / 2 + 1, -d.h / 2 + 1, Math.max(1.5, d.w * 0.3), Math.max(1, d.h * 0.4));
             }
-            // estrelas sugadas (riscos)
-            g.globalCompositeOperation = 'source-over';
-            for (const s of f.streaks) {
-                const k = Math.max(0, s.life / s.max);
-                g.globalAlpha = k * 0.8;
-                g.strokeStyle = s.violet ? '#b48aff' : '#e8e8ff';
-                g.lineWidth = 1.3;
-                g.beginPath();
-                g.moveTo(s.x, s.y);
-                g.lineTo(s.x - s.vx * 3.4, s.y - s.vy * 3.4);
-                g.stroke();
-            }
-            // O BURACO NEGRO gigante no centro (a boca de tudo)
-            const bh = this.blackHole;
-            if (bh) {
-                const cx = this.width / 2, cy = this.height * 0.47;
-                const t2 = Date.now() / 1000;
-                const R2 = 150 + Math.min(1, (e - f.speechEnd) / f.destroyDur) * 120;
-                // bruma
-                g.globalAlpha = 0.9;
-                g.drawImage(bh.haze, cx - R2 * 2.1, cy - R2 * 2.1, R2 * 4.2, R2 * 4.2);
-                // sombra (horizonte)
-                g.drawImage(bh.sprite, cx - R2 * 2.2, cy - R2 * 2.2, R2 * 4.4, R2 * 4.4);
-                // disco de acreção simplificado (elipses vivas)
-                g.globalCompositeOperation = 'lighter';
-                g.lineCap = 'round';
-                const diskE = [
-                    [R2 * 1.15, R2 * 0.22, 0.34, '#fff6e6', 0.30 + Math.sin(t2 * 2.2) * 0.08],
-                    [R2 * 1.45, R2 * 0.28, 0.22, '#ffd28e', 0.22 + Math.sin(t2 * 1.7) * 0.06],
-                    [R2 * 1.95, R2 * 0.36, 0.13, '#c95cff', 0.16 + Math.sin(t2 * 1.3) * 0.05]
-                ];
-                for (const d of diskE) {
-                    g.globalAlpha = d[4];
-                    g.strokeStyle = d[3];
-                    g.lineWidth = R2 * d[2];
-                    g.beginPath();
-                    g.ellipse(cx, cy + R2 * 0.22, d[0], d[1], 0, 0.02, Math.PI - 0.02);
-                    g.stroke();
+            if (d.hot) {
+                // brasa do tijolo: esfria junto com o horizonte de eventos (na
+                // singularidade, com o disco morto, nada mais brilha)
+                const dA = (f.bhDiskAlpha != null) ? f.bhDiskAlpha : 1;
+                if (dA > 0.02) {
+                    g.globalCompositeOperation = 'lighter';
+                    g.globalAlpha = k * 0.5 * dA;
+                    g.fillStyle = '#ff9a4e';
+                    g.fillRect(-d.w / 2 - 1, -d.h / 2 - 1, d.w + 2, d.h + 2);
                 }
-                // photon ring no topo
-                g.globalAlpha = 0.85;
-                g.strokeStyle = 'rgba(255,250,255,0.9)';
-                g.lineWidth = 2.6;
-                g.beginPath();
-                g.arc(cx, cy, (R2 + 2) * (1 + Math.sin(t2 * 0.6) * 0.008), Math.PI + 0.2, Math.PI * 2 - 0.2);
-                g.stroke();
-                g.globalAlpha = 1;
-            }
-            // pedaços de prédio/chão girando no vazio
-            for (const d of f.debris) {
-                const k = Math.min(1, d.life / 700);
-                g.save();
-                g.globalAlpha = k;
-                g.translate(d.x, d.y);
-                g.rotate(d.rot);
-                g.fillStyle = d.color;
-                g.fillRect(-d.w / 2, -d.h / 2, d.w, d.h);
-                if (d.lit) {
-                    g.fillStyle = 'rgba(190,150,255,0.75)';
-                    g.fillRect(-d.w / 2 + 1, -d.h / 2 + 1, Math.max(1.5, d.w * 0.3), Math.max(1, d.h * 0.4));
-                }
-                g.restore();
             }
             g.restore();
+        }
+        // estrelas sugadas (riscos)
+        for (const s of f.streaks) {
+            const k = Math.max(0, s.life / s.max);
+            g.save();
+            g.globalAlpha = k * 0.8;
+            g.strokeStyle = s.violet ? '#b48aff' : '#e8e8ff';
+            g.lineWidth = 1.3;
+            g.beginPath();
+            g.moveTo(s.x, s.y);
+            g.lineTo(s.x - s.vx * 3.4, s.y - s.vy * 3.4);
+            g.stroke();
+            g.restore();
+        }
+    }
 
-            // 2) a BORDA da ilha: anel de acreção quente (a "boca" comendo)
-            const tB = Date.now() / 1000;
+    // ===== a ÚLTIMA LUZ: nos momentos finais, só o mago é iluminado =====
+    if (ph >= 2) {
+        const pcx = p.x + p.width / 2, pcy = p.y + p.height / 2;
+        const fade = ph >= 3 ? 1 : Math.max(0, (e - f.cityEnd) / (f.platDur * 0.5));
+        if (fade > 0.01) {
+            const pulse = 0.8 + Math.sin(Date.now() / 300) * 0.2;
             g.save();
             g.globalCompositeOperation = 'lighter';
-            g.lineCap = 'round';
-            const pulse = 1 + Math.sin(tB * 5) * 0.012;
-            const rB = iR * pulse;
-            g.globalAlpha = 0.16 + Math.sin(tB * 3) * 0.05;
-            g.strokeStyle = '#a060ff';
-            g.lineWidth = 13;
-            g.beginPath(); g.arc(pcx, pcy, rB, 0, Math.PI * 2); g.stroke();
-            g.globalAlpha = 0.30 + Math.sin(tB * 4) * 0.08;
-            g.strokeStyle = '#ff9a4e';
-            g.lineWidth = 6;
-            g.beginPath(); g.arc(pcx, pcy, rB, 0, Math.PI * 2); g.stroke();
-            g.globalAlpha = 0.8;
-            g.strokeStyle = '#fff2dc';
-            g.lineWidth = 2.2;
-            g.beginPath(); g.arc(pcx, pcy, rB, 0, Math.PI * 2); g.stroke();
-            // pontos quentes orbitando a borda (keplerianos)
-            for (let h2 = 0; h2 < 3; h2++) {
-                const ha = tB * 1.6 + (h2 / 3) * Math.PI * 2;
-                const hx = pcx + Math.cos(ha) * rB, hy = pcy + Math.sin(ha) * rB;
-                g.globalAlpha = 0.9;
-                g.fillStyle = '#ffffff';
-                g.fillRect(hx - 2, hy - 2, 4, 4);
-                g.globalAlpha = 0.4;
-                g.fillStyle = '#ffcf9a';
-                g.fillRect(pcx + Math.cos(ha - 0.1) * rB - 1.5, pcy + Math.sin(ha - 0.1) * rB - 1.5, 3, 3);
-            }
+            g.globalAlpha = 0.22 * fade * pulse;
+            const lg = g.createRadialGradient(pcx, pcy - 10, 6, pcx, pcy - 10, 190);
+            lg.addColorStop(0, 'rgba(200,170,255,0.5)');
+            lg.addColorStop(0.5, 'rgba(140,100,230,0.16)');
+            lg.addColorStop(1, 'rgba(90,60,180,0)');
+            g.fillStyle = lg;
+            g.beginPath(); g.ellipse(pcx, pcy - 10, 190, 200, 0, 0, Math.PI * 2); g.fill();
             g.restore();
         }
     }
@@ -12070,37 +12464,25 @@ Game.prototype.drawFinale = function (g) {
     if (ph === 0) {
         f.bloodTitle.draw(g, 1, 2.2);
     }
-    // ===== balão de fala (typewriter) =====
-    if (ph === 1 || ph === 3) {
-        let line = null, typed = 0, fadeK = 1;
-        if (ph === 1) {
-            for (const s of f.speech) {
-                if (e >= s.start && e < s.start + s.typeMs + s.hold + 380) {
-                    line = s;
-                    const lt = e - s.start;
-                    typed = Math.floor(Math.min(s.text.length, lt / 46));
-                    if (lt > s.typeMs + s.hold) fadeK = Math.max(0, 1 - (lt - s.typeMs - s.hold) / 380);
-                    break;
+
+    // ===== balão de fala (typewriter; some logo após terminar de digitar) =====
+    if (ph >= 1 && ph <= 3) {
+        for (const s of f.speech) {
+            if (e >= s.start && e < s.start + s.typeMs + s.hold + 400) {
+                const lt = e - s.start;
+                let fadeK = 1;
+                if (lt > s.typeMs + s.hold) fadeK = Math.max(0, 1 - (lt - s.typeMs - s.hold) / 400);
+                if (fadeK > 0.02) {
+                    const typed = Math.floor(Math.min(s.text.length, lt / s.spd));
+                    this._drawFinaleBubble(g, s.text, typed, fadeK);
                 }
-            }
-        } else {
-            const wE = e - f.speechEnd - f.destroyDur;
-            for (const s of f.words) {
-                if (wE >= s.start + 300 && wE < s.start + s.typeMs + s.hold + 300) {
-                    line = s;
-                    const lt = wE - s.start - 300;
-                    const spd = (s.text === T.fFinal2) ? 30 : 46;
-                    typed = Math.floor(Math.min(s.text.length, lt / spd));
-                    if (lt > s.typeMs + s.hold) fadeK = Math.max(0, 1 - (lt - s.typeMs - s.hold) / 380);
-                    break;
-                }
+                break;
             }
         }
-        if (line && fadeK > 0.02) this._drawFinaleBubble(g, line.text, typed, fadeK);
     }
 
-    // ===== o mago sendo engolido (espiral, por cima do vazio) =====
-    if (ph === 5 && f.swallow) {
+    // ===== o mago sendo engolido (espiral + espaguetificação) =====
+    if (ph === 4 && f.swallow) {
         const s = f.swallow;
         const mx = s.cx + Math.cos(s.ang) * s.r;
         const my = s.cy + Math.sin(s.ang) * s.r;
@@ -12137,9 +12519,9 @@ Game.prototype.drawFinale = function (g) {
         g.fillStyle = 'rgba(0,0,0,' + f.blackAlpha.toFixed(3) + ')';
         g.fillRect(0, 0, this.width, this.height);
     }
-    if (ph === 7 || ph === 8) {
+    if (ph === 6 || ph === 7) {
         // zoom lento no texto (deriva de escala 1 -> 1.05)
-        const k = Math.max(0, Math.min(1, (e - f.speechEnd - f.destroyDur - f.wordsEnd - 800 - 1400 - 3800 - 700) / 15000));
+        const k = Math.max(0, Math.min(1, (e - f.blackEnd) / (f.endEnd - f.blackEnd)));
         g.save();
         g.translate(this.width / 2, this.height / 2);
         g.scale(1 + k * 0.05, 1 + k * 0.05);
@@ -12150,7 +12532,7 @@ Game.prototype.drawFinale = function (g) {
     }
 };
 
-// [v10] balão de fala do mago (letras datilografadas, cauda apontando pro herói)
+// [v11] balão de fala do mago (letras datilografadas, cauda apontando pro herói)
 Game.prototype._drawFinaleBubble = function (g, text, typed, alpha) {
     const p = this.player;
     g.save();
@@ -12161,15 +12543,10 @@ Game.prototype._drawFinaleBubble = function (g, text, typed, alpha) {
     g.textBaseline = 'middle';
     const tw = g.measureText(text).width;
     const bw = Math.min(tw + 46, this.width - 120);
-    // âncora: acompanha o ZOOM do finale (o mago pode estar ampliado no centro)
-    const f = this.finale;
-    let ax = p.x + p.width / 2, ay = p.y;
-    if (f && f.zoom && f.zoom > 1.05) {
-        ax = this.width / 2 + (p.x + p.width / 2 - f.zoomX) * f.zoom;
-        ay = this.height / 2 + (p.y - f.zoomY) * f.zoom;
-    }
+    const ax = p.x + p.width / 2;
+    const ay = p.y;
     const bx = Math.max(24 + bw / 2, Math.min(this.width - 24 - bw / 2, ax));
-    const by = Math.max(64, ay - 62 * (f && f.zoom ? f.zoom : 1));
+    const by = Math.max(64, ay - 66);
     // caixa chanfrada escura com borda branca
     const cut = 9;
     g.beginPath();
