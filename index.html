@@ -311,7 +311,7 @@
             background: #000; color: #0f0; border: none; font-family: inherit; font-size: 10px; width: 300px; outline: none; padding: 5px;
         }
 
-        /* Controles Mobile */
+        /* [v8] editor de controles desativado — CSS removido junto com a UI */
         #mobile-controls { position: fixed; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 90; touch-action: none; }
         #joy-base, #aim-base, #jump-btn { position: absolute; pointer-events: auto; touch-action: none; user-select: none; -webkit-user-select: none; border-radius: 50%; }
         #joy-base, #aim-base { background: rgba(255,255,255,0.07); border: 2px solid rgba(255,255,255,0.35); }
@@ -340,17 +340,13 @@
         .flag-img { width: clamp(20px, 4vw, 26px); height: auto; display: block; margin: 0 auto 6px auto; border: 1px solid #555; }
         .flag-btn { display: flex; flex-direction: column; align-items: center; font-size: clamp(8px, 1.4vw, 10px); }
 
-        /* Conquistas e Santuário */
-        #ach-list, #meta-list { display: flex; flex-direction: column; gap: 8px; width: min(680px, 94vw); max-height: min(430px, 56dvh); overflow-y: auto; padding-right: 6px; }
-        .ach-item, .meta-item { border: 1px solid #444; padding: clamp(8px, 1.4vw, 14px); display: flex; align-items: center; gap: 14px; background: #0a0a0a; flex-shrink: 0; }
-        .ach-item .ach-ico, .meta-item .ach-ico { font-size: clamp(16px, 3vw, 20px); width: 34px; text-align: center; flex-shrink: 0; }
-        .ach-item .ach-txt, .meta-item .ach-txt { display: flex; flex-direction: column; gap: 4px; text-align: left; flex: 1; min-width: 0; }
-        .ach-item .ach-name, .meta-item .meta-name { font-size: clamp(9px, 1.5vw, 10px); }
-        .ach-item .ach-desc, .meta-item .meta-desc { font-size: clamp(7px, 1.2vw, 8px); color: #888; line-height: 1.5; }
-        .ach-item .ach-status { margin-left: auto; font-size: clamp(8px, 1.3vw, 9px); color: #555; white-space: nowrap; }
-        .ach-done { border-color: #ffd700; }
-        .ach-done .ach-name { color: #ffd700; }
-        .ach-done .ach-status { color: #ffd700; }
+        /* Santuário das Almas (v8: só os Pactos da Ganância) */
+        #meta-list { display: flex; flex-direction: column; gap: 8px; width: min(680px, 94vw); max-height: min(430px, 56dvh); overflow-y: auto; padding-right: 6px; }
+        .meta-item { border: 1px solid #444; padding: clamp(8px, 1.4vw, 14px); display: flex; align-items: center; gap: 14px; background: #0a0a0a; flex-shrink: 0; }
+        .meta-item .ach-ico { font-size: clamp(16px, 3vw, 20px); width: 34px; text-align: center; flex-shrink: 0; }
+        .meta-item .ach-txt { display: flex; flex-direction: column; gap: 4px; text-align: left; flex: 1; min-width: 0; }
+        .meta-item .meta-name { font-size: clamp(9px, 1.5vw, 10px); }
+        .meta-item .meta-desc { font-size: clamp(7px, 1.2vw, 8px); color: #888; line-height: 1.5; }
         .meta-lvl { font-size: 8px; color: #4da6ff; }
         .meta-buy button { padding: 8px 12px; font-size: 9px; margin: 0; }
         .meta-buy { margin-left: auto; flex-shrink: 0; }
@@ -359,25 +355,6 @@
         #go-perks span { border: 1px solid #4da6ff; color: #4da6ff; font-size: 8px; padding: 4px 7px; border-radius: 3px; }
         .menu-btn-row { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; margin: 5px 0; }
         .menu-btn-row .btn { padding: clamp(9px, 1.6vh, 10px) clamp(14px, 2.4vw, 18px); font-size: clamp(10px, 1.8vw, 12px); margin: 0; min-width: 46px; min-height: 44px; }
-
-        /* Toast de Conquista */
-        #ach-toast {
-            position: absolute; top: 112px; right: 20px;
-            background: linear-gradient(135deg, rgba(60,50,0,0.95), rgba(30,25,0,0.95));
-            border: 2px solid #ffd700; border-left: 4px solid #ffd700;
-            padding: 12px 18px; display: flex; align-items: center; gap: 12px;
-            z-index: 500; pointer-events: none; border-radius: 5px;
-            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
-            max-width: 380px;
-            opacity: 0; visibility: hidden;
-            transform: translateX(60px);
-            transition: opacity 0.3s, transform 0.4s cubic-bezier(0.2, 0.8, 0.3, 1), visibility 0.3s;
-        }
-        #ach-toast.show { opacity: 1; visibility: visible; transform: translateX(0); }
-        #ach-toast .toast-icon { font-size: 28px; }
-        #ach-toast .toast-text { display: flex; flex-direction: column; gap: 4px; }
-        #ach-toast .toast-label { font-size: 8px; color: #ffd700; }
-        #ach-toast .toast-name { font-size: 11px; color: #fff; }
 
         /* Avisos de Eventos */
         @keyframes kami-flash { 0%, 100% { opacity: 0.12; } 50% { opacity: 0.45; } }
@@ -591,12 +568,11 @@
             clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
             box-shadow: inset 0 0 0 1.5px #555; font-family: var(--f-body); font-size: 12px; }
         #stats-panel h3 { font-family: var(--f-disp); }
-        .ach-item, .meta-item { border: none;
+        .meta-item { border: none;
             clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
             box-shadow: inset 0 0 0 1px #333; }
-        .ach-name, .meta-name { font-family: var(--f-body); font-weight: 700; }
-        .ach-desc, .meta-desc { font-family: var(--f-body); font-size: 11px; }
-        #ach-toast { clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px); }
+        .meta-name { font-family: var(--f-body); font-weight: 700; }
+        .meta-desc { font-family: var(--f-body); font-size: 11px; }
         #audio-controls { border: none;
             clip-path: polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
             background: rgba(4,4,4,0.8); box-shadow: inset 0 0 0 1px #2a2a2a; }
@@ -754,7 +730,6 @@
         .menu-btn-row .btn svg { width: 30px; height: 30px; display: block; }
         #btn-sanctuary { color: #7db8ff; }
         #btn-sanctuary svg { filter: drop-shadow(0 0 7px rgba(77,166,255,0.55)); }
-        #btn-ach:hover { filter: drop-shadow(0 0 10px rgba(255,255,255,0.5)); }
         #btn-settings:hover, #btn-sanctuary:hover { filter: drop-shadow(0 0 10px currentColor); }
         #btn-howto { display: none; font-family: var(--f-disp); font-size: 19px; font-weight: 900; }
         body.mobile #btn-howto { display: inline-flex; }
@@ -780,7 +755,7 @@
            tela, nem uma barrinha de rolagem */
         @media (orientation: landscape) and (max-height: 540px) {
             #main-menu { overflow: hidden !important; padding: 4px 10px !important;
-                padding-right: clamp(104px, 18vw, 156px) !important; /* espaco do mago */
+                padding-right: clamp(160px, 24vw, 230px) !important; /* [v8] espaço do mago (preview centralizado) */
                 display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
                 grid-auto-rows: min-content; align-content: center; justify-items: center;
                 column-gap: 14px; row-gap: 2px; }
@@ -844,8 +819,10 @@
         /* [v7] botões de EFEITOS SONOROS e MÚSICA nas configurações */
         #audio-toggles { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; margin: 16px 0 2px; }
         #audio-toggles .btn { font-size: clamp(9px, 1.5vw, 11px); padding: 10px 16px; }
-        #btn-sfx.off, #btn-music.off { color: #ff6b6b; box-shadow: inset 0 0 0 1.5px rgba(255,107,107,0.6); }
-        #btn-sfx.on, #btn-music.on { color: #7dffb0; box-shadow: inset 0 0 0 1.5px rgba(125,255,176,0.55); }
+        #btn-sfx.off, #btn-music.off, #btn-haptics.off { color: #ff6b6b; box-shadow: inset 0 0 0 1.5px rgba(255,107,107,0.6); }
+        #btn-sfx.on, #btn-music.on, #btn-haptics.on { color: #7dffb0; box-shadow: inset 0 0 0 1.5px rgba(125,255,176,0.55); }
+        /* [v8] vibração é opção de CELULAR — some no desktop */
+        body:not(.mobile) #btn-haptics { display: none !important; }
 
         /* [v7] AURAS premium das caixinhas (amarela: Nômade + Glifo Solar;
            azul: Arcanista + Condutor Arcano) — brilham MESMO selecionadas */
@@ -864,20 +841,6 @@
         .char-select-container > .char-aura:nth-child(2) .char-card { animation-delay: 0.96s; }
         .char-select-container > .char-aura:nth-child(3) .char-card { animation-delay: 1.02s; }
 
-        /* [v7] GALERIA de estátuas das conquistas (Santuário das Almas) */
-        #gallery-label { margin-top: 26px; }
-        #ach-gallery { display: grid; grid-template-columns: repeat(auto-fill, minmax(86px, 1fr));
-            gap: 10px; width: min(760px, 94vw); max-height: min(360px, 46dvh); overflow-y: auto;
-            padding: 4px 6px 8px 2px; }
-        .statue-item { display: flex; flex-direction: column; align-items: center; gap: 4px;
-            background: #07070a; padding: 8px 4px 7px;
-            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
-            box-shadow: inset 0 0 0 1px #26262c; }
-        .statue-item canvas { width: 56px; height: 72px; }
-        .statue-item .st-name { font-size: 7px; color: #9a9a9a; text-align: center; line-height: 1.4; }
-        .statue-item.done { box-shadow: inset 0 0 0 1px rgba(255,215,0,0.4); }
-        .statue-item.done .st-name { color: #ffd700; }
-
         /* [v7] tela de fim de run: causa da morte + gráficos arcade */
         #go-cause { color: #ff9d9d; font-size: clamp(9px, 1.6vw, 11px); margin: 4px 0; }
         #go-chart { width: min(680px, 92vw); height: auto; margin: 8px 0 4px;
@@ -888,13 +851,40 @@
         #souls-text.bump { animation: soulBump 0.28s cubic-bezier(0.2, 1.6, 0.4, 1); }
         @keyframes soulBump { 0% { transform: scale(1); } 45% { transform: scale(1.4); color: #bfe1ff; } 100% { transform: scale(1); } }
 
-        /* [v7] PREVIEW do personagem: box menor, mais perto das caixinhas */
-        #hero-preview { right: clamp(24px, 11vw, 190px); bottom: 8vh; height: min(56vh, 350px); }
-        @media (max-width: 1080px) { #hero-preview { height: min(48vh, 300px); right: clamp(10px, 8vw, 120px); } }
-        @media (orientation: portrait) { #hero-preview { height: min(36vh, 240px); right: 6px; bottom: 8vh; } }
+        /* [v8] SANTUÁRIO — "PACTOS DA GANÂNCIA": o nome dos upgrades permanentes */
+        #pacts-label { margin-top: 4px; color: #c8b070; letter-spacing: 5px;
+            text-shadow: 0 0 12px rgba(200,176,112,0.35); }
+        #pacts-label::before, #pacts-label::after { content: '\2014'; color: #6e6144; margin: 0 10px; }
+        #sanctuary-sub { font-size: 9px; color: #888; max-width: 700px; text-align: center; line-height: 1.6; margin: 6px 0 14px; }
+
+        /* [v8] SANTUÁRIO NO CELULAR: ocupa a tela inteira e cresce (de boa leitura) */
+        @media (max-width: 820px), (max-height: 500px) {
+            #meta-list { width: 96vw; max-height: 60dvh; gap: 10px; }
+            .meta-item { padding: 12px 10px; gap: 10px; }
+            .meta-item .ach-ico { font-size: 22px; width: 40px; }
+            .meta-item .meta-name { font-size: 12px; }
+            .meta-item .meta-desc { font-size: 10px; }
+            .meta-lvl { font-size: 10px; }
+            .meta-buy button { padding: 12px 14px; font-size: 11px; }
+        }
+
+        /* [v8] PREVIEW do personagem: CENTRALIZADO na vertical (antes ficava
+           colado lá embaixo), sempre à direita, sem cobrir nada */
+        #hero-preview { right: clamp(18px, 9vw, 170px); bottom: auto;
+            top: 50%; height: min(56vh, 350px); margin-top: calc(min(56vh, 350px) / -2); }
+        @media (max-width: 1080px) {
+            #hero-preview { height: min(46vh, 290px); right: clamp(8px, 6vw, 110px);
+                margin-top: calc(min(46vh, 290px) / -2); }
+        }
+        /* celular EM PÉ: preview pequeno no TOPO à direita (longe dos cards) */
+        @media (orientation: portrait) {
+            #hero-preview { height: min(24vh, 175px); top: clamp(52px, 9vh, 92px);
+                margin-top: 0; bottom: auto; right: 4px; opacity: 0.92; }
+        }
         @media (orientation: portrait) and (max-height: 700px) { #hero-preview { display: none; } }
         @media (orientation: landscape) and (max-height: 540px) {
-            #hero-preview { height: min(52vh, 235px); right: clamp(4px, 7vw, 110px); bottom: 1vh; }
+            #hero-preview { height: min(52vh, 235px); right: 4px;
+                top: 50%; margin-top: calc(min(52vh, 235px) / -2); bottom: auto; }
         }
     </style>
 </head>
@@ -916,18 +906,7 @@
         <div id="aim-base"><div id="aim-knob"></div></div>
         <div id="jump-btn">PULAR</div>
     </div>
-    <div id="controls-editor" class="hidden">
-        <div id="ce-toolbar">
-            <p>ARRASTE os controles para mover. Toque num controle para selecionar e use − / + para mudar o tamanho.</p>
-            <div id="ce-buttons">
-                <button class="btn" id="ce-minus">−</button>
-                <button class="btn" id="ce-plus">+</button>
-                <button class="btn" id="ce-reset">RESET</button>
-                <button class="btn" id="ce-cancel">VOLTAR</button>
-                <button class="btn" id="ce-save">SALVAR</button>
-            </div>
-        </div>
-    </div>
+    <!-- [v8] editor de controles DESATIVADO a pedido (não funcionava bem) -->
 
     <canvas id="gameCanvas" width="1472" height="690"></canvas>
 
@@ -956,13 +935,13 @@
 
         <div id="stats-panel" class="hidden">
             <h3 style="margin:0 0 10px 0; text-align:center; font-size:12px; color:#4da6ff;">STATUS</h3>
-            <div>Vida Máx: <span id="stat-maxhp">100</span></div>
-            <div>Dano Base: <span id="stat-dmg">10</span></div>
-            <div>Vel. Ataque: <span id="stat-atkspd">1.00</span>/s</div>
-            <div>Chance Crítico: <span id="stat-critc">5</span>%</div>
-            <div>Dano Crítico: <span id="stat-critd">200</span>%</div>
-            <div>Roubo de Vida: <span id="stat-lifesteal">0</span>%</div>
-            <div style="font-size:8px;color:#aaa; justify-content:flex-end;">(Máx 2% HP)</div>
+            <div><span id="lbl-maxhp">Vida Máx:</span> <span id="stat-maxhp">100</span></div>
+            <div><span id="lbl-dmg">Dano Base:</span> <span id="stat-dmg">10</span></div>
+            <div><span id="lbl-atkspd">Vel. Ataque:</span> <span id="stat-atkspd">1.00</span>/s</div>
+            <div><span id="lbl-critc">Chance Crítico:</span> <span id="stat-critc">5</span>%</div>
+            <div><span id="lbl-critd">Dano Crítico:</span> <span id="stat-critd">200</span>%</div>
+            <div><span id="lbl-lifesteal">Roubo de Vida:</span> <span id="stat-lifesteal">0</span>%</div>
+            <div style="font-size:8px;color:#aaa; justify-content:flex-end;" id="lbl-hpnote">(Máx 2% HP)</div>
         </div>
 
         <div id="hud-top-right">
@@ -974,14 +953,6 @@
                 </div>
             </div>
             <button id="pause-btn-ingame" onclick="audioManager.playWav('botton'); game.togglePause()">PAUSE (ESC)</button>
-        </div>
-
-        <div id="ach-toast">
-            <span class="toast-icon">🏆</span>
-            <span class="toast-text">
-                <span class="toast-label" id="toast-label">CONQUISTA!</span>
-                <span class="toast-name" id="toast-name">—</span>
-            </span>
         </div>
 
         <div id="kamikaze-warning" style="position:absolute; top:28%; left:50%; transform:translate(-50%,-50%); font-size:28px; color:#ff2222; text-shadow:0 0 15px red; z-index:50; pointer-events:none; display:none; animation:kami-flash 1.2s ease-in-out infinite;">⚠ KAMIKAZE! ⚠</div>
@@ -1020,15 +991,11 @@
         <div class="char-select-container" id="staff-selection"></div>
         <button class="btn btn-play" id="btn-play" onclick="audioManager.playWav('botton'); startGame()">JOGAR</button>
         <div id="mobile-options" class="hidden">
-            <label id="aim-toggle-row"><input type="checkbox" id="aim-toggle"> Joystick de Mira (mira manual)</label>
-            <button class="btn" id="btn-edit-controls" onclick="audioManager.playWav('botton'); openControlsEditor()">EDITAR CONTROLES</button>
+            <label id="aim-toggle-row"><input type="checkbox" id="aim-toggle"> <span id="aim-toggle-txt">Joystick de Mira (mira manual)</span></label>
         </div>
         <div class="menu-btn-row">
             <button class="btn" id="btn-settings" onclick="audioManager.playWav('botton'); toggleSettingsMenu()" title="Configurações" aria-label="Configurações">
                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3.4"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33h.08a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51h.08a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82v.08a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
-            </button>
-            <button class="btn" id="btn-ach" onclick="audioManager.playWav('botton'); toggleSimpleMenu('achievements-menu')" title="Conquistas" aria-label="Conquistas">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
             </button>
             <button class="btn" id="btn-sanctuary" onclick="audioManager.playWav('botton'); toggleSimpleMenu('sanctuary-menu')" title="Santuário das Almas" aria-label="Santuário das Almas">
                 <svg viewBox="0 0 24 28" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M12 2 C16 6 18 10 17 15 C16.4 19 14.5 22 12 23 C9.5 22 7.6 19 7 15 C6 10 8 6 12 2 Z"/><circle cx="9.8" cy="12.5" r="1.05" fill="currentColor" stroke="none"/><circle cx="14.2" cy="12.5" r="1.05" fill="currentColor" stroke="none"/><path d="M8.5 22.5 C7.5 23.5 7.5 24.6 8 25.6"/><path d="M15.5 22.5 C16.5 23.5 16.5 24.6 16 25.6"/></svg>
@@ -1061,6 +1028,7 @@
         <div id="audio-toggles">
             <button class="btn" id="btn-sfx" onclick="audioManager.playWav('botton'); toggleSfx()"></button>
             <button class="btn" id="btn-music" onclick="audioManager.playWav('botton'); toggleMusic()"></button>
+            <button class="btn" id="btn-haptics" onclick="audioManager.playWav('botton'); toggleHaptics()"></button>
         </div>
         <button class="btn" onclick="audioManager.playWav('botton'); toggleSettingsMenu()" style="margin-top:20px;">VOLTAR</button>
     </div>
@@ -1071,19 +1039,11 @@
         <button class="btn" onclick="audioManager.playWav('botton'); toggleHowTo()" style="margin-top:14px;">VOLTAR</button>
     </div>
 
-    <div id="achievements-menu" class="menu-screen hidden">
-        <h1 id="ach-title" style="font-size:18px;">CONQUISTAS</h1>
-        <div id="ach-list"></div>
-        <button class="btn" onclick="audioManager.playWav('botton'); toggleSimpleMenu('achievements-menu')" style="margin-top:15px;">VOLTAR</button>
-    </div>
-
     <div id="sanctuary-menu" class="menu-screen hidden">
         <h1 id="sanctuary-title" style="font-size:18px;">SANTUARIO DAS ALMAS</h1>
-        <p style="font-size:9px; color:#888; max-width:700px; text-align:center; line-height:1.6; margin-bottom:15px;">Melhorias permanentes que valem para TODAS as suas futuras runs.</p>
+        <p class="menu-label" id="pacts-label">PACTOS DA GANANCIA</p>
+        <p id="sanctuary-sub">Melhorias permanentes que valem para TODAS as suas futuras runs.</p>
         <div id="meta-list"></div>
-        <p class="menu-label" id="gallery-label">GALERIA DAS CONQUISTAS</p>
-        <p style="font-size:9px; color:#888; max-width:700px; text-align:center; line-height:1.6; margin:0 0 12px;" id="gallery-sub">Cada conquista ergue uma estátua aqui no santuário.</p>
-        <div id="ach-gallery"></div>
         <button class="btn" onclick="audioManager.playWav('botton'); toggleSimpleMenu('sanctuary-menu')" style="margin-top:15px;">VOLTAR</button>
     </div>
 
@@ -1114,9 +1074,9 @@
     <div id="game-over-menu" class="menu-screen hidden">
         <h1 id="game-over-title" style="color:red">VOCE MORREU</h1>
         <p><span id="stats-wave">Ondas</span>: <span id="final-wave">0</span></p>
-        <p>⏱ Tempo: <span id="go-time">0m 00s</span></p>
-        <p>💀 Abates: <span id="go-kills">0</span></p>
-        <p>⚔️ Dano causado: <span id="go-damage">0</span></p>
+        <p>⏱ <span id="go-lbl-time">Tempo</span>: <span id="go-time">0m 00s</span></p>
+        <p>💀 <span id="go-lbl-kills">Abates</span>: <span id="go-kills">0</span></p>
+        <p>⚔️ <span id="go-lbl-dmg">Dano causado</span>: <span id="go-damage">0</span></p>
         <p><span id="stats-souls">Almas</span>: <span id="final-souls">0</span></p>
         <p id="go-cause"></p>
         <canvas id="go-chart" width="680" height="330"></canvas>
@@ -1174,15 +1134,24 @@ const TEXTS = {
         perksTitle: "PERKS COLETADOS", close: "FECHAR", blocked: "BLOQUEADO",
         revived: "RENASCEU!", perks: "PERKS", shield: "[ESCUDO]", phoenix: "[FENIX]",
         acquired: "Adquirido", tier: "Nível",
-        achToast: "CONQUISTA!", meteorW: "CHUVA DE METEOROS!", goldenW: "GENERAIS A CAMINHO!",
+        meteorW: "CHUVA DE METEOROS!", goldenW: "GENERAIS A CAMINHO!",
         bossName: "DEVORADOR DE ALMAS", miniName: "GUARDIÃO ARCANO", rage: "FÚRIA!",
-        achTitle: "CONQUISTAS", sanctuaryTitle: "SANTUARIO DAS ALMAS", settings: "CONFIGURAÇÕES",
-        back: "VOLTAR", maxLevel: "MAXIMO", noPerks: "Nenhum perk coletado",
+        sanctuaryTitle: "SANTUÁRIO DAS ALMAS", settings: "CONFIGURAÇÕES",
+        back: "VOLTAR", maxLevel: "MÁXIMO", noPerks: "Nenhum perk coletado",
         howto: "COMO JOGAR", volume: "VOLUME", pauseCfg: "CONFIGURAÇÕES",
-        sfxBtn: "EFEITOS SONOROS", musicBtn: "MÚSICA", onS: "LIGADO", offS: "DESLIGADO", onF: "LIGADA", offF: "DESLIGADA",
-        galleryTitle: "GALERIA DAS CONQUISTAS", gallerySub: "Cada conquista ergue uma estátua aqui no santuário.",
+        sfxBtn: "EFEITOS SONOROS", musicBtn: "MÚSICA", hapticsBtn: "VIBRAÇÃO", onS: "LIGADO", offS: "DESLIGADO", onF: "LIGADA", offF: "DESLIGADA",
         causeDeath: "CAUSA DA MORTE", dmgSrc: "DANO POR FONTE", killType: "ABATES POR TIPO",
-        causes: { bullet: "atingido por um projétil arcano", boss: "desintegrado pelo chefe", kami: "vítima de um kamikaze", meteor: "esmagado por um meteoro" }
+        causes: { bullet: "atingido por um projétil arcano", boss: "desintegrado pelo chefe", kami: "vítima de um kamikaze", meteor: "esmagado por um meteoro" },
+        // [v8] i18n completo: tudo que faltava traduzir no jogo
+        pactsTitle: "PACTOS DA GANÂNCIA",
+        sanctuarySub: "Melhorias permanentes que valem para TODAS as suas futuras runs.",
+        pauseBtn: "PAUSE (ESC)", statsBtn: "STATS", ready2: "PRONTO", active2: "ATV", ok2: "OK",
+        validArea: "ÁREA VÁLIDA", soulsShort: "ALMAS", soulsWord: "ALMAS", lvlShort: "Nv",
+        goTime: "Tempo", goKills: "Abates", goDmg: "Dano causado",
+        stMaxHp: "Vida Máx:", stDmg: "Dano Base:", stAtkSpd: "Vel. Ataque:", stCritC: "Chance Crítico:", stCritD: "Dano Crítico:", stLifesteal: "Roubo de Vida:", stHpNote: "(Máx 2% HP)",
+        meteorSurv: "SOBREVIVEU AOS METEOROS!", heritageArc: "HERANÇA ARCANA",
+        fullscreenT: "Tela cheia", soundT: "Som",
+        aimToggleTxt: "Joystick de Mira (mira manual)"
     },
     en: {
         play: "PLAY", controls: "A/D or ← → to Move, Space/↑ to Jump, Mouse to Aim, F for Skill",
@@ -1194,15 +1163,24 @@ const TEXTS = {
         perksTitle: "COLLECTED PERKS", close: "CLOSE", blocked: "BLOCKED",
         revived: "REVIVED!", perks: "PERKS", shield: "[SHIELD]", phoenix: "[PHOENIX]",
         acquired: "Acquired", tier: "Tier",
-        achToast: "ACHIEVEMENT!", meteorW: "METEOR SHOWER!", goldenW: "GENERALS INCOMING!",
+        meteorW: "METEOR SHOWER!", goldenW: "GENERALS INCOMING!",
         bossName: "SOUL DEVOURER", miniName: "ARCANE GUARDIAN", rage: "RAGE!",
-        achTitle: "ACHIEVEMENTS", sanctuaryTitle: "SOUL SANCTUARY", settings: "SETTINGS",
+        sanctuaryTitle: "SOUL SANCTUARY", settings: "SETTINGS",
         back: "BACK", maxLevel: "MAXED", noPerks: "No perks collected",
         howto: "HOW TO PLAY", volume: "VOLUME", pauseCfg: "SETTINGS",
-        sfxBtn: "SOUND FX", musicBtn: "MUSIC", onS: "ON", offS: "OFF", onF: "ON", offF: "OFF",
-        galleryTitle: "ACHIEVEMENT GALLERY", gallerySub: "Every achievement raises a statue in this sanctuary.",
+        sfxBtn: "SOUND FX", musicBtn: "MUSIC", hapticsBtn: "HAPTICS", onS: "ON", offS: "OFF", onF: "ON", offF: "OFF",
         causeDeath: "CAUSE OF DEATH", dmgSrc: "DAMAGE BY SOURCE", killType: "KILLS BY TYPE",
-        causes: { bullet: "hit by an arcane bolt", boss: "disintegrated by the boss", kami: "kamikaze victim", meteor: "crushed by a meteor" }
+        causes: { bullet: "hit by an arcane bolt", boss: "disintegrated by the boss", kami: "kamikaze victim", meteor: "crushed by a meteor" },
+        // [v8] i18n completo
+        pactsTitle: "PACTS OF GREED",
+        sanctuarySub: "Permanent upgrades that carry over to ALL your future runs.",
+        pauseBtn: "PAUSE (ESC)", statsBtn: "STATS", ready2: "READY", active2: "ON", ok2: "OK",
+        validArea: "VALID ZONE", soulsShort: "SOULS", soulsWord: "SOULS", lvlShort: "Lv",
+        goTime: "Time", goKills: "Kills", goDmg: "Damage dealt",
+        stMaxHp: "Max HP:", stDmg: "Base Damage:", stAtkSpd: "Atk Speed:", stCritC: "Crit Chance:", stCritD: "Crit Damage:", stLifesteal: "Lifesteal:", stHpNote: "(Max 2% HP)",
+        meteorSurv: "SURVIVED THE METEORS!", heritageArc: "ARCANE HERITAGE",
+        fullscreenT: "Fullscreen", soundT: "Sound",
+        aimToggleTxt: "Aim joystick (manual aim)"
     }
 };
 
@@ -1233,16 +1211,35 @@ function setLanguage(lang) {
     document.getElementById('perk-modal-title').innerText = t.perksTitle;
     document.getElementById('btn-close-perks').innerText = t.close;
     document.getElementById('perk-list-btn').innerText = t.perks;
+    document.getElementById('stats-btn').innerText = t.statsBtn;
+    const _pbi = document.getElementById('pause-btn-ingame'); if (_pbi) _pbi.innerText = window.isMobileDevice ? 'PAUSE' : t.pauseBtn;
     document.getElementById('mana-shield-indicator').innerText = t.shield;
     document.getElementById('phoenix-indicator').innerText = t.phoenix;
     document.getElementById('souls-caption').innerText = '(' + t.souls + ')';
     const jumpBtnEl = document.getElementById('jump-btn');
     if (jumpBtnEl) jumpBtnEl.innerText = (lang === 'pt') ? 'PULAR' : 'JUMP';
-    document.getElementById('ach-title').innerText = t.achTitle;
     document.getElementById('sanctuary-title').innerText = t.sanctuaryTitle;
-    document.getElementById('toast-label').innerText = t.achToast;
-    const gl2 = document.getElementById('gallery-label'); if (gl2) gl2.innerText = t.galleryTitle;
-    const gs2 = document.getElementById('gallery-sub'); if (gs2) gs2.innerText = t.gallerySub;
+    // [v8] Santuário: título dos upgrades permanentes + descrição
+    const _pl = document.getElementById('pacts-label'); if (_pl) _pl.innerText = t.pactsTitle;
+    const _ss = document.getElementById('sanctuary-sub'); if (_ss) _ss.innerText = t.sanctuarySub;
+    // [v8] painel de STATUS traduzido
+    const _set = (id, v) => { const e = document.getElementById(id); if (e) e.innerText = v; };
+    _set('lbl-maxhp', t.stMaxHp); _set('lbl-dmg', t.stDmg); _set('lbl-atkspd', t.stAtkSpd);
+    _set('lbl-critc', t.stCritC); _set('lbl-critd', t.stCritD); _set('lbl-lifesteal', t.stLifesteal);
+    _set('lbl-hpnote', t.stHpNote);
+    // [v8] tela de fim de run traduzida
+    _set('go-lbl-time', t.goTime); _set('go-lbl-kills', t.goKills); _set('go-lbl-dmg', t.goDmg);
+    // [v8] nomes de PERSONAGENS e CAJADOS trocam na hora (Arquimago Forasteiro,
+    // Cajado Quebrado etc. — antes ficavam travados no idioma inicial)
+    if (window.CHAR_DB) window.CHAR_DB.forEach(c => _set('char-name-' + c.id, lang === 'pt' ? c.name_pt : c.name_en));
+    if (window.STAFF_DB) window.STAFF_DB.forEach(s => _set('staff-name-' + s.id, lang === 'pt' ? s.name_pt : s.name_en));
+    // [v8] titles/aria + rótulos soltos
+    _set('aim-toggle-txt', t.aimToggleTxt);
+    const _fs = document.getElementById('fullscreen-btn'); if (_fs) { _fs.title = t.fullscreenT; _fs.setAttribute('aria-label', t.fullscreenT); }
+    const _bs = document.getElementById('btn-settings'); if (_bs) { _bs.title = t.settings; _bs.setAttribute('aria-label', t.settings); }
+    const _bt = document.getElementById('btn-sanctuary'); if (_bt) { _bt.title = t.sanctuaryTitle; _bt.setAttribute('aria-label', t.sanctuaryTitle); }
+    const _bh = document.getElementById('btn-howto'); if (_bh) { _bh.title = t.howto; _bh.setAttribute('aria-label', t.howto); }
+    const _mb = document.getElementById('mute-btn'); if (_mb) _mb.title = t.soundT;
     if (typeof updateAudioToggles === 'function') updateAudioToggles();
     const rotEl = document.getElementById('rotate-hint-text');
     if (rotEl) rotEl.innerText = (lang === 'pt') ? 'GIRE O APARELHO \u2014 MELHOR EM PAISAGEM' : 'ROTATE YOUR PHONE \u2014 BEST IN LANDSCAPE';
@@ -1341,8 +1338,28 @@ const audioManager = {
         if (ASSETS.audio[trackName]) {
             this.current = ASSETS.audio[trackName];
             this.current.volume = this.musicVol();
+            // [v8] música ACELERA com as waves (estilo arcade: o tom sobe junto)
+            this.applyMusicSpeed();
             this.current.play().catch(e => console.log("Aguardando interação..."));
         }
+    },
+    // [v8] VELOCIDADE DA MÚSICA: 1x na wave 1 -> 3x na wave 300 (teto).
+    // A cada ~100 waves ela ganha +1x de velocidade (rampa contínua, sem degraus).
+    musicSpeed: 1,
+    setMusicSpeed(mult) {
+        this.musicSpeed = Math.max(0.5, Math.min(3, mult));
+        this.applyMusicSpeed();
+    },
+    applyMusicSpeed() {
+        const a = this.current;
+        if (!a) return;
+        try {
+            a.playbackRate = this.musicSpeed;
+            // preservesPitch=false: o TOM sobe junto (efeito arcade clássico)
+            a.preservesPitch = false;
+            a.mozPreservesPitch = false;
+            a.webkitPreservesPitch = false;
+        } catch (e) { /* navegador antigo: acelera sem mudar o tom */ }
     },
     // [v7] religar/desligar música em tempo real: retoma a trilha CERTA pro estado
     refreshMusic() {
@@ -1577,11 +1594,20 @@ function toggleMusic() {
     localStorage.setItem('musicOn', audioManager.musicOn ? '1' : '0');
     updateAudioToggles();
     audioManager.refreshMusic();
+    DynamicMusic.refresh(); // [v8] camadas procedurais acompanham
+}
+// [v8] VIBRAÇÃO do celular (háptico): liga/desliga nas Configurações
+function toggleHaptics() {
+    Haptics.enabled = !Haptics.enabled;
+    localStorage.setItem('hapticsOn', Haptics.enabled ? '1' : '0');
+    updateAudioToggles();
+    if (Haptics.enabled) Haptics.buzz(30); // confirma com um zunido
 }
 function updateAudioToggles() {
     const t = TEXTS[currentLang];
     const bs = document.getElementById('btn-sfx');
     const bm = document.getElementById('btn-music');
+    const bh = document.getElementById('btn-haptics');
     if (bs) {
         bs.innerText = t.sfxBtn + ': ' + (audioManager.sfxOn ? t.onS : t.offS);
         bs.className = 'btn ' + (audioManager.sfxOn ? 'on' : 'off');
@@ -1589,6 +1615,10 @@ function updateAudioToggles() {
     if (bm) {
         bm.innerText = t.musicBtn + ': ' + (audioManager.musicOn ? t.onF : t.offF);
         bm.className = 'btn ' + (audioManager.musicOn ? 'on' : 'off');
+    }
+    if (bh) {
+        bh.innerText = t.hapticsBtn + ': ' + (Haptics.enabled ? t.onF : t.offF);
+        bh.className = 'btn ' + (Haptics.enabled ? 'on' : 'off');
     }
 }
 // [v7] Slider de volume 0-100 SUAVE (sem trancos) com o número na tela
@@ -1608,6 +1638,160 @@ function initVolumeUI() {
     if (vv) vv.innerText = v + '%';
     updateAudioToggles();
 }
+
+/**
+ * [v8] HÁPTICO MOBILE — o celular vibra (bem sutil) quando você leva hit,
+ * mata um inimigo ou derruba um chefe. Configurável nas Configurações.
+ */
+const Haptics = {
+    enabled: (localStorage.getItem('hapticsOn') || '1') !== '0',
+    buzz(pattern) {
+        if (!this.enabled || !window.isMobileDevice) return;
+        try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) { /* iOS e afins */ }
+    },
+    hit() { this.buzz(45); },              // tomou dano
+    kill() { this.buzz(12); },             // matou um inimigo
+    boss() { this.buzz([70, 50, 130]); }   // chefe caiu
+};
+
+/**
+ * [v8] MÚSICA DINÂMICA PROCEDURAL — camadas WebAudio SEM assets que
+ * acompanharam a trilha: um pulso cardíaco nas waves, baixo a partir da
+ * wave 8, arpejo a partir da 30, e no chefe TUDO desce 3 semitons com um
+ * pad de tensão. O tempo acelera junto com a música (teto 3x na wave 300).
+ * Combina com o P&B: só graves, ruído e uma escala de Ré menor.
+ */
+const DynamicMusic = {
+    ctx: null, master: null, running: false, timer: null,
+    nextStepTime: 0, step: 0,
+    wave: 1, boss: false,
+    // Ré menor: D2..F3 (raiz, terça menor, quarta, quinta, oitava, décima)
+    scale: [73.42, 87.31, 98.00, 110.00, 146.83, 174.61],
+    _noise: null,
+    transpose() { return this.boss ? Math.pow(2, -3 / 12) : 1; }, // boss: -3 semitons
+    vol() { return audioManager.isMuted ? 0 : audioManager.globalVolume * 0.45 * 0.34; },
+    _ensure() {
+        if (!audioManager.context) return false;
+        this.ctx = audioManager.context;
+        if (!this.master) {
+            this.master = this.ctx.createGain();
+            this.master.gain.value = 0;
+            this.master.connect(this.ctx.destination);
+        }
+        return true;
+    },
+    start() {
+        if (this.running || !audioManager.musicOn) return;
+        if (!this._ensure()) return;
+        this.running = true;
+        this.step = 0;
+        this.nextStepTime = this.ctx.currentTime + 0.12;
+        if (this.timer) clearInterval(this.timer);
+        this.timer = setInterval(() => this._schedule(), 90);
+        this.master.gain.setTargetAtTime(this.vol(), this.ctx.currentTime, 0.4);
+    },
+    stop() {
+        if (!this.running) return;
+        this.running = false;
+        if (this.timer) { clearInterval(this.timer); this.timer = null; }
+        if (this.master && this.ctx) this.master.gain.setTargetAtTime(0, this.ctx.currentTime, 0.25);
+    },
+    refresh() { // ligou/desligou a música, mudou o volume: acompanha
+        if (!audioManager.musicOn || !this.running) { this.stop(); return; }
+        if (this.master && this.ctx) this.master.gain.setTargetAtTime(this.vol(), this.ctx.currentTime, 0.2);
+    },
+    update(wave, isBoss) { this.wave = wave; this.boss = !!isBoss; },
+    speed() { return Math.min(3, 1 + (this.wave - 1) / 149.5); }, // igual à trilha (3x na 300)
+    _schedule() {
+        if (!this.running) return;
+        const stepDur = (60 / 96 / 2) / this.speed(); // colcheias a 96 BPM
+        while (this.nextStepTime < this.ctx.currentTime + 0.22) {
+            this._playStep(this.step, this.nextStepTime, stepDur);
+            this.step = (this.step + 1) % 32;
+            this.nextStepTime += stepDur;
+        }
+    },
+    _f(n) { return this.scale[n % this.scale.length] * this.transpose(); },
+    _playStep(step, t, dur) {
+        const w = this.wave;
+        // PULSO cardíaco: kick sub em todo tempo forte (sempre)
+        if (step % 8 === 0) this._kick(t);
+        if (w >= 6 && step % 8 === 4) this._kick(t, 0.6); // wave 6+: pulso dobrado
+        // CHIMBAL de ruído: offbeat a partir da wave 15, dobrado na 60
+        if (w >= 15 && step % 4 === 2) this._hat(t, 0.05);
+        if (w >= 60 && step % 2 === 1) this._hat(t, 0.032);
+        // BAIXO pulsante: a partir da wave 8, raiz andando (D-D-F-G)
+        if (w >= 8 && step % 4 === 0) {
+            const seq = [0, 0, 2, 3];
+            this._bass(t, this._f(seq[(step >> 2) % 4]), dur * 3.2);
+        }
+        // ARPEJO curto e agudo: a partir da wave 30 (a ganância acelera)
+        if (w >= 30 && step % 2 === 0) {
+            const arp = [0, 2, 4, 3, 5, 4, 2, 1];
+            this._pluck(t, this._f(arp[(step >> 1) % 8]) * 2, 0.05);
+        }
+        // PAD de tensão do CHEFE: nota longa e grave girando (muda o tom da arena)
+        if (this.boss && step % 16 === 0) this._pad(t, this._f(0), dur * 15);
+    },
+    _kick(t, v = 1) {
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = 'sine';
+        o.frequency.setValueAtTime(110, t);
+        o.frequency.exponentialRampToValueAtTime(36, t + 0.11);
+        g.gain.setValueAtTime(0.42 * v, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.15);
+        o.connect(g); g.connect(this.master);
+        o.start(t); o.stop(t + 0.17);
+    },
+    _hat(t, v) {
+        if (!this._noise) {
+            const len = this.ctx.sampleRate * 0.06;
+            const buf = this.ctx.createBuffer(1, len, this.ctx.sampleRate);
+            const d = buf.getChannelData(0);
+            for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 2);
+            this._noise = buf;
+        }
+        const s = this.ctx.createBufferSource(), g = this.ctx.createGain(), f = this.ctx.createBiquadFilter();
+        s.buffer = this._noise;
+        f.type = 'highpass'; f.frequency.value = 6000;
+        g.gain.setValueAtTime(v, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.05);
+        s.connect(f); f.connect(g); g.connect(this.master);
+        s.start(t); s.stop(t + 0.06);
+    },
+    _bass(t, freq, len) {
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain(), f = this.ctx.createBiquadFilter();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(freq, t);
+        f.type = 'lowpass'; f.frequency.setValueAtTime(320, t);
+        f.frequency.exponentialRampToValueAtTime(120, t + len);
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.16, t + 0.02);
+        g.gain.exponentialRampToValueAtTime(0.001, t + len);
+        o.connect(f); f.connect(g); g.connect(this.master);
+        o.start(t); o.stop(t + len + 0.03);
+    },
+    _pluck(t, freq, v) {
+        const o = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = 'triangle';
+        o.frequency.setValueAtTime(freq, t);
+        g.gain.setValueAtTime(v, t);
+        g.gain.exponentialRampToValueAtTime(0.001, t + 0.16);
+        o.connect(g); g.connect(this.master);
+        o.start(t); o.stop(t + 0.18);
+    },
+    _pad(t, freq, len) {
+        const o = this.ctx.createOscillator(), o2 = this.ctx.createOscillator(), g = this.ctx.createGain();
+        o.type = 'sawtooth'; o2.type = 'sawtooth';
+        o.frequency.setValueAtTime(freq, t);
+        o2.frequency.setValueAtTime(freq * 1.007, t); // batimento lento entre as duas serras
+        g.gain.setValueAtTime(0.0001, t);
+        g.gain.linearRampToValueAtTime(0.075, t + len * 0.3);
+        g.gain.linearRampToValueAtTime(0.0001, t + len);
+        o.connect(g); o2.connect(g); g.connect(this.master);
+        o.start(t); o2.start(t); o.stop(t + len + 0.05); o2.stop(t + len + 0.05);
+    }
+};
 
 
 /**
@@ -2021,10 +2205,6 @@ class Game {
         this.statGoldenKills = parseInt(localStorage.getItem('statGoldenKills') || 0);
         this.statKamiSurvived = parseInt(localStorage.getItem('statKamiSurvived') || 0);
         
-        // Toast de conquista
-        this.achToastQueue = [];
-        this.achToastBusy = false;
-        
         this.player = null;
         this.bullets = [];
         this.enemies = [];
@@ -2269,6 +2449,80 @@ class Game {
             g.lineTo(b.x + b.w - 13, b.y + 1.2);
             g.stroke();
             g.restore();
+
+            // ===== [v8] CHÃO PREMIUM: cristais de éter, capim seco e runas-mãe =====
+            // CRISTAIS DE ÉTER: clusters roxos facetados nascendo da aresta
+            const nCry = 2 + Math.floor(rt() * 3);
+            for (let ci = 0; ci < nCry; ci++) {
+                const cxx = b.x + 14 + rt() * (b.w - 28);
+                const ch2 = 4 + rt() * 8;
+                const cw = 2 + rt() * 2.5;
+                g.save();
+                g.globalAlpha = 0.9;
+                for (let spike = 0; spike < 3; spike++) {
+                    const sx = cxx + (spike - 1) * cw * 0.95;
+                    const sh2 = ch2 * (spike === 1 ? 1.3 : 0.65);
+                    g.fillStyle = spike === 1 ? '#b48aff' : '#8e63d9';
+                    g.beginPath();
+                    g.moveTo(sx - cw * 0.42, b.y + 1);
+                    g.lineTo(sx, b.y - sh2);
+                    g.lineTo(sx + cw * 0.42, b.y + 1);
+                    g.closePath();
+                    g.fill();
+                    // facetada: meia-face mais clara (luz do cristal)
+                    g.fillStyle = 'rgba(240,225,255,0.35)';
+                    g.beginPath();
+                    g.moveTo(sx, b.y - sh2);
+                    g.lineTo(sx + cw * 0.42, b.y + 1);
+                    g.lineTo(sx + cw * 0.1, b.y + 1);
+                    g.closePath();
+                    g.fill();
+                }
+                // brilho vivo no topo do cristão
+                g.globalAlpha = 0.55;
+                g.fillStyle = '#efe2ff';
+                g.fillRect(cxx - 0.8, b.y - ch2 * 1.12, 1.6, ch2 * 0.7);
+                g.restore();
+            }
+
+            // CAPIM SECO: tufos escuros em silhueta na aresta (natureza retomando)
+            g.strokeStyle = 'rgba(28,24,40,0.92)';
+            g.lineWidth = 1;
+            const nG = 3 + Math.floor(rt() * 4);
+            for (let gi = 0; gi < nG; gi++) {
+                const gxx = b.x + 8 + rt() * (b.w - 16);
+                const gn = 3 + Math.floor(rt() * 3);
+                for (let bl = 0; bl < gn; bl++) {
+                    const ghh = 4 + rt() * 7;
+                    const lean = (rt() - 0.5) * 7;
+                    g.beginPath();
+                    g.moveTo(gxx + bl * 1.6, b.y + 1);
+                    g.quadraticCurveTo(gxx + bl * 1.6 + lean * 0.4, b.y - ghh * 0.6, gxx + bl * 1.6 + lean, b.y - ghh);
+                    g.stroke();
+                }
+            }
+
+            // RUNA-MÃE acesa: selo arcano brilhando na fachada de pedra
+            if (rt() < 0.85) {
+                const rx = b.x + b.w * (0.25 + rt() * 0.5);
+                const ry = b.y + 28 + rt() * Math.max(8, b.h - 56);
+                const rr3 = 6 + rt() * 6;
+                g.save();
+                g.translate(rx, ry);
+                const rgGlow = g.createRadialGradient(0, 0, 1, 0, 0, rr3 * 2.6);
+                rgGlow.addColorStop(0, 'rgba(190,150,255,0.26)');
+                rgGlow.addColorStop(1, 'rgba(190,150,255,0)');
+                g.fillStyle = rgGlow;
+                g.fillRect(-rr3 * 2.6, -rr3 * 2.6, rr3 * 5.2, rr3 * 5.2);
+                g.rotate(Math.PI / 4);
+                g.strokeStyle = 'rgba(205,170,255,0.7)';
+                g.lineWidth = 1.5;
+                g.strokeRect(-rr3 * 0.5, -rr3 * 0.5, rr3, rr3);
+                g.rotate(-Math.PI / 4);
+                g.fillStyle = '#dcc6ff';
+                g.beginPath(); g.arc(0, 0, 1.9, 0, Math.PI * 2); g.fill();
+                g.restore();
+            }
         });
 
         this.terrainCanvas = terrain;
@@ -2488,6 +2742,13 @@ class Game {
         this.streakLastKill = 0;
         this.streakMultiplier = 1;
 
+        // [v8] as alminhas do chefe morto ACORDAM e voam até o mago agora que
+        // a nova wave começou (elas flutuavam paradas esperando o perk)
+        this.releaseDormantSouls();
+
+        // [v8] MÚSICA DINÂMICA: a trilha acelera com a wave (1x -> 3x na 300)
+        audioManager.setMusicSpeed(Math.min(3, 1 + (this.wave - 1) / 149.5));
+
         // Reset de eventos
         this.isMeteorWave = false;
         this.isGoldenWave = false;
@@ -2535,6 +2796,9 @@ class Game {
             
             this.lastSpawnTime = Date.now();
             audioManager.play('principal');
+            // [v8] camadas procedurais entram junto com a wave normal
+            DynamicMusic.update(this.wave, false);
+            DynamicMusic.start();
             let suffix = '';
             if (this.isMeteorWave) suffix = ' ☄';
             if (this.isGoldenWave) suffix = ' ★';
@@ -2546,6 +2810,9 @@ class Game {
         this.state = 'PLAYING';
         this.resumeFromFreeze(); // [FIX v4]
         audioManager.play('boss');
+        // [v8] camadas procedurais: no chefe tudo MUDA DE TOM (-3 semitons) e aperta o ritmo
+        DynamicMusic.update(this.wave, true);
+        DynamicMusic.start();
         this.enemiesToSpawn = 0; 
         this.spawnBoss(this.wave % CONFIG.bossWaveInterval === 0);
         // [JUICE] entrada dramatica do chefe
@@ -2571,6 +2838,7 @@ class Game {
         this.addShake(9);
         
         if (audioManager.current) audioManager.current.pause();
+        DynamicMusic.stop(); // [v8] silêncio de tensão na morte do chefe
         audioManager.playWav('bossdefeat');
         audioManager.playSfx('boss_die');
     }
@@ -2651,18 +2919,16 @@ class Game {
                 this.createExplosion(e.x + e.width / 2, e.y + e.height / 2, 'white', 14, 6, 5, 1500);
             }
         });
-        // [v7] almas do chefe VOAM até o mago em enxame (chegam com som)
-        this.spawnSoulOrbs(cx, cy, this.cinematicBoss.isBigBoss ? 5 : 3);
+        // [v8] almas do chefe: ficam FLUTUANDO no lugar onde ele caiu — só voam
+        // até o mago quando a próxima wave começa (a cinemática não engole mais)
+        this.spawnSoulOrbs(cx, cy, this.cinematicBoss.isBigBoss ? 5 : 3, true);
         this.statBossKills++;
         localStorage.setItem('statBossKills', this.statBossKills);
         if (this.runStats) {
             const bk = this.cinematicBoss.isBigBoss ? 'boss' : 'miniboss';
             this.runStats.kills[bk] = (this.runStats.kills[bk] || 0) + 1;
         }
-        if (this.statBossKills >= 1) this.unlockAchievement('first_boss');
-        if (this.statBossKills >= 10) this.unlockAchievement('boss_hunter');
-        if (this.statBossKills >= 50) this.unlockAchievement('boss_50');
-        if (this.statBossKills >= 100) this.unlockAchievement('boss_100');
+        Haptics.boss(); // [v8] o celular congratula
         this.checkSoulAchievement();
         this.updateSoulsUI();
     }
@@ -2680,13 +2946,13 @@ class Game {
     }
 
     endCinematic() {
-        if (this.isBossWave && this.player && !this.player.hurtThisWave) this.unlockAchievement('immaculate');
         this.state = 'UPGRADE_MENU';
         window.timeScale = 1.0; // [v4] garante saida do slow-mo da cinematica
         this.enemies = []; 
         this.meteors = [];
         this.cinematicShards = []; // [v4]
         document.getElementById('fade-overlay').style.opacity = 0;
+        DynamicMusic.stop(); // [v8] camadas procedurais saem no menu de perk
         audioManager.play('principal');
         this.showUpgradeMenu();
     }
@@ -2699,38 +2965,9 @@ class Game {
         this.hitStopUntil = Math.max(this.hitStopUntil, Date.now() + ms);
     }
 
-    unlockAchievement(id) {
-        if (this.achUnlocked.includes(id)) return;
-        const ach = ACHIEVEMENTS_DB.find(a => a.id === id);
-        if (!ach) return;
-        this.achUnlocked.push(id);
-        localStorage.setItem('achUnlocked', JSON.stringify(this.achUnlocked));
-        this.achToastQueue.push(ach);
-        this.processAchToastQueue();
-        audioManager.playSfx('ach');
-        if (typeof buildAchGallery === 'function') buildAchGallery(); // [v7] nova estátua no santuário
-    }
-
-    processAchToastQueue() {
-        if (this.achToastBusy || this.achToastQueue.length === 0) return;
-        this.achToastBusy = true;
-        const ach = this.achToastQueue.shift();
-        const toast = document.getElementById('ach-toast');
-        const iconEl = toast.querySelector('.toast-icon');
-        const nameEl = document.getElementById('toast-name');
-        const labelEl = document.getElementById('toast-label');
-        iconEl.textContent = ach.icon;
-        nameEl.innerText = (currentLang === 'pt') ? ach.name_pt : ach.name_en;
-        labelEl.innerText = TEXTS[currentLang].achToast;
-        toast.classList.add('show');
-        setTimeout(() => {
-            toast.classList.remove('show');
-            setTimeout(() => {
-                this.achToastBusy = false;
-                this.processAchToastQueue();
-            }, 500);
-        }, 3500);
-    }
+    // [v8] CONQUISTAS REMOVIDAS a pedido (botão de troféu, galeria e toasts
+    // saíram do jogo). As estatísticas internas continuam sendo salvas, mas sem UI.
+    unlockAchievement(id) { /* no-op: sistema desativado na v8 */ }
 
     checkWaveAchievements() {
         if (this.wave >= 10) this.unlockAchievement('wave_10');
@@ -2769,6 +3006,8 @@ class Game {
 
     showGameOver() {
         this.state = 'GAME_OVER';
+        DynamicMusic.stop(); // [v8] camadas procedurais saem
+        audioManager.setMusicSpeed(1); // [v8] trilha do menu volta à velocidade normal
         document.getElementById('final-wave').innerText = this.wave;
         const tempoMs = Date.now() - (this.runStartTime || Date.now());
         const min = Math.floor(tempoMs / 60000);
@@ -2818,7 +3057,7 @@ class Game {
                 p.perksCounts[pick.id] = (p.perksCounts[pick.id] || 0) + 1;
             }
             p.updateStatsUI();
-            this.addFloatingText(p.x, p.y - 60, 'HERANCA ARCANA', '#ffd700');
+            this.addFloatingText(p.x, p.y - 60, TEXTS[currentLang].heritageArc, '#ffd700');
         }
     }
 
@@ -3285,7 +3524,9 @@ class Game {
     }
 
     // ===== [v7] SUCÇÃO DE ALMAS: as almas VOAM do inimigo até o mago =====
-    spawnSoulOrbs(x, y, n) {
+    // [v8] dormant=true: a alma fica FLUTUANDO no local (morte de CHEFE) e só
+    // voa até o mago quando a PRÓXIMA wave começa — a cinemática não engole mais.
+    spawnSoulOrbs(x, y, n, dormant = false) {
         n = Math.max(1, Math.min(8, n || 1));
         if (!this.soulOrbs) this.soulOrbs = [];
         for (let i = 0; i < n; i++) {
@@ -3293,9 +3534,26 @@ class Game {
             this.soulOrbs.push({
                 x: x + (Math.random() - 0.5) * 26, y: y + (Math.random() - 0.5) * 26,
                 vx: (Math.random() - 0.5) * 2.6, vy: -1.8 - Math.random() * 1.6,
-                born: Date.now(), seekAt: Date.now() + 240 + i * 80,
+                born: Date.now(),
+                seekAt: dormant ? Infinity : Date.now() + 240 + i * 80,
+                dormant: dormant,
                 trail: [], wob: Math.random() * 6.28
             });
+        }
+    }
+
+    // [v8] a próxima wave começou: as almas do chefe ACORDAM e partem pro mago
+    releaseDormantSouls() {
+        if (!this.soulOrbs || !this.soulOrbs.length) return;
+        let i = 0;
+        for (const o of this.soulOrbs) {
+            if (o.dormant) {
+                o.dormant = false;
+                o.seekAt = Date.now() + 380 + i * 140; // saem em fila, uma a uma
+                o.vx = (Math.random() - 0.5) * 1.6;
+                o.vy = -1.2;
+                i++;
+            }
         }
     }
 
@@ -3314,7 +3572,13 @@ class Game {
         const ts = window.timeScale || 1;
         for (let i = this.soulOrbs.length - 1; i >= 0; i--) {
             const o = this.soulOrbs[i];
-            if (Date.now() < o.seekAt) {
+            if (o.dormant) {
+                // [v8] DORMINDO: a alma flutua no lugar da morte do chefe,
+                // balançando devagar como uma lanterna à espera
+                o.wob += 0.03 * ts;
+                o.x += Math.sin(o.wob * 0.7) * 0.16 * ts;
+                o.y += Math.cos(o.wob) * 0.22 * ts;
+            } else if (Date.now() < o.seekAt) {
                 // estouro inicial: a alma sobe e flutua
                 o.vy += 0.006 * ts; o.vx *= 0.99;
                 o.x += o.vx * ts; o.y += o.vy * ts;
@@ -3592,6 +3856,7 @@ class Game {
                 let s = this.shockwaves[i]; s.update();
                 if (s.dead) this.shockwaves.splice(i, 1);
             }
+            this.updateSoulOrbs(); // [v8] almas do chefe flutuando durante a cinemática
             // [v4] fragmentos girando em camera lenta, caindo com gravidade
             for (let i = this.cinematicShards.length - 1; i >= 0; i--) {
                 const sh = this.cinematicShards[i];
@@ -3710,20 +3975,21 @@ class Game {
                     else this.streakMultiplier = 1;
 
                     if (this.streakCount === 5) {
-                        this.addFloatingText(this.width / 2, 130, '5 STREAK! x2 ALMAS', '#ffd700');
+                        this.addFloatingText(this.width / 2, 130, '5 STREAK! \u00d72 ' + TEXTS[currentLang].soulsWord, '#ffd700');
                         this.addShake(4);
                     }
                     if (this.streakCount === 10) {
-                        this.addFloatingText(this.width / 2, 130, '10 STREAK! x3 ALMAS', '#ff6600');
+                        this.addFloatingText(this.width / 2, 130, '10 STREAK! \u00d73 ' + TEXTS[currentLang].soulsWord, '#ff6600');
                         this.addShake(6);
                         this.hitStop(60);
                     }
                     if (this.streakCount === 20) {
-                        this.addFloatingText(this.width / 2, 130, 'RAMPAGE! x3 ALMAS', '#ff2200');
+                        this.addFloatingText(this.width / 2, 130, 'RAMPAGE! \u00d73 ' + TEXTS[currentLang].soulsWord, '#ff2200');
                         this.addShake(10);
                         this.hitStop(100);
                     }
                     localStorage.setItem('statTotalKills', this.statTotalKills);
+                    Haptics.kill(); // [v8] micro-vibração no abate
                     if (e.isGolden) {
                         this.statGoldenKills++;
                         localStorage.setItem('statGoldenKills', this.statGoldenKills);
@@ -3878,7 +4144,7 @@ class Game {
                 localStorage.setItem('statMeteorSurvived', this.statMeteorSurvived);
                 if (this.statMeteorSurvived >= 1) this.unlockAchievement('meteor_survivor');
                 if (this.statMeteorSurvived >= 10) this.unlockAchievement('meteor_10');
-                this.addFloatingText(this.width / 2, this.height / 2, 'SOBREVIVEU AOS METEOROS!', '#ffaa00');
+                this.addFloatingText(this.width / 2, this.height / 2, TEXTS[currentLang].meteorSurv, '#ffaa00');
             }
             this.meteorHitThisWave = false;
             this.meteors = [];
@@ -4147,10 +4413,12 @@ class Game {
         ctx.restore();
     }
 
-    addFloatingText(x, y, text, color = null, size = 12) {
+    addFloatingText(x, y, text, color = null, size = 11, crit = false) {
+        // [v8] teto anti-poluição: nunca mais de 36 números na tela
+        if (this.floatingTexts.length > 36) this.floatingTexts.shift();
         const colors = ['red', '#4da6ff', '#00ff00']; 
         const c = color || colors[Math.floor(Math.random() * colors.length)];
-        this.floatingTexts.push(new FloatingText(x, y, text, c, size));
+        this.floatingTexts.push(new FloatingText(x, y, text, c, size, crit));
     }
 
     showUpgradeMenu() {
@@ -4489,7 +4757,8 @@ class Game {
                     g.stroke();
                 }
 
-                // JANELAS em arco — algumas acesas (violeta), outras mortas
+                // [v8] JANELAS em arco — MOLDURA, peitoril e caixilho em cruz;
+                // as acesas ganham GLOW violeta suave (tudo pré-renderizado)
                 const cols = Math.max(1, Math.floor((w - 14) / 20));
                 const rows = Math.max(1, Math.floor((h - 32) / 26));
                 const spread = cols > 1 ? (w - 16) / (cols - 1) : 0;
@@ -4498,12 +4767,86 @@ class Game {
                         const jx = x + 8 + wx * spread;
                         const jy = by + 17 + wy * 26;
                         const lit = r() < 0.2;
+                        if (lit) {
+                            // halo: a luz vaza da janela pra fachada
+                            const wg = g.createRadialGradient(jx + 3, jy + 4, 1, jx + 3, jy + 4, 11);
+                            wg.addColorStop(0, 'rgba(185,140,255,0.28)');
+                            wg.addColorStop(1, 'rgba(185,140,255,0)');
+                            g.fillStyle = wg;
+                            g.fillRect(jx - 8, jy - 7, 23, 23);
+                        }
                         g.fillStyle = lit ? 'rgba(205,170,255,' + (0.2 + r() * 0.3).toFixed(2) + ')' : 'rgba(0,0,0,0.5)';
                         g.fillRect(jx, jy, 6, 9);
                         g.beginPath();
                         g.arc(jx + 3, jy, 3, Math.PI, Math.PI * 2);
                         g.fill();
+                        // caixilho: cruz fina escura
+                        g.strokeStyle = 'rgba(0,0,0,0.55)';
+                        g.lineWidth = 0.8;
+                        g.beginPath();
+                        g.moveTo(jx + 3, jy); g.lineTo(jx + 3, jy + 9);
+                        g.moveTo(jx, jy + 4.5); g.lineTo(jx + 6, jy + 4.5);
+                        g.stroke();
+                        // peitoril (laje clara)
+                        g.fillStyle = 'rgba(190,175,235,0.20)';
+                        g.fillRect(jx - 1.2, jy + 9, 8.4, 1.6);
                     }
+                }
+
+                // [v8] LINHAS DE ANDAR: lajes dividindo os pisos (leitura de altura)
+                g.strokeStyle = 'rgba(0,0,0,0.30)';
+                g.lineWidth = 1;
+                for (let wy = 1; wy < rows; wy++) {
+                    const fy = by + 17 + wy * 26 - 6;
+                    g.beginPath(); g.moveTo(x + 2, fy); g.lineTo(x + w - 2, fy); g.stroke();
+                }
+
+                // [v8] QUINAS iluminadas: batidas de luar violeta nas bordas
+                g.fillStyle = 'rgba(195,175,245,0.13)';
+                g.fillRect(x, by + 4, 1.6, h - 4);
+                g.fillRect(x + w - 1.6, by + 4, 1.6, h - 4);
+
+                // [v8] ANTENA no topo dos prédios íntegros + luz vermelha de alerta
+                if (!broken && r() < 0.4) {
+                    const ax = x + w * (0.3 + r() * 0.4);
+                    const ah = 10 + r() * 18;
+                    g.strokeStyle = 'rgba(160,150,190,0.5)';
+                    g.lineWidth = 1.2;
+                    g.beginPath(); g.moveTo(ax, by + 6); g.lineTo(ax, by - ah); g.stroke();
+                    g.beginPath(); g.moveTo(ax - 3.5, by - ah * 0.55); g.lineTo(ax + 3.5, by - ah * 0.55); g.stroke();
+                    const lg = g.createRadialGradient(ax, by - ah - 1, 0.5, ax, by - ah - 1, 5);
+                    lg.addColorStop(0, 'rgba(255,80,80,0.85)');
+                    lg.addColorStop(1, 'rgba(255,80,80,0)');
+                    g.fillStyle = lg;
+                    g.beginPath(); g.arc(ax, by - ah - 1, 5, 0, Math.PI * 2); g.fill();
+                    g.fillStyle = '#ff6b6b';
+                    g.fillRect(ax - 1, by - ah - 2, 2, 2);
+                }
+
+                // [v8] VIGAS EXPOSTAS saindo do topo esventrado
+                if (broken) {
+                    g.strokeStyle = 'rgba(150,135,185,0.35)';
+                    g.lineWidth = 1.3;
+                    const nb = 2 + Math.floor(r() * 2);
+                    for (let vb = 0; vb < nb; vb++) {
+                        const vx0 = x + 6 + r() * (w - 12);
+                        g.beginPath();
+                        g.moveTo(vx0, by + 6);
+                        g.lineTo(vx0 + (r() - 0.5) * 14, by - 6 - r() * 12);
+                        g.stroke();
+                    }
+                }
+
+                // [v8] CONTRAFORTE: escora diagonal na base (arquitetura de fortaleza)
+                if (r() < 0.35 && h > 120) {
+                    g.strokeStyle = 'rgba(0,0,0,0.4)';
+                    g.lineWidth = 3;
+                    const side = r() < 0.5 ? 0 : 1;
+                    const bx0 = side ? x + w : x;
+                    g.beginPath();
+                    g.moveTo(bx0, this.height - 8);
+                    g.lineTo(bx0 + (side ? -1 : 1) * (w * 0.5), this.height - h * 0.45);
+                    g.stroke();
                 }
 
                 // BRASA viva (glow tremulando em tempo real, bem leve)
@@ -5188,7 +5531,7 @@ class Game {
         const bgDt = Math.min(50, nowMs - (this._bgT || nowMs)); this._bgT = nowMs;
         const bgAlive = !this.paused && this.state !== 'PAUSED';
         if (this.cityNear && bgAlive && nowMs > (this._bgMeteorNext || Infinity) && this.bgMeteors.length < 2) {
-            this._bgMeteorNext = nowMs + 60000 + Math.random() * 180000; // 1 a 4 minutos
+            this._bgMeteorNext = nowMs + 60000 + Math.random() * 60000; // [v8] 1 a 2 minutos
             // [v7] só prédios VISÍVEIS: o impacto precisa aparecer na tela (nada
             // de cair atrás do solo que tapa a cidade — sem efeito visual não vale)
             const terrainTopAt = (x0, x1) => {
@@ -5610,8 +5953,8 @@ class Game {
             ctx.font = '12px "Press Start 2P"';
             ctx.textAlign = 'center';
             if (Math.floor(Date.now() / 150) % 2 === 0) {
-                ctx.fillText("AREA VALIDA", this.width / 12, this.height / 2);
-                ctx.fillText("AREA VALIDA", this.width * 11 / 12, this.height / 2);
+                ctx.fillText(TEXTS[currentLang].validArea, this.width / 12, this.height / 2);
+                ctx.fillText(TEXTS[currentLang].validArea, this.width * 11 / 12, this.height / 2);
             }
             ctx.restore();
         }
@@ -5762,28 +6105,53 @@ class Shockwave {
 }
 
 class FloatingText {
-    constructor(x, y, text, color, size = 12) {
-        this.x = x; this.y = y; this.text = text; this.color = color; this.size = size;
-        this.vy = -1; this.spawnTime = Date.now(); this.duration = 500; this.dead = false;
+    // [v8] NÚMEROS DE DANO flutuantes estilizados: contorno escuro pra
+    // ler em qualquer fundo, pop de entrada, drift orgânico e — no CRÍTICO —
+    // fonte maior, DOURADO com glow e uma rotaçãozinha que assenta (juice!).
+    constructor(x, y, text, color, size = 11, crit = false) {
+        this.x = x + (Math.random() - 0.5) * 12;
+        this.y = y - 8;
+        this.text = String(text);
+        this.color = color;
+        this.size = size;
+        this.crit = crit;
+        this.vy = crit ? -1.7 : -1.15;
+        this.vx = (Math.random() - 0.5) * (crit ? 1.1 : 0.5);
+        this.rot = (Math.random() - 0.5) * (crit ? 0.26 : 0.10);
+        this.spawnTime = Date.now();
+        this.duration = crit ? 820 : 640;
+        this.dead = false;
     }
     update() {
-        this.y += this.vy * window.timeScale;
+        const ts = window.timeScale;
+        this.y += this.vy * ts;
+        this.x += this.vx * ts;
+        this.vy *= Math.pow(0.986, ts);
         if (Date.now() - this.spawnTime > this.duration) this.dead = true;
     }
     draw(ctx) {
-        ctx.save(); ctx.font = this.size + 'px "Press Start 2P"'; ctx.fillStyle = this.color;
-        let remaining = this.duration - (Date.now() - this.spawnTime);
-        if (remaining < 150) ctx.globalAlpha = Math.max(0, remaining / 150);
-        // [JUICE] "pop" sutil no instante em que o numero aparece
         const age = Date.now() - this.spawnTime;
-        if (age < 90) {
-            const pop = 1 + (1 - age / 90) * 0.3;
-            ctx.translate(this.x, this.y);
-            ctx.scale(pop, pop);
-            ctx.fillText(this.text, 0, 0);
-        } else {
-            ctx.fillText(this.text, this.x, this.y);
+        const fadeStart = this.duration - 200;
+        let a = age > fadeStart ? Math.max(0, 1 - (age - fadeStart) / 200) : 1;
+        if (a <= 0) return;
+        ctx.save();
+        ctx.globalAlpha = a;
+        ctx.translate(this.x, this.y);
+        if (this.crit) ctx.rotate(this.rot * (1 - age / this.duration)); // assenta
+        if (age < 100) { const pop = 1 + (1 - age / 100) * 0.5; ctx.scale(pop, pop); }
+        ctx.font = this.size + 'px "Press Start 2P"';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.lineWidth = Math.max(2, this.size * 0.24);
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = 'rgba(0,0,0,0.88)';
+        ctx.strokeText(this.text, 0, 0);
+        if (this.crit) {
+            ctx.shadowColor = 'rgba(255,200,20,0.95)';
+            ctx.shadowBlur = 11;
         }
+        ctx.fillStyle = this.color;
+        ctx.fillText(this.text, 0, 0);
         ctx.restore();
     }
 }
@@ -6528,11 +6896,11 @@ class Player {
             if (this.laserActive || Date.now() < this.laserCooldown) {
                 laserUI.style.opacity = 0.5;
                 let cdRemaining = Math.ceil((this.laserCooldown - Date.now()) / 1000);
-                if (this.laserActive) dom('laser-cd').innerText = "ATV";
-                else dom('laser-cd').innerText = cdRemaining > 0 ? cdRemaining : "PRONTO";
+                if (this.laserActive) dom('laser-cd').innerText = TEXTS[currentLang].active2;
+                else dom('laser-cd').innerText = cdRemaining > 0 ? cdRemaining : TEXTS[currentLang].ready2;
             } else {
                 laserUI.style.opacity = 1;
-                dom('laser-cd').innerText = 'PRONTO';
+                dom('laser-cd').innerText = TEXTS[currentLang].ready2;
             }
         }
 
@@ -6545,7 +6913,7 @@ class Player {
                 dom('dash-cd').innerText = cdRemaining > 0 ? cdRemaining + 's' : '-';
             } else {
                 dashUI.style.opacity = 1;
-                dom('dash-cd').innerText = 'OK';
+                dom('dash-cd').innerText = TEXTS[currentLang].ok2;
             }
         }
 
@@ -6555,10 +6923,10 @@ class Player {
             if (game.state === 'TELEPORTING' || Date.now() < this.teleportCooldown) {
                 tpUI.style.opacity = 0.5;
                 let cdRemaining = Math.ceil((this.teleportCooldown - Date.now()) / 1000);
-                dom('teleport-cd').innerText = cdRemaining > 0 ? cdRemaining : "PRONTO";
+                dom('teleport-cd').innerText = cdRemaining > 0 ? cdRemaining : TEXTS[currentLang].ready2;
             } else {
                 tpUI.style.opacity = 1;
-                dom('teleport-cd').innerText = 'PRONTO';
+                dom('teleport-cd').innerText = TEXTS[currentLang].ready2;
             }
         }
 
@@ -6791,7 +7159,9 @@ class Player {
         game.addShake(9);
         game.hitStop(60);
 
-        game.addFloatingText(this.x, this.y, Math.round(finalDamage));
+        // [v8] dano no PLAYER estilizado (vermelho) + vibração do celular
+        game.addFloatingText(this.x + this.width / 2, this.y, '-' + Math.round(finalDamage), '#ff5a5a', 13);
+        Haptics.hit();
         audioManager.playSfx('player_hit');
 
         if (this.hp <= 0) {
@@ -6888,6 +7258,47 @@ const TintedSprites = {
         const g = c.getContext('2d');
         g.filter = filters[tint];
         g.drawImage(img, 0, 0);
+        this.cache[key] = c;
+        return c;
+    }
+};
+
+/**
+ * [v8] SPRITES COM CONTORNO — os .png dos inimigos têm tons que se confundem
+ * com o fundo do cenário. Solução profissional de pixel-art: silhueta escura
+ * pré-renderizada 2px em volta do sprite (8 direções), cacheada por tipo.
+ * NÃO altera os .png originais nem o fundo — só a renderização.
+ */
+const OutlinedSprites = {
+    cache: {},
+    get(type, variant) {
+        const key = type + '|' + (variant || 'normal');
+        if (this.cache[key] !== undefined) return this.cache[key];
+        let src = null;
+        if (variant && variant !== 'normal') {
+            src = TintedSprites.get(type, variant); // já é canvas tintado
+        } else {
+            const img = ASSETS.images[type];
+            if (!img || !img.complete || img.naturalHeight === 0) return null;
+            src = img;
+        }
+        if (!src) return null;
+        const pad = 2;
+        const c = document.createElement('canvas');
+        c.width = src.width + pad * 2;
+        c.height = src.height + pad * 2;
+        const g = c.getContext('2d');
+        // 1) união do sprite deslocado em 8 direções = silhueta EXPANDIDA
+        const offs = [[-2,0],[2,0],[0,-2],[0,2],[-2,-2],[2,-2],[-2,2],[2,2],[-1,2],[1,-2],[-2,1],[2,-1]];
+        g.globalCompositeOperation = 'source-over';
+        for (let i = 0; i < offs.length; i++) g.drawImage(src, pad + offs[i][0], pad + offs[i][1]);
+        // 2) pinta a silhueta toda de quase-preto arroxeado (combina com o P&B)
+        g.globalCompositeOperation = 'source-in';
+        g.fillStyle = 'rgba(10,7,16,0.92)';
+        g.fillRect(0, 0, c.width, c.height);
+        // 3) o sprite ORIGINAL limpo por cima
+        g.globalCompositeOperation = 'source-over';
+        g.drawImage(src, pad, pad);
         this.cache[key] = c;
         return c;
     }
@@ -7205,9 +7616,14 @@ class Enemy {
         game.damageDealt = (game.damageDealt || 0) + amount;
         this.lastHitDamage = amount; 
         this.hp -= amount; this.lastHitTime = Date.now();
-        // [JUICE] critico: numero maior e dourado
-        if (isCrit) game.addFloatingText(this.x, this.y, Math.round(amount), '#ffd700', 15);
-        else game.addFloatingText(this.x, this.y, Math.round(amount), this.isGolden ? '#ffd700' : null);
+        // [v8] números de dano estilizados: crítico MAIOR, DOURADO, com glow e
+        // micro-shake (o feedback viciante); normal branco discretinho
+        if (isCrit) {
+            game.addFloatingText(this.x + this.width / 2, this.y, Math.round(amount), '#ffd700', 17, true);
+            game.addShake(2.5);
+        } else {
+            game.addFloatingText(this.x + this.width / 2, this.y, Math.round(amount), this.isGolden ? '#ffd700' : '#eef0f8', 11);
+        }
 
         if (this.hp <= 0) this.die();
     }
@@ -7221,29 +7637,29 @@ class Enemy {
         if (this.dead) return;
         this.dead = true;
         const cx = this.x + this.width / 2, cy = this.y + this.height / 2;
-        // [v7] cada inimigo estilhaça na SUA cor — lascas SÓLIDAS pra todo lado
-        // (casca escura grossa + fragmentos coloridos + faíscas quentes)
+        // [v8] estilhaço SÓBRIO: as lascas continuam poligonais e na cor do
+        // inimigo, mas MENORES e menos brilhantes — destroço de nave, não
+        // confete. A tela volta a respirar quando vários morrem juntos.
         const palC = { triangulo: '#ff5a20', losango: '#3c96ff', redondo: '#3cdc50', miniboss: '#bf00ff', boss: '#bf00ff' };
         const shellC = this.isGolden ? '#ffd700' : (palC[this.type] || '#8f89ad');
-        // flash duplo do estouro
-        game.spawnShockwave(cx, cy, this.isGolden ? 82 : 58, '#ffffff', 240, 3.2);
-        game.spawnShockwave(cx, cy, this.isGolden ? 74 : 48, shellC, 400, 2.4);
-        // FRAGMENTOS de verdade: pedaços grandes girando, com brasa e gravidade
-        game.createDebris(cx, cy, '#262133', 7, 9.5, 4.6, 1150);
-        game.createDebris(cx, cy, shellC, 15, 7, 6.6, 1000);
-        if (this.isGolden) game.createDebris(cx, cy, '#ffd700', 6, 5.5, 7.4, 800);
-        for (let i = 0; i < 7; i++) {
-            game.createParticle(cx + (Math.random() - 0.5) * 18, cy + (Math.random() - 0.5) * 18,
-                Math.random() < 0.5 ? '#ffe9b0' : shellC, 2.2 + Math.random() * 2.4, 420, 1.6);
+        game.spawnShockwave(cx, cy, this.isGolden ? 74 : 54, '#ffffff', 220, 2.6);
+        game.spawnShockwave(cx, cy, this.isGolden ? 62 : 44, shellC, 360, 2);
+        game.createDebris(cx, cy, '#262133', 4, 5.2, 3.8, 950);
+        game.createDebris(cx, cy, shellC, 9, 4.2, 4.6, 820);
+        if (this.isGolden) game.createDebris(cx, cy, '#ffd700', 4, 3.4, 4.8, 700);
+        for (let i = 0; i < 4; i++) {
+            game.createParticle(cx + (Math.random() - 0.5) * 16, cy + (Math.random() - 0.5) * 16,
+                Math.random() < 0.5 ? '#ffe9b0' : shellC, 1.8 + Math.random() * 1.6, 380, 1.4);
         }
         if (game.player.perks.fragmentation) {
-            // [v7] EXPLOSÃO RADIAL COMPLETA: 12 destroços em TODAS as direções,
-            // velocidades variadas (uns voam longe, outros estouram perto)
-            const NF = 12;
+            // [v8] FRAGMENTAÇÃO: 10 LASCAS DE NAVE (chapas finas e alongadas
+            // girando) em todas as direções — pequenas, escuras e com só um
+            // fio de brasa. Nada de bolha brilhante nem poluição visual.
+            const NF = 10;
             for (let i = 0; i < NF; i++) {
                 let ang = (i / NF) * Math.PI * 2 + (Math.random() - 0.5) * 0.5;
                 game.bullets.push(ObjectPool.getBullet(cx, cy, ang, 0, true,
-                    { speed: 1.5 + Math.random() * 1.5, projSize: 5, isFragment: true }));
+                    { speed: 1.4 + Math.random() * 1.3, projSize: 2.3, isFragment: true }));
             }
         }
 
@@ -7290,19 +7706,25 @@ class Enemy {
             }
         }
 
-        // 4. Sprite principal do inimigo ([PERFORMANCE] tint pre-renderizado, mesmo visual)
+        // 4. Sprite principal do inimigo ([v8] CONTORNO escuro procedural:
+        // os .png têm tons que somem no cenário — a silhueta escura em volta
+        // separa o inimigo do fundo SEM alterar a arte nem o cenário)
         ctx.save();
+        const variant = this.poisonActive ? 'poison' : (this.kamikaze ? 'kami' : (this.isGolden ? 'golden' : 'normal'));
+        const outlined = OutlinedSprites.get(this.type, variant);
         let tintedSprite = null;
-        if (this.poisonActive) tintedSprite = TintedSprites.get(this.type, 'poison');
-        else if (this.kamikaze) tintedSprite = TintedSprites.get(this.type, 'kami');
-        else if (this.isGolden) tintedSprite = TintedSprites.get(this.type, 'golden');
-        if (!tintedSprite) {
-            if (this.poisonActive) {
-                ctx.filter = 'sepia(1) hue-rotate(80deg) saturate(4)';
-            } else if (this.kamikaze) {
-                ctx.filter = 'sepia(1) hue-rotate(-45deg) saturate(7)';
-            } else if (this.isGolden) {
-                ctx.filter = 'sepia(1) hue-rotate(-5deg) saturate(8) brightness(1.3)';
+        if (!outlined) {
+            if (this.poisonActive) tintedSprite = TintedSprites.get(this.type, 'poison');
+            else if (this.kamikaze) tintedSprite = TintedSprites.get(this.type, 'kami');
+            else if (this.isGolden) tintedSprite = TintedSprites.get(this.type, 'golden');
+            if (!tintedSprite) {
+                if (this.poisonActive) {
+                    ctx.filter = 'sepia(1) hue-rotate(80deg) saturate(4)';
+                } else if (this.kamikaze) {
+                    ctx.filter = 'sepia(1) hue-rotate(-45deg) saturate(7)';
+                } else if (this.isGolden) {
+                    ctx.filter = 'sepia(1) hue-rotate(-5deg) saturate(8) brightness(1.3)';
+                }
             }
         }
 
@@ -7318,7 +7740,7 @@ class Enemy {
             ctx.translate(this.x + this.width / 2, this.y + this.height / 2);
             ctx.rotate(tilt);
             ctx.scale(breathe, 2 - breathe);
-            ctx.drawImage(tintedSprite || img, -tamanhoVisual / 2, -tamanhoVisual / 2, tamanhoVisual, tamanhoVisual);
+            ctx.drawImage(outlined || tintedSprite || img, -tamanhoVisual / 2, -tamanhoVisual / 2, tamanhoVisual, tamanhoVisual);
             ctx.restore();
 
             if (this.kamikaze && this.kamikazeState === 'aviso' && Math.floor(Date.now() / 130) % 2 === 0) {
@@ -7522,9 +7944,10 @@ class Boss extends Enemy {
     draw(ctx) {
         let img = ASSETS.images[this.type];
         ctx.save();
-        // [PERFORMANCE] tint de veneno pre-renderizado
-        const bossTinted = this.poisonActive ? TintedSprites.get(this.type, 'poison') : null;
-        if (this.poisonActive && !bossTinted) {
+        // [v8] contorno escuro procedural no chefe também (destaque do fundo)
+        const bossOutlined = OutlinedSprites.get(this.type, this.poisonActive ? 'poison' : 'normal');
+        const bossTinted = (!bossOutlined && this.poisonActive) ? TintedSprites.get(this.type, 'poison') : null;
+        if (!bossOutlined && !bossTinted && this.poisonActive) {
             ctx.filter = 'sepia(1) hue-rotate(80deg) saturate(4)';
         }
 
@@ -7534,45 +7957,83 @@ class Boss extends Enemy {
             if (Date.now() - this.lastHitTime < 100 || Date.now() < this.colorUntil) ctx.globalAlpha = 0.5;
                         // Telegraph do boss (anel duplo pulsante)
             if (this.isChargingShot) {
+                // [v8] CARGA PREMIUM: arco que se FECHA, energia sugada de fora,
+                // anel tracejado girando, faíscas elétricas e núcleo esquentando
                 const interval = this.currentBossFireInterval || 1500;
+                const chargeMs = 500;
                 const timeSinceShot = Date.now() - this.lastShootTime;
-                const chargeProgress = Math.min(1, Math.max(0, (timeSinceShot - (interval - 500)) / 500));
+                const cp = Math.min(1, Math.max(0, (timeSinceShot - (interval - chargeMs)) / chargeMs));
                 const cxT = this.x + this.width / 2;
                 const cyT = this.y + this.height / 2;
-                
+                const R0 = tamanhoVisual / 2;
+                const tNow = Date.now() / 1000;
+
                 ctx.save();
-                // Anel externo
-                const maxR1 = tamanhoVisual / 2 + 14;
-                const minR1 = tamanhoVisual / 2 + 4;
-                const r1 = maxR1 - (maxR1 - minR1) * chargeProgress;
-                ctx.strokeStyle = `rgba(255,100,100,${0.15 + chargeProgress * 0.4})`;
-                ctx.lineWidth = 2 + chargeProgress * 3;
+                // 1) ARCO DE CARGA: o anel vai se fechando conforme a energia acumula
+                ctx.strokeStyle = `rgba(255,90,90,${(0.22 + cp * 0.68).toFixed(2)})`;
+                ctx.lineWidth = 2.4 + cp * 2.2;
+                ctx.shadowColor = 'rgba(255,60,60,0.85)';
+                ctx.shadowBlur = 12 * cp;
                 ctx.beginPath();
-                ctx.arc(cxT, cyT, r1, 0, Math.PI * 2);
+                ctx.arc(cxT, cyT, R0 + 13, -Math.PI / 2, -Math.PI / 2 + cp * Math.PI * 2);
                 ctx.stroke();
-                
-                // Anel interno
-                const r2 = tamanhoVisual / 2 + 2;
-                ctx.strokeStyle = `rgba(255,255,255,${chargeProgress * 0.3})`;
+                ctx.shadowBlur = 0;
+
+                // 2) anel-limite tracejado GIRANDO (o campo de contenção)
+                ctx.setLineDash([10, 7]);
+                ctx.lineDashOffset = -tNow * 42;
+                ctx.strokeStyle = `rgba(255,255,255,${(0.10 + cp * 0.30).toFixed(2)})`;
                 ctx.lineWidth = 1.5;
-                ctx.beginPath();
-                ctx.arc(cxT, cyT, r2, 0, Math.PI * 2);
-                ctx.stroke();
-                
-                // Glow
-                if (chargeProgress > 0.6) {
-                    ctx.globalAlpha = (chargeProgress - 0.6) * 0.2;
-                    ctx.fillStyle = '#ff4444';
-                    ctx.beginPath();
-                    ctx.arc(cxT, cyT, tamanhoVisual / 2, 0, Math.PI * 2);
-                    ctx.fill();
+                ctx.beginPath(); ctx.arc(cxT, cyT, R0 + 23, 0, Math.PI * 2); ctx.stroke();
+                ctx.setLineDash([]);
+
+                // 3) ENERGIA SUGADA: partículas convergindo de fora pra dentro
+                for (let s = 0; s < 6; s++) {
+                    const k = ((tNow * (1.5 + s * 0.23)) + s * 0.37) % 1; // 0 nasce, 1 chega
+                    const ang = s * 2.399 + tNow * 0.9;
+                    const rr = R0 + 18 + (1 - k) * 52;
+                    const px = cxT + Math.cos(ang) * rr;
+                    const py = cyT + Math.sin(ang) * rr * 0.9;
+                    const sz = 1.4 + k * 2.4;
+                    ctx.globalAlpha = 0.20 + k * 0.65;
+                    ctx.fillStyle = k > 0.75 ? '#ffffff' : '#ff8866';
+                    ctx.fillRect(px - sz / 2, py - sz / 2, sz, sz);
+                }
+                ctx.globalAlpha = 1;
+
+                // 4) FAÍSCAS elétricas na casca quando está quase pronto
+                if (cp > 0.55) {
+                    ctx.strokeStyle = `rgba(255,232,220,${((cp - 0.55) * 1.7).toFixed(2)})`;
+                    ctx.lineWidth = 1.3;
+                    for (let a = 0; a < 3; a++) {
+                        if (Math.random() < 0.4) continue;
+                        const ang0 = Math.random() * Math.PI * 2;
+                        let sx = cxT + Math.cos(ang0) * (R0 + 2), sy = cyT + Math.sin(ang0) * (R0 + 2);
+                        ctx.beginPath(); ctx.moveTo(sx, sy);
+                        for (let sg = 0; sg < 3; sg++) {
+                            const a2 = ang0 + (Math.random() - 0.5) * 0.9;
+                            const r2 = R0 + 4 + sg * 6 + Math.random() * 4;
+                            ctx.lineTo(cxT + Math.cos(a2) * r2, cyT + Math.sin(a2) * r2);
+                        }
+                        ctx.stroke();
+                    }
+                }
+
+                // 5) NÚCLEO esquentando (o corpo inteiro ferve por dentro)
+                if (cp > 0.35) {
+                    const k2 = (cp - 0.35) / 0.65;
+                    const gg = ctx.createRadialGradient(cxT, cyT, 2, cxT, cyT, R0);
+                    gg.addColorStop(0, `rgba(255,120,90,${(0.26 * k2).toFixed(2)})`);
+                    gg.addColorStop(1, 'rgba(255,60,40,0)');
+                    ctx.fillStyle = gg;
+                    ctx.beginPath(); ctx.arc(cxT, cyT, R0, 0, Math.PI * 2); ctx.fill();
                 }
                 ctx.restore();
             }
             // [v3] tremor no sprite enquanto carrega o especial
             let shx = this.isChargingShot ? (Math.random() - 0.5) * 3 : 0;
             let shy = this.isChargingShot ? (Math.random() - 0.5) * 3 : 0;
-            const drawImg = bossTinted || img;
+            const drawImg = bossOutlined || bossTinted || img;
             if (this._cinematic) {
                 // [v4] morte cinematica: tremor crescente + encolhimento + glitch de video
                 shx += (Math.random() - 0.5) * (this._cineJitter || 0);
@@ -8061,12 +8522,15 @@ class Projectile {
         this._rgbNow = this.hueSeed;
         this.spin = Math.random() * Math.PI * 2;
         if (this.isFragment) {
-            // [v5] fragmento = DETRITO de verdade: polígono irregular quente
+            // [v8] fragmento = CHAPA DE NAVE: lasca ACHATADA e alongada
+            // (metade da largura em Y), como placa de casca estalando
             this.frag = [];
             const fn = 3 + Math.floor(Math.random() * 3);
+            const elong = 1.7 + Math.random() * 1.1; // comprimento da chapa
             for (let i = 0; i < fn; i++) {
                 const fa = (i / fn) * Math.PI * 2 + Math.random() * 0.7;
-                this.frag.push([Math.cos(fa) * (0.5 + Math.random() * 0.5), Math.sin(fa) * (0.5 + Math.random() * 0.5)]);
+                this.frag.push([Math.cos(fa) * (0.5 + Math.random() * 0.5) * elong,
+                                Math.sin(fa) * (0.5 + Math.random() * 0.5) * 0.55]);
             }
             this.fragSpin = (Math.random() - 0.5) * 0.5;
             this.fragGlow = Math.random() < 0.5 ? '#ff9a40' : '#c9a2ff';
@@ -8129,7 +8593,8 @@ class Projectile {
         this.frameCount++;
         if (this.frag) {
             this.spin += this.fragSpin * window.timeScale;
-            if (this.frameCount % 14 === 0) game.createParticle(this.x, this.y, 'rgba(255,150,70,0.55)', 2, 300, 0.3);
+            // [v8] sem fagulhas de rastro: o destroço é um pedaço de casca
+            // seco e escuro girando — nada de cometa
         }
         if (this.frameCount % 3 === 0) {
             this.history.push({ x: this.x, y: this.y });
@@ -8233,38 +8698,20 @@ class Projectile {
         audioManager.playSfx('shatter');
     }
 
-    // [v6] fragmento = DESTROÇO de verdade: lasca poligonal GROSSA girando,
-    // aresta em brasa que ESFRIA, faíscas voando e nada de "bolinha com rastro"
+    // [v8] fragmento = LASCA DE NAVE: chapa alongada escura girando com um
+    // FIO de brasa na borda que esfria. Sem aura circular, sem núcleo
+    // brilhante, sem rastro — um destroço seco (a pedido: nada de bolinhas).
     drawFragment(ctx) {
         const age = Date.now() - (this.bornAt || 0);
-        const heat = Math.max(0, 1 - age / 1100); // esfria com o tempo
-        const sz = this.radius * 4.6;
+        const heat = Math.max(0, 1 - age / 800); // esfria rápido
+        const sz = this.radius * 3.1; // pequeno (~7px)
         this.spin += this.fragSpin * 0.55;
-        // faíscas quentes atrás do destroço (determinísticas, zero alocação)
-        const sp = Math.hypot(this.vx, this.vy) || 1;
-        const bx2 = -this.vx / sp, by2 = -this.vy / sp;
-        for (let k = 0; k < 2; k++) {
-            const sd = (this.hueSeed * 9.7 + k * 41.3) % 1;
-            const fx = this.x + bx2 * (sz * (0.8 + sd * 1.6)) + by2 * (sd - 0.5) * 7;
-            const fy = this.y + by2 * (sz * (0.8 + sd * 1.6)) - bx2 * (sd - 0.5) * 7;
-            const fs = 1.5 + sd * 1.8;
-            ctx.globalAlpha = heat * (0.5 + sd * 0.4);
-            ctx.fillStyle = sd > 0.5 ? '#ffd9a0' : '#ff8a3a';
-            ctx.fillRect(fx - fs / 2, fy - fs / 2, fs, fs);
-        }
-        ctx.globalAlpha = 1;
         ctx.save();
         ctx.translate(this.x, this.y);
         ctx.rotate(this.spin);
-        // aura quente que apaga junto com a brasa
-        ctx.globalAlpha = 0.26 + heat * 0.34;
-        ctx.fillStyle = this.fragGlow;
-        ctx.beginPath();
-        ctx.arc(0, 0, sz * 0.95, 0, Math.PI * 2);
-        ctx.fill();
-        // corpo do destroço (rocha ardósia escura)
+        // corpo da chapa (metal ardósia escuro)
         ctx.globalAlpha = 1;
-        ctx.fillStyle = '#3d3852';
+        ctx.fillStyle = '#37334c';
         ctx.beginPath();
         for (let i = 0; i < this.frag.length; i++) {
             const vx = this.frag[i][0] * sz, vy = this.frag[i][1] * sz;
@@ -8272,23 +8719,16 @@ class Projectile {
         }
         ctx.closePath();
         ctx.fill();
-        // aresta em BRASA esfriando (laranja viva -> roxa morta)
-        ctx.strokeStyle = 'rgba(255,' + Math.round(120 + heat * 110) + ',50,' + (0.40 + heat * 0.55).toFixed(2) + ')';
-        ctx.lineWidth = 1.8;
-        ctx.stroke();
-        // face iluminada pelo calor (triângulo interno)
-        ctx.fillStyle = 'rgba(255,190,110,' + (heat * 0.40).toFixed(2) + ')';
+        // veio central (placa metálica)
+        ctx.strokeStyle = 'rgba(255,255,255,0.10)';
+        ctx.lineWidth = 0.8;
         ctx.beginPath();
-        ctx.moveTo(this.frag[0][0] * sz, this.frag[0][1] * sz);
-        ctx.lineTo(this.frag[1][0] * sz, this.frag[1][1] * sz);
-        ctx.lineTo(0, 0);
-        ctx.closePath();
-        ctx.fill();
-        // cravejado de luz no núcleo quando recém-nascido
-        if (heat > 0.55) {
-            ctx.globalAlpha = (heat - 0.55) * 1.6;
-            ctx.fillStyle = '#ffe9c8';
-            ctx.fillRect(-sz * 0.14, -sz * 0.14, sz * 0.28, sz * 0.28);
+        ctx.moveTo(-sz * 0.7, 0); ctx.lineTo(sz * 0.7, 0); ctx.stroke();
+        // fio de brasa na borda (apaga conforme esfria)
+        if (heat > 0) {
+            ctx.strokeStyle = 'rgba(255,' + Math.round(110 + heat * 100) + ',45,' + (0.28 + heat * 0.42).toFixed(2) + ')';
+            ctx.lineWidth = 1;
+            ctx.stroke();
         }
         ctx.restore();
     }
@@ -8397,8 +8837,8 @@ class Particle {
             ctx.save();
             ctx.translate(this.x, this.y);
             ctx.rotate(this.rot);
-            // [v7] fragmento SÓLIDO: face + aresta clara + brasa inicial esfriando
-            const heat = Math.max(0, 1 - (Date.now() - this.spawnTime) / 260);
+            // [v8] fragmento SÓLIDO: face + aresta discreta + brasa curta
+            const heat = Math.max(0, 1 - (Date.now() - this.spawnTime) / 200);
             ctx.fillStyle = this.color;
             ctx.beginPath();
             for (let i = 0; i < this.verts.length; i++) {
@@ -8407,11 +8847,11 @@ class Particle {
             }
             ctx.closePath();
             ctx.fill();
-            ctx.strokeStyle = 'rgba(255,255,255,0.30)';
+            ctx.strokeStyle = 'rgba(255,255,255,0.14)';
             ctx.lineWidth = 1;
             ctx.stroke();
             if (heat > 0) {
-                ctx.fillStyle = 'rgba(255,210,140,' + (heat * 0.55).toFixed(2) + ')';
+                ctx.fillStyle = 'rgba(255,210,140,' + (heat * 0.28).toFixed(2) + ')';
                 ctx.fill();
             }
             ctx.restore();
@@ -8570,21 +9010,22 @@ function initGame() {
     audioManager.play('main');
     
     const select = document.getElementById('char-selection');
-    // [v7] nomes traduzidos: Barba Branca / Nômade / Arcanista
-    const chars = [
-        { id: 1, name_pt: 'Barba Branca', name_en: 'White Beard', cost: 0, aura: null },
+    // [v8] nomes TRADUZIDOS AO VIVO (trocam com o idioma): o personagem padrão
+    // agora é o ARQUIMAGO FORASTEIRO com o CAJADO QUEBRADO
+    window.CHAR_DB = [
+        { id: 1, name_pt: 'Arquimago Forasteiro', name_en: 'Outlander Archmage', cost: 0, aura: null },
         { id: 2, name_pt: 'Nômade', name_en: 'Nomad', cost: 100, aura: 'gold' },
         { id: 3, name_pt: 'Arcanista', name_en: 'Arcanist', cost: 200, aura: 'blue' }
     ];
     const unlockedData = JSON.parse(localStorage.getItem('unlockedChars') || '[1]');
     
-    chars.forEach((c, index) => {
+    window.CHAR_DB.forEach((c, index) => {
         const isUnlocked = unlockedData.includes(c.id); const el = document.createElement('div');
         el.className = `char-card ${isUnlocked ? '' : 'char-locked'}`; if (index === 0) el.classList.add('selected');
         const cName = (currentLang === 'pt') ? c.name_pt : c.name_en;
         
         el.innerHTML = `<img src="Assets/mage${c.id}.png" onerror="this.style.display='none';this.parentElement.classList.add('img-missing')" style="width:64px;height:64px;display:block;margin:0 auto;object-fit:contain;" alt="Mage ${c.id}">
-            <p>${cName}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px" title="${c.cost} Souls">${c.cost} &#9671;</p>` : ''}`;
+            <p id="char-name-${c.id}">${cName}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px" title="${c.cost} Souls">${c.cost} &#9671;</p>` : ''}`;
             
         el.onclick = () => {
             audioManager.playWav('botton'); 
@@ -8609,22 +9050,22 @@ function initGame() {
     window.selectedChar = 1;
 
     const staffSelect = document.getElementById('staff-selection');
-    // [v7] cajados traduzidos: Simples Eficaz / Glifo Solar / Condutor Arcano
-    const staffs = [
-        { id: 1, name_pt: 'Simples Eficaz', name_en: 'Simply Effective', cost: 0, aura: null },
+    // [v8] cajados com nome traduzido: o padrão agora é o CAJADO QUEBRADO
+    window.STAFF_DB = [
+        { id: 1, name_pt: 'Cajado Quebrado', name_en: 'Broken Staff', cost: 0, aura: null },
         { id: 2, name_pt: 'Glifo Solar', name_en: 'Solar Glyph', cost: 100, aura: 'gold' },
         { id: 3, name_pt: 'Condutor Arcano', name_en: 'Arcane Flow', cost: 180, aura: 'blue' }
     ];
     const unlockedStaffs = JSON.parse(localStorage.getItem('unlockedStaffs') || '[1]');
     window.selectedStaff = parseInt(localStorage.getItem('selectedStaff') || '1');
 
-    staffs.forEach((s) => {
+    window.STAFF_DB.forEach((s) => {
         const isUnlocked = unlockedStaffs.includes(s.id); const el = document.createElement('div');
         el.className = `char-card ${isUnlocked ? '' : 'char-locked'}`; if (window.selectedStaff === s.id) el.classList.add('selected');
         const sName = (currentLang === 'pt') ? s.name_pt : s.name_en;
         
         el.innerHTML = `<img src="Assets/cajado${s.id}.png" onerror="this.style.display='none';this.parentElement.classList.add('img-missing')" style="width:44px;height:84px;display:block;margin:0 auto;object-fit:contain;" alt="Cajado ${s.id}">
-            <p>${sName}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px" title="${s.cost} Souls">${s.cost} &#9671;</p>` : ''}`;
+            <p id="staff-name-${s.id}">${sName}</p>${!isUnlocked ? `<p style="color:#4da6ff;font-size:10px" title="${s.cost} Souls">${s.cost} &#9671;</p>` : ''}`;
             
         el.onclick = () => {
             audioManager.playWav('botton'); 
@@ -8647,7 +9088,6 @@ function initGame() {
         } else staffSelect.appendChild(el);
     });
 
-    buildAchievementsUI();
     buildSanctuaryUI();
     requestAnimationFrame(() => game.loop());
 }
@@ -8802,19 +9242,20 @@ if (window.isMobileDevice) {
         // [FIX v3] Os controles agora ficam ancorados nos CANTOS DA TELA (viewport),
         // nao colados ao canvas. Funciona em retrato, paisagem, com ou sem tela cheia,
         // em qualquer aparelho. Layout salvo em fracoes (fx/fy/size) da viewport.
+        // [v8] tamanhos MENORES (o PULAR gigante incomodava) — layout V5
         const defaultLayout = {
-            move: { fx: 0.035, fy: 0.64, size: 0.34 },  // joystick: canto esquerdo inferior
-            jump: { fx: 0.865, fy: 0.74, size: 0.32 },  // [v6] PULAR: canto direito INFERIOR
-            aim:  { fx: 0.865, fy: 0.36, size: 0.28 }   // [v6] mira manual: direita, ACIMA do pular
+            move: { fx: 0.035, fy: 0.64, size: 0.30 },  // joystick: canto esquerdo inferior
+            jump: { fx: 0.875, fy: 0.76, size: 0.235 }, // PULAR: canto direito inferior (compacto)
+            aim:  { fx: 0.875, fy: 0.40, size: 0.235 }  // mira manual: direita, acima do pular
         };
         let layout;
-        try { layout = JSON.parse(localStorage.getItem('mobileControlsLayoutV4')) || defaultLayout; }
+        try { layout = JSON.parse(localStorage.getItem('mobileControlsLayoutV5')) || defaultLayout; }
         catch (err) { layout = defaultLayout; }
         ['move', 'jump', 'aim'].forEach(k => { if (!layout[k]) layout[k] = { ...defaultLayout[k] }; });
 
         function controlSize(c) {
             const vp = getViewportSize();
-            return Math.max(84, Math.min(200, c.size * Math.min(vp.w, vp.h)));
+            return Math.max(80, Math.min(168, c.size * Math.min(vp.w, vp.h)));
         }
         function place(el, c) {
             const vp = getViewportSize();
@@ -8864,26 +9305,19 @@ if (window.isMobileDevice) {
             selectedControl = null;
             [joyBase, aimBase, jumpBtn].forEach(el => el.classList.remove('control-selected'));
         }
-        window.openControlsEditor = function () {
-            window.controlsEditMode = true;
-            clearSelection();
-            document.getElementById('main-menu').classList.remove('hidden');
-            document.getElementById('controls-editor').classList.remove('hidden');
-            updateAimVisibility();
-            positionMobileControls();
-        };
+        window.openControlsEditor = function () { /* [v8] editor desativado a pedido */ };
         function closeControlsEditor(save) {
             if (save) {
                 clampLayout();
-                localStorage.setItem('mobileControlsLayoutV4', JSON.stringify(layout));
+                localStorage.setItem('mobileControlsLayoutV5', JSON.stringify(layout));
             } else {
-                try { layout = JSON.parse(localStorage.getItem('mobileControlsLayoutV4')) || defaultLayout; }
+                try { layout = JSON.parse(localStorage.getItem('mobileControlsLayoutV5')) || defaultLayout; }
                 catch (err) { layout = defaultLayout; }
                 ['move', 'jump', 'aim'].forEach(k => { if (!layout[k]) layout[k] = { ...defaultLayout[k] }; });
             }
             window.controlsEditMode = false;
             clearSelection();
-            document.getElementById('controls-editor').classList.add('hidden');
+            const ceEl = document.getElementById('controls-editor'); if (ceEl) ceEl.classList.add('hidden');
             document.getElementById('main-menu').classList.remove('hidden');
             updateAimVisibility();
             positionMobileControls();
@@ -8895,15 +9329,17 @@ if (window.isMobileDevice) {
             clampLayout();
             positionMobileControls();
         }
-        document.getElementById('ce-save').addEventListener('click', () => { audioManager.playWav('botton'); closeControlsEditor(true); });
-        document.getElementById('ce-cancel').addEventListener('click', () => { audioManager.playWav('botton'); closeControlsEditor(false); });
-        document.getElementById('ce-reset').addEventListener('click', () => {
+        // [v8] editor de controles DESATIVADO — os botões saíram do HTML; os
+        // listeners ficam com guarda de null (nada quebra em navegação antiga)
+        const ceSave = document.getElementById('ce-save'); if (ceSave) ceSave.addEventListener('click', () => { audioManager.playWav('botton'); closeControlsEditor(true); });
+        const ceCancel = document.getElementById('ce-cancel'); if (ceCancel) ceCancel.addEventListener('click', () => { audioManager.playWav('botton'); closeControlsEditor(false); });
+        const ceReset = document.getElementById('ce-reset'); if (ceReset) ceReset.addEventListener('click', () => {
             audioManager.playWav('botton');
             layout = { move: { ...defaultLayout.move }, jump: { ...defaultLayout.jump }, aim: { ...defaultLayout.aim } };
             positionMobileControls();
         });
-        document.getElementById('ce-minus').addEventListener('click', () => adjustSelectedSize(-16));
-        document.getElementById('ce-plus').addEventListener('click', () => adjustSelectedSize(16));
+        const ceMinus = document.getElementById('ce-minus'); if (ceMinus) ceMinus.addEventListener('click', () => adjustSelectedSize(-16));
+        const cePlus = document.getElementById('ce-plus'); if (cePlus) cePlus.addEventListener('click', () => adjustSelectedSize(16));
 
         function setupControl(el, key, onStart, onMove, onEnd) {
             el.addEventListener('touchstart', (e) => {
@@ -9146,16 +9582,16 @@ function buildHowTo() {
         row('🕹️', 'JOYSTICK (ESQUERDA)', 'Arraste o joystick da esquerda para andar. Arraste pra cima enquanto anda para pular.'),
         row('⬆️', 'BOTÃO PULAR (DIREITA, EMBAIXO)', 'O botão azul no canto direito inferior faz o mago pular.'),
         row('🃏', 'CARTAS DE UPGRADE', 'Ao fim de cada onda, escolha uma carta: são poderes permanentes da sua run.'),
-        row('⏸️', 'PAUSE', 'O botão PAUSE no topo congela o jogo. Por lá você também encontra CONFIGURAÇÕES (som e quadros por segundo).'),
-        row('🛠️', 'EDITAR CONTROLES', 'No menu inicial, em EDITAR CONTROLES, arraste os botões para onde preferir e ajuste o tamanho.')
+        row('⏸️', 'PAUSE', 'O botão PAUSE no topo congela o jogo. Por lá você também encontra CONFIGURAÇÕES (som, vibração e quadros por segundo).'),
+        row('📳', 'VIBRAÇÃO', 'Nas CONFIGURAÇÕES você pode desligar a vibração do celular nos hits e abates.')
     ].join('') : [
         row('🎯', 'AUTO AIM', 'Your staff aims at the nearest enemy by itself. Just move and dodge.'),
         row('👆', 'TAP AN ENEMY = LOCK ON', 'Tap an enemy with your finger and the aim locks ON IT until it dies. Tap empty space to unlock.'),
         row('🕹️', 'JOYSTICK (LEFT)', 'Drag the left joystick to walk. Flick it upwards while moving to jump.'),
         row('⬆️', 'JUMP BUTTON (RIGHT, BOTTOM)', 'The blue button on the bottom-right corner makes the mage jump.'),
         row('🃏', 'UPGRADE CARDS', 'At the end of each wave, pick a card: permanent powers for your run.'),
-        row('⏸️', 'PAUSE', 'The PAUSE button on top freezes the game. Settings (sound & FPS) live there too.'),
-        row('🛠️', 'EDIT CONTROLS', 'In the main menu, EDIT CONTROLS lets you drag and resize the buttons.')
+        row('⏸️', 'PAUSE', 'The PAUSE button on top freezes the game. Settings (sound, haptics & FPS) live there too.'),
+        row('📳', 'HAPTICS', 'In SETTINGS you can turn off the phone vibration on hits and kills.')
     ].join('');
 }
 
@@ -9306,44 +9742,11 @@ function toggleSimpleMenu(id) {
     }
 }
 
-function buildAchievementsUI() {
-    const list = document.getElementById('ach-list');
-    if (!list || !game) return;
-    list.innerHTML = '';
-    ACHIEVEMENTS_DB.forEach(a => {
-        const done = game.achUnlocked.includes(a.id);
-        let extra = '';
-        if (a.id === 'hunter_50' || a.id === 'hunter_200' || a.id === 'hunter_1000' || a.id === 'hunter_5000' || a.id === 'hunter_15000' || a.id === 'hunter_100k') {
-            extra = ' (' + Math.min(game.statTotalKills, a.goal) + '/' + a.goal + ')';
-        }
-        if (a.id === 'boss_hunter' || a.id === 'boss_50' || a.id === 'boss_100') {
-            extra = ' (' + Math.min(game.statBossKills, a.goal) + '/' + a.goal + ')';
-        }
-        if (a.id === 'soul_lord' || a.id === 'soul_1000' || a.id === 'soul_5000') {
-            extra = ' (' + Math.min(game.statTotalSouls, a.goal) + '/' + a.goal + ')';
-        }
-        if (a.id === 'golden_slayer' || a.id === 'golden_50') {
-            extra = ' (' + Math.min(game.statGoldenKills, a.goal) + '/' + a.goal + ')';
-        }
-        if (a.id === 'meteor_survivor' || a.id === 'meteor_10') {
-            extra = ' (' + Math.min(game.statMeteorSurvived, a.goal) + '/' + a.goal + ')';
-        }
-        const div = document.createElement('div');
-        div.className = 'ach-item' + (done ? ' ach-done' : '');
-        const nome = (currentLang === 'pt') ? a.name_pt : a.name_en;
-        const desc = (currentLang === 'pt') ? a.desc_pt : a.desc_en;
-        const statusTxt = done ? (currentLang === 'pt' ? '✔' : '✔') : '';
-        div.innerHTML = `<span class="ach-ico">${a.icon}</span>
-            <span class="ach-txt"><span class="ach-name">${nome}</span><span class="ach-desc">${desc}</span></span>
-            <span class="ach-status">${statusTxt}${extra}</span>`;
-        list.appendChild(div);
-    });
-}
-
 function buildSanctuaryUI() {
     const list = document.getElementById('meta-list');
     if (!list) return;
     list.innerHTML = '';
+    const t = TEXTS[currentLang];
     const levels = JSON.parse(localStorage.getItem('metaLevels') || '{}');
     META_UPGRADES_DB.forEach(m => {
         const lvl = levels[m.id] || 0;
@@ -9352,93 +9755,18 @@ function buildSanctuaryUI() {
         const div = document.createElement('div');
         div.className = 'meta-item';
         const botao = maxed 
-            ? `<button class="btn" disabled>${TEXTS[currentLang].maxLevel}</button>` 
-            : `<button class="btn" onclick="buyMetaUpgrade('${m.id}')">${custo} ALMAS</button>`;
+            ? `<button class="btn" disabled>${t.maxLevel}</button>` 
+            : `<button class="btn" onclick="buyMetaUpgrade('${m.id}')">${custo} ${t.soulsShort}</button>`;
         const nome = (currentLang === 'pt') ? m.name_pt : m.name_en;
         const desc = (currentLang === 'pt') ? m.desc_pt : m.desc_en;
         div.innerHTML = `<span class="ach-ico">${m.icon}</span>
-            <span class="ach-txt"><span class="meta-name">${nome} <span class="meta-lvl">Nv ${lvl}/${m.max}</span></span><span class="meta-desc">${desc}</span></span>
+            <span class="ach-txt"><span class="meta-name">${nome} <span class="meta-lvl">${t.lvlShort} ${lvl}/${m.max}</span></span><span class="meta-desc">${desc}</span></span>
             <span class="meta-buy">${botao}</span>`;
         list.appendChild(div);
     });
-    buildAchGallery(); // [v7] estátuas das conquistas
 }
 
-// [v7] GALERIA: cada conquista desbloqueada ergue uma ESTÁTUA no santuário
-function buildAchGallery() {
-    const gal = document.getElementById('ach-gallery');
-    if (!gal || !game) return;
-    gal.innerHTML = '';
-    ACHIEVEMENTS_DB.forEach(a => {
-        const done = game.achUnlocked.includes(a.id);
-        const item = document.createElement('div');
-        item.className = 'statue-item' + (done ? ' done' : '');
-        const cv = document.createElement('canvas');
-        cv.width = 56; cv.height = 72;
-        drawAchStatue(cv.getContext('2d'), a, done);
-        const nm = document.createElement('span');
-        nm.className = 'st-name';
-        nm.innerText = done ? ((currentLang === 'pt') ? a.name_pt : a.name_en) : '???';
-        item.appendChild(cv);
-        item.appendChild(nm);
-        gal.appendChild(item);
-    });
-}
-
-function drawAchStatue(g, ach, done) {
-    const W = 56, H = 72;
-    g.clearRect(0, 0, W, H);
-    // pedestal de pedra (2 degraus)
-    g.fillStyle = done ? '#3a3644' : '#181820';
-    g.fillRect(6, H - 12, W - 12, 5);
-    g.fillRect(10, H - 16, W - 20, 4);
-    g.fillStyle = done ? '#555062' : '#22222c';
-    g.fillRect(6, H - 12, W - 12, 2);
-    // corpo da estátua: lápide/obelisco arqueado
-    const bodyG = g.createLinearGradient(0, 8, 0, H - 16);
-    if (done) { bodyG.addColorStop(0, '#8d86a8'); bodyG.addColorStop(1, '#4c4763'); }
-    else { bodyG.addColorStop(0, '#232330'); bodyG.addColorStop(1, '#121218'); }
-    g.fillStyle = bodyG;
-    g.beginPath();
-    g.moveTo(W / 2 - 11, H - 16);
-    g.lineTo(W / 2 - 11, 20);
-    g.quadraticCurveTo(W / 2 - 11, 8, W / 2, 8);
-    g.quadraticCurveTo(W / 2 + 11, 8, W / 2 + 11, 20);
-    g.lineTo(W / 2 + 11, H - 16);
-    g.closePath();
-    g.fill();
-    g.strokeStyle = done ? 'rgba(255,215,0,0.55)' : 'rgba(255,255,255,0.10)';
-    g.lineWidth = 1.2;
-    g.stroke();
-    if (done) {
-        // placa com o ÍCONE da conquista
-        g.fillStyle = '#0c0a14';
-        g.fillRect(W / 2 - 9, 22, 18, 18);
-        g.strokeStyle = 'rgba(255,215,0,0.5)';
-        g.lineWidth = 1;
-        g.strokeRect(W / 2 - 9, 22, 18, 18);
-        g.font = '12px "Press Start 2P", sans-serif';
-        g.textAlign = 'center';
-        g.textBaseline = 'middle';
-        g.fillText(ach.icon, W / 2, 31.5);
-        // chama d'alma no topo (sempre acesa)
-        const fl = 0.6 + Math.sin(Date.now() / 300 + ach.id.length) * 0.25;
-        const fg2 = g.createRadialGradient(W / 2, 12, 1, W / 2, 12, 10);
-        fg2.addColorStop(0, 'rgba(190,225,255,' + (0.75 * fl).toFixed(2) + ')');
-        fg2.addColorStop(1, 'rgba(120,180,255,0)');
-        g.fillStyle = fg2;
-        g.beginPath(); g.arc(W / 2, 12, 10, 0, Math.PI * 2); g.fill();
-    } else {
-        // silhueta: interrogação
-        g.fillStyle = '#33333f';
-        g.font = '13px "Press Start 2P", sans-serif';
-        g.textAlign = 'center';
-        g.textBaseline = 'middle';
-        g.fillText('?', W / 2, 31);
-    }
-}
-
-// [v7] TELA DE FIM DE RUN estilo arcade: dano por fonte + abates por tipo
+// [v8] TELA DE FIM DE RUN estilo arcade: dano por fonte + abates por tipo
 function drawGameOverChart(g) {
     const cv = document.getElementById('go-chart');
     if (!cv) return;
