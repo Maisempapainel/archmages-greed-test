@@ -219,6 +219,13 @@
         .rarity-uncommon { border-color: #4dff4d; color: #4dff4d; }
         .rarity-epic { border-color: #bf00ff; color: #bf00ff; }
         .rarity-legendary { border-color: #ffd700; color: #ffd700; box-shadow: 0 0 15px #ffd700; }
+        /* [v15] PACTO DE SANGUE: a carta dourada com veio rubro — o risco */
+        .rarity-pact { border-color: #ff2255; color: #ffd700; box-shadow: 0 0 17px rgba(255,34,85,0.75), inset 0 0 22px rgba(255,34,85,0.16); }
+        .rarity-pact .card-title { color: #ff4466; }
+        /* [v15] barra de TROCAR CARTAS — agência de roguelike */
+        #reroll-bar { display: flex; justify-content: center; margin: 2px 0 10px; }
+        #reroll-bar .btn { font-size: clamp(8px, 1.3vw, 11px); padding: 7px 16px; }
+        #reroll-bar .btn.poor { opacity: 0.45; }
         
         .card-locked { opacity: 0.6; pointer-events: none; }
         .card-unlocked { opacity: 1; pointer-events: auto; }
@@ -1245,6 +1252,17 @@ function waveEnemyCount(w) {
     return Math.min(84, 64 + Math.floor((w - 100) / 10)); // satura em 84 (wave 300+)
 }
 
+// [v15] CURVA DO ABISMO: o HP dos inimigos cresce QUADRÁTICO até a wave
+// 400 e LINEAR dali em diante (+16/wave). Antes o quadrático ia até a
+// 10.000 (HP na casa dos MILHÕES por zumbi) e nenhuma build da Terra
+// acompanhava: a wave 10.000 era MATEMATICAMENTE impossível (~5.800h só
+// de fila de spawn). Agora o late game é uma maratona EXTREMA — possível,
+// brutal, sem parede infinita.
+function waveHpMult(w) {
+    if (w <= 400) return 1 + (w * 0.15) + Math.pow(w / 10, 2); // 1.661 na wave 400
+    return 1661 + (w - 400) * 16;                               // ~155.000 na 10.000
+}
+
 // Verifica se a wave tem chuva de meteoros
 function isMeteorWave(wave) {
     if ([19, 29, 49, 79, 99].includes(wave)) return true;
@@ -1295,6 +1313,10 @@ const TEXTS = {
         dmgWord: "DANO",
         streakDmg5: "×2 ALMAS ×1.3 DANO", streakDmg10: "×3 ALMAS ×1.5 DANO", streakDmg20: "×3 ALMAS ×1.75 DANO",
         eliteFuria: "FÚRIA", eliteVeloz: "VELOZ", eliteTanque: "TANQUE",
+        // [v15] dopamina de roguelike: frenesi, pactos, jackpot, reroll
+        bloodlustWord: "FRENESI SANGRENTO! ALMAS ×2", bloodlustEnd: "o frenesi acabou",
+        pactTitle: "PACTO DE SANGUE", pactPick: "PACTO ASSINADO",
+        rerollBtn: "TROCAR CARTAS", jackpotWord: "JACKPOT DE ALMAS!", extraPickWord: "ESCOLHA EXTRA!", pactsWarning: "assine com sangue",
         fullscreenT: "Tela cheia", soundT: "Som",
         aimToggleTxt: "Joystick de Mira (mira manual)",
         // [v10] cheats com i18n
@@ -1349,6 +1371,10 @@ const TEXTS = {
         dmgWord: "DMG",
         streakDmg5: "×2 SOULS ×1.3 DMG", streakDmg10: "×3 SOULS ×1.5 DMG", streakDmg20: "×3 SOULS ×1.75 DMG",
         eliteFuria: "FURY", eliteVeloz: "SWIFT", eliteTanque: "TANK",
+        // [v15] roguelike dopamine: bloodlust, pacts, jackpot, reroll
+        bloodlustWord: "BLOODLUST! SOULS ×2", bloodlustEnd: "bloodlust over",
+        pactTitle: "BLOOD PACT", pactPick: "PACT SIGNED",
+        rerollBtn: "REROLL CARDS", jackpotWord: "SOUL JACKPOT!", extraPickWord: "EXTRA PICK!", pactsWarning: "sign in blood",
         fullscreenT: "Fullscreen", soundT: "Sound",
         aimToggleTxt: "Aim joystick (manual aim)",
         // [v10] cheats i18n
@@ -2259,6 +2285,39 @@ const UPGRADES_DB = {
 };
 
 /**
+ * [v15] PACTOS DE SANGUE — a aposta do roguelike. Depois de CADA chefe, uma
+ * 4ª carta DOURADA aparece junto das perks: poder ABSURDO com uma MALDIÇÃO
+ * engatilhada. Quem aposta alto sangra alto — e a run vira lenda (ou morre
+ * tentando). Cada pacto só é oferecido UMA vez por run (a lista é finita).
+ */
+const PACTS_DB = [
+    { id: 'pacto_furia', name_pt: 'Pacto da Fúria', name_en: 'Pact of Fury',
+      desc_pt: 'Dano +60%. MALDIÇÃO: você recebe +20% de dano.', desc_en: 'Damage +60%. CURSE: you take +20% damage.',
+      apply: (p) => { p.stats.damage *= 1.6; game.pactDmgTaken = (game.pactDmgTaken || 1) * 1.2; } },
+    { id: 'pacto_avaro', name_pt: 'Pacto do Avaro', name_en: 'Miser\'s Pact',
+      desc_pt: 'Todas as almas valem o DOBRO. MALDIÇÃO: dano -12%.', desc_en: 'Every soul is worth DOUBLE. CURSE: damage -12%.',
+      apply: (p) => { game.pactSoulMult = (game.pactSoulMult || 1) * 2; p.stats.damage *= 0.88; } },
+    { id: 'pacto_sangue', name_pt: 'Sangue por Poder', name_en: 'Blood for Power',
+      desc_pt: 'Dano +50%. MALDIÇÃO: vida máxima -25%.', desc_en: 'Damage +50%. CURSE: max HP -25%.',
+      apply: (p) => { p.stats.damage *= 1.5; p.maxHp = Math.max(40, Math.round(p.maxHp * 0.75)); p.hp = Math.min(p.hp, p.maxHp); p.updateHpUI(); } },
+    { id: 'pacto_vidente', name_pt: 'Olho do Vazio', name_en: 'Eye of the Void',
+      desc_pt: 'Crítico +18% e dano crítico +40%. MALDIÇÃO: vida máxima -15%.', desc_en: 'Crit +18% and crit damage +40%. CURSE: max HP -15%.',
+      apply: (p) => { p.stats.critChance = Math.min(1, p.stats.critChance + 0.18); p.stats.critDmg = Math.min(5.5, p.stats.critDmg + 0.4); p.maxHp = Math.max(40, Math.round(p.maxHp * 0.85)); p.hp = Math.min(p.hp, p.maxHp); p.updateHpUI(); } },
+    { id: 'pacto_pressa', name_pt: 'Hora do Sangue', name_en: 'Blood Hour',
+      desc_pt: 'Velocidade de ataque +35%. MALDIÇÃO: dano recebido +25%.', desc_en: 'Attack speed +35%. CURSE: damage taken +25%.',
+      apply: (p) => { p.stats.fireRate = Math.max(470, Math.round(p.stats.fireRate * 0.65)); game.pactDmgTaken = (game.pactDmgTaken || 1) * 1.25; } },
+    { id: 'pacto_engula', name_pt: 'O Engolidor', name_en: 'The Devourer',
+      desc_pt: 'Roubo de vida +6%. MALDIÇÃO: inimigos com +12% de vida.', desc_en: 'Lifesteal +6%. CURSE: enemies +12% HP.',
+      apply: (p) => { p.stats.lifesteal = Math.min(0.35, (p.stats.lifesteal || 0) + 0.06); game.pactEnemyHp = (game.pactEnemyHp || 1) * 1.12; } },
+    { id: 'pacto_tempestade', name_pt: 'Pacto da Tempestade', name_en: 'Storm Pact',
+      desc_pt: 'Raios caem sozinhos (nível 1). MALDIÇÃO: +5% de kamikazes.', desc_en: 'Lightning strikes on its own (tier 1). CURSE: +5% kamikazes.',
+      apply: (p) => { game.pactStorm = true; game.pactKamiBonus = (game.pactKamiBonus || 0) + 0.05; } },
+    { id: 'pacto_ganancia', name_pt: 'Ganância Absoluta', name_en: 'Absolute Greed',
+      desc_pt: '+8 almas no início de cada wave. MALDIÇÃO: defesa -8%.', desc_en: '+8 souls at the start of each wave. CURSE: defense -8%.',
+      apply: (p) => { game.pactWaveSouls = (game.pactWaveSouls || 0) + 8; p.stats.defense = Math.max(0, p.stats.defense - 0.08); } }
+];
+
+/**
  * 35 CONQUISTAS — das fáceis às impossíveis
  */
 const ACHIEVEMENTS_DB = [
@@ -2771,6 +2830,12 @@ class Game {
         // fazem fila: a cada abate, entra o próximo até acabar a wave.
         this.maxEnemiesAlive = 40; // [v14] legado: o teto real agora é enemyAliveCap() (sobe com a wave)
         this.guaranteeEpicNext = false; // [v14] marco a cada 25 waves: próxima 1ª carta é épica
+        // [v15] GANÂNCIA TURBINADA: estado dos pactos, do frenesi e das
+        // escolhas extras (tudo zerado a cada run — pacto é aposta DA run)
+        this.pactDmgTaken = 1; this.pactSoulMult = 1; this.pactEnemyHp = 1;
+        this.pactKamiBonus = 0; this.pactStorm = false; this.pactWaveSouls = 0;
+        this.bloodlustUntil = 0; this.picksLeft = 0; this._pactsOffered = [];
+        this._pickLock = false; // [v15] trava da mesa de perks (uma escolha por vez)
         // [v10] teto GLOBAL de projéteis (a wave 2000 é o limite de dificuldade;
         // nada de mil projéteis simultâneos numa wave 9999)
         this.maxBullets = 340;
@@ -3505,6 +3570,12 @@ class Game {
                 this.addFloatingText(this.width / 2, 250, TEXTS[currentLang].milestoneHeal, '#7dff7d', 15);
             }
         }
+        // [v15] Pacto da Ganância Absoluta: o tributo de cada wave (é o pacto
+        // que mais LÊ no contador de almas — dopamina de fluxo constante)
+        if (this.pactWaveSouls && this.wave > 1) {
+            this.souls += this.pactWaveSouls;
+            if (this.updateSoulsUI) this.updateSoulsUI();
+        }
 
         if (isBoss) {
             this.state = 'BOSS_CONFIRM';
@@ -3650,6 +3721,9 @@ class Game {
         // [v8] almas do chefe: ficam FLUTUANDO no lugar onde ele caiu — só voam
         // até o mago quando a próxima wave começa (a cinemática não engole mais)
         this.spawnSoulOrbs(cx, cy, this.cinematicBoss.isBigBoss ? 5 : 3, true);
+        // [v15] JACKPOT DO CHEFE: 35% no chefão, 15% no mini — a recompensa
+        // espetacular que faz cada boss ser um bilhete de loteria
+        this.trySoulJackpot(cx, cy, this.cinematicBoss.isBigBoss ? 0.35 : 0.15);
         this.statBossKills++;
         localStorage.setItem('statBossKills', this.statBossKills);
         if (this.runStats) {
@@ -3882,7 +3956,7 @@ class Game {
             // e mais simultâneos (2->4) — a partir da 150 vira um terror de verdade
             const vivos = this.enemies.filter(e => e.kamikaze && !e.dead).length;
             const maxK = Math.min(4, 2 + Math.floor(this.wave / 150));
-            const chance = Math.min(0.22, 0.10 + this.wave / 2500);
+            const chance = Math.min(0.22, 0.10 + this.wave / 2500) + (this.pactKamiBonus || 0); // [v15] maldição da Tempestade
             if (vivos < maxK && Math.random() < chance) kami = true;
         }
         const types = ['triangulo', 'losango', 'redondo'];
@@ -4085,17 +4159,19 @@ class Game {
             if (a <= 0) continue;
             ctx.save();
             ctx.globalAlpha = a;
-            // buraco queimado
-            const gg = ctx.createRadialGradient(cr.x, cr.y, 1, cr.x, cr.y, cr.r);
+            // buraco queimado ([v15] assentado no solo: centro um tico ABAIXO
+            // da linha do chão e elipse mais achatada — nada de mancha no ar)
+            const kcy = cr.y + cr.r * 0.10;
+            const gg = ctx.createRadialGradient(cr.x, kcy, 1, cr.x, kcy, cr.r);
             gg.addColorStop(0, 'rgba(5,3,8,0.85)');
             gg.addColorStop(0.7, 'rgba(15,8,20,0.55)');
             gg.addColorStop(1, 'rgba(20,10,28,0)');
             ctx.fillStyle = gg;
-            ctx.beginPath(); ctx.ellipse(cr.x, cr.y, cr.r, cr.r * 0.34, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.beginPath(); ctx.ellipse(cr.x, kcy, cr.r, cr.r * 0.26, 0, 0, Math.PI * 2); ctx.fill();
             // borda rachada
             ctx.strokeStyle = 'rgba(90,60,120,0.55)';
             ctx.lineWidth = 1.4;
-            ctx.beginPath(); ctx.ellipse(cr.x, cr.y, cr.r * 0.92, cr.r * 0.30, 0, 0, Math.PI * 2); ctx.stroke();
+            ctx.beginPath(); ctx.ellipse(cr.x, kcy, cr.r * 0.92, cr.r * 0.23, 0, 0, Math.PI * 2); ctx.stroke();
             // brasas apagando
             const heat = Math.max(0, 1 - age / 1600);
             if (heat > 0) {
@@ -4103,7 +4179,7 @@ class Game {
                 for (let k = 0; k < 5; k++) {
                     const aa = cr.seed + k * 1.7;
                     ctx.fillStyle = 'rgba(255,120,40,0.8)';
-                    ctx.fillRect(cr.x + Math.cos(aa) * cr.r * 0.5, cr.y + Math.sin(aa) * cr.r * 0.16, 2, 2);
+                    ctx.fillRect(cr.x + Math.cos(aa) * cr.r * 0.5, kcy + Math.sin(aa) * cr.r * 0.14, 2, 2);
                 }
             }
             ctx.restore();
@@ -4187,8 +4263,20 @@ class Game {
         if (!this.meteorCraters) this.meteorCraters = [];
         if (this.meteorCraters.length >= 8) this.meteorCraters.shift(); // teto de decals
         const r = 46 + intensity * 30 + Math.random() * 12;
+        // [v15] A CRATERA É NO CHÃO: guarda o FUNDO do bloco atingido pra
+        // desenhar o decal ACHATADO sobre a superfície — a sprite centrada
+        // no y fazia METADE da cratera (e das rachaduras) pairar acima da
+        // linha do piso: era a "cratera flutuando no ar" do chefão.
+        let maxY = y + 60;
+        for (let i = 0; i < this.blocks.length; i++) {
+            const b = this.blocks[i];
+            if (x >= b.x - 4 && x <= b.x + b.w + 4 && y >= b.y - 10 && y <= b.y + b.h) {
+                maxY = b.y + b.h - 2;
+                break;
+            }
+        }
         this.meteorCraters.push({
-            x: x, y: y, r: r, born: Date.now(), dur: 10000,
+            x: x, y: y, r: r, born: Date.now(), dur: 10000, maxY: maxY,
             variant: Math.floor(Math.random() * 3), seed: Math.random() * 6.28
         });
     }
@@ -4217,7 +4305,13 @@ class Game {
             g.save();
             g.globalAlpha = fade;
             const spr = CraterSprite.get(cr.variant);
-            g.drawImage(spr, cr.x - cr.r, cr.y - cr.r * 0.62, cr.r * 2, cr.r * 1.24);
+            // [v15] DECAL SENTADO NO SOLO: só a BORDA ERGUIDA aparece acima
+            // da linha do chão, o resto ACHATADO dentro da pedra — e o fundo
+            // faz CLAMP no fim do bloco (nada de cratera vazando por baixo
+            // da plataforma, nada de cratera flutuando no ar)
+            const cTop = cr.y - cr.r * 0.28;
+            const cBot = Math.min(cr.y + cr.r * 0.62, cr.maxY || (cr.y + 60));
+            g.drawImage(spr, cr.x - cr.r, cTop, cr.r * 2, Math.max(12, cBot - cTop));
             // brasa viva esfriando (por cima do veio central)
             if (heat > 0) {
                 g.globalCompositeOperation = 'lighter';
@@ -4255,7 +4349,7 @@ class Game {
         const w = this.weather;
         const nowMs = performance.now();
         const dt = Math.min(50, nowMs - (this._wxT || nowMs)); this._wxT = nowMs;
-        const alive = !this.paused && this.state !== 'PAUSED';
+        const alive = !this.paused && this.state !== 'PAUSED' && this.state !== 'FINALE'; // [v15] fim do mundo: o clima também morre (nada de flash numa cidade devorada)
 
         // troca de clima (o menu também tem clima)
         if (nowMs > w.until) {
@@ -4503,9 +4597,43 @@ class Game {
         }
     }
 
+    // [v15] JACKPOT DE ALMAS: o cassino da ganância — chefes e generais
+    // dourados têm chance de CRACAR um cofre de 20 almas com fanfarra e
+    // chuva de ouro. Recompensa rara e espetacular = pico de dopamina.
+    trySoulJackpot(x, y, chance) {
+        if (Math.random() >= chance) return;
+        const amount = 20;
+        this.souls += amount;
+        this.statTotalSouls += amount;
+        localStorage.setItem('statTotalSouls', this.statTotalSouls);
+        this.checkSoulAchievement();
+        this.updateSoulsUI();
+        this.addFloatingText(x, y - 40, TEXTS[currentLang].jackpotWord + ' +' + amount, '#ffd700', 17, true);
+        this.addFloatingText(x, y - 14, '+' + amount + ' ' + TEXTS[currentLang].soulsWord, '#38e0ff', 14);
+        this.spawnShockwave(x, y, 220, '#ffd700', 800, 4);
+        this.addShake(7);
+        this.hitStop(70);
+        audioManager.playSfx('ach2');
+        for (let i = 0; i < 26; i++) {
+            if (this.particles.length >= this.particleCap) break;
+            const a = Math.random() * Math.PI * 2;
+            const p = ObjectPool.getParticle(x, y, Math.random() < 0.5 ? '#ffd700' : '#fff6c8', 2.5 + Math.random() * 3.5, 900, 0);
+            p.vx = Math.cos(a) * (1.5 + Math.random() * 4.5);
+            p.vy = Math.sin(a) * (1.5 + Math.random() * 4.5) - 1.2;
+            this.particles.push(p);
+        }
+    }
+
     grantSoul() {
-        this.souls++;
-        this.statTotalSouls++;
+        // [v15] GANÂNCIA TURBINADA: o FRENESI SANGRENTO dobra e o Pacto do
+        // Avaro dobra — multiplicativos, sempre no mínimo 1 (o contador da
+        // dopamina sobe FORTE quando a mesa está acesa)
+        let n = 1;
+        if (this.bloodlustUntil && Date.now() < this.bloodlustUntil) n *= 2;
+        if (this.pactSoulMult && this.pactSoulMult > 1) n *= this.pactSoulMult;
+        n = Math.max(1, Math.round(n));
+        this.souls += n;
+        this.statTotalSouls += n;
         localStorage.setItem('statTotalSouls', this.statTotalSouls);
         this.checkSoulAchievement();
         this.updateSoulsUI();
@@ -5117,12 +5245,29 @@ class Game {
                         this.addShake(10);
                         this.hitStop(100);
                     }
+                    // [v15] FRENESI SANGRENTO: a cada 8 abates em sequência, 8
+                    // segundos de ÊXTASE — cadência derretida (+60%), almas em
+                    // DOBRO e sangue pulsando na tela. O combo PAGA o combo:
+                    // é o loop viciante do roguelike (matar rápido pra continuar
+                    // matando mais rápido)
+                    if (this.streakCount % 8 === 0) {
+                        this.bloodlustUntil = Date.now() + 8000;
+                        this.addFloatingText(this.player.x + this.player.width / 2, this.player.y - 54,
+                            TEXTS[currentLang].bloodlustWord, '#ff3355', 15, true);
+                        this.spawnShockwave(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, 150, '#ff3355', 520, 3);
+                        this.addShake(6);
+                        this.hitStop(60);
+                        audioManager.playSfx('golden_alert');
+                        Haptics.boss();
+                    }
                     localStorage.setItem('statTotalKills', this.statTotalKills);
                     Haptics.kill(); // [v8] micro-vibração no abate
                     if (e.isGolden) {
                         this.statGoldenKills++;
                         localStorage.setItem('statGoldenKills', this.statGoldenKills);
                         this.souls += 2;
+                        // [v15] JACKPOT: general dourado pode CRACAR o cofre
+                        this.trySoulJackpot(e.x + e.width / 2, e.y + e.height / 2, 0.12);
                     }
                     // [v14] ELITE ABATIDO: jackpot de almas (a recompensa por
                     // atravessar a tempestade de verdade)
@@ -5198,7 +5343,9 @@ class Game {
             const dK = this.streakDamageMult();
             const multTxt = this.streakMultiplier > 1 ? ` ×${this.streakMultiplier}` : '';
             const dmgTxt = dK > 1 ? ` ${TEXTS[currentLang].dmgWord} ×${dK}` : '';
-            streakEl.innerText = `${this.streakCount} STREAK${multTxt}${dmgTxt}`;
+            // [v15] FRENESI aceso: o aviso grita junto (e pinta de sangue)
+            const blOn = this.bloodlustUntil && Date.now() < this.bloodlustUntil;
+            streakEl.innerText = `${blOn ? 'FRENESI! ' : ''}${this.streakCount} STREAK${multTxt}${dmgTxt}`;
             
             const timeSinceKill = Date.now() - this.streakLastKill;
             if (timeSinceKill < 200) {
@@ -5208,7 +5355,7 @@ class Game {
                 streakEl.style.transform = 'translateX(-50%)';
             }
             
-            const urgency = this.streakCount >= 10 ? '#ff6600' : (this.streakCount >= 5 ? '#ffd700' : '#ffaa00');
+            const urgency = (blOn) ? '#ff3355' : (this.streakCount >= 10 ? '#ff6600' : (this.streakCount >= 5 ? '#ffd700' : '#ffaa00'));
             streakEl.style.color = urgency;
             streakEl.style.textShadow = `0 0 10px ${urgency}`;
         } else {
@@ -5227,8 +5374,30 @@ class Game {
         return 1.15;
     }
 
+    // [v15] CARTAS POR WAVE: 1 até a wave 299, 2 da 300 em diante, 3 da
+    // 1500 em diante — o crescimento de força acompanha a maratona do abismo
+    picksPerWave() {
+        return this.wave >= 1500 ? 3 : (this.wave >= 300 ? 2 : 1);
+    }
+
+    // [v15] DEPOIS DE CADA ESCOLHA: ainda tem carta nessa wave? A mesa
+    // REABRE (sem avançar). Acabou? A próxima wave começa.
+    advanceAfterPick() {
+        this._pickLock = false; // [v15] libera a mesa
+        if (this.picksLeft > 1) {
+            this.picksLeft--;
+            this.addFloatingText(this.width / 2, this.height * 0.30, TEXTS[currentLang].extraPickWord, '#7dff7d', 15);
+            audioManager.playSfx('perk_pick');
+            this.showUpgradeMenu(true);
+        } else {
+            this.picksLeft = 0;
+            this.wave++; this.state = 'PLAYING'; this.startWave();
+        }
+    }
+
     manageThunder() {
-        const tier = this.player.perks.thunderbolt;
+        // [v15] Pacto da Tempestade: os raios caem MESMO sem o perk (tier mínimo 1)
+        const tier = Math.max(this.player.perks.thunderbolt || 0, this.pactStorm ? 1 : 0);
         if (tier > 0) {
             let intervalSeconds = (tier === 3) ? 8 : Math.max(2, 6 - (tier - 1)); 
             if (Date.now() - this.lastThunderTime > intervalSeconds * 1000) {
@@ -5625,14 +5794,44 @@ class Game {
         this.floatingTexts.push(new FloatingText(x, y, text, c, size, crit));
     }
 
-    showUpgradeMenu() {
+    showUpgradeMenu(keepPicks) {
         this.trackPauseStart(); // [FIX v4] congela TODOS os timers durante a escolha
         this.clearAllBullets();
+
+        // [v15] ESCOLHAS DO ABISMO: wave 300+ = 2 cartas por wave, wave
+        // 1500+ = 3 — a força do mago acompanha a maratona (sem isso, a
+        // 10.000 era humanamente impossível). keepPicks preserva a contagem
+        // quando a mesa REABRE (escolha extra ou TROCA de cartas)
+        if (!keepPicks) this.picksLeft = this.picksPerWave();
 
         const menu = document.getElementById('upgrade-menu');
         const container = document.getElementById('upgrade-container');
         container.innerHTML = '';
         menu.classList.remove('hidden');
+
+        // [v15] TROCAR CARTAS (por almas): agência de roguelike — não gostou
+        // da mão? PAGA pra trocar (15 almas). Quem tem ganância, aposta.
+        const oldBar = document.getElementById('reroll-bar');
+        if (oldBar) oldBar.remove();
+        const REROLL_COST = 15;
+        const bar = document.createElement('div');
+        bar.id = 'reroll-bar';
+        const rBtn = document.createElement('button');
+        rBtn.id = 'reroll-btn';
+        rBtn.className = 'btn' + (this.souls < REROLL_COST ? ' poor' : '');
+        rBtn.innerText = TEXTS[currentLang].rerollBtn + ' (' + REROLL_COST + ' ' + TEXTS[currentLang].soulsShort + ')';
+        rBtn.onclick = () => {
+            if (this.state !== 'UPGRADE_MENU') return;
+            if (this._pickLock) return; // [v15] mesa travada no meio de uma escolha
+            if (this.souls < REROLL_COST) { audioManager.playSfx('hit'); return; }
+            this.souls -= REROLL_COST;
+            this.updateSoulsUI();
+            audioManager.playWav('botton');
+            this.addFloatingText(this.width / 2, this.height * 0.36, TEXTS[currentLang].rerollBtn, '#4da6ff', 13);
+            this.showUpgradeMenu(true); // mesma mesa, novas cartas (escolhas extras intactas)
+        };
+        bar.appendChild(rBtn);
+        menu.insertBefore(bar, container);
 
         let secondsLeft = 20;
         const timerText = document.getElementById('timer-text');
@@ -5723,8 +5922,10 @@ class Game {
                 if (alreadyPicked) return;
                 if (this.state !== 'UPGRADE_MENU') return;
                 if (card.classList.contains('card-locked')) return;
+                if (this._pickLock) return; // [v15] uma escolha por mesa — sem dupla contagem
                 
                 alreadyPicked = true;
+                this._pickLock = true; // [v15] trava a mesa até o avanço (nada de 2 picks no mesmo clique)
                 clearInterval(this.menuTimer);
                 audioManager.playWav('botton');
                 audioManager.playSfx('perk_pick'); // [v3] arpejo magico
@@ -5778,7 +5979,7 @@ class Game {
                     container.classList.remove('choosing');
                     this.resumeFromFreeze(); // [FIX v4] timers voltam de onde pararam
                     if (this.player) this.player.updateStatsUI();
-                    this.wave++; this.state = 'PLAYING'; this.startWave();
+                    this.advanceAfterPick(); // [v15] escolha dupla/tripla no late game
                 }, 440);
             };
 
@@ -5788,6 +5989,69 @@ class Game {
             card.classList.add('card-in');
             card.style.animationDelay = (i * 70) + 'ms';
             container.appendChild(card);
+        }
+
+        // ===== [v15] A 4ª CARTA DOURADA: PACTO DE SANGUE =====
+        // Depois de CADA chefe (wave múltipla de 10), a carta com veio rubro
+        // entra na mesa: poder absurdo, maldição engatilhada. Cada pacto só
+        // aparece UMA vez por run — a lista é finita e a escolha é pra sempre.
+        if (this.wave % 10 === 0 && this.wave >= 10) {
+            const avail = PACTS_DB.filter(pc => !(this._pactsOffered || []).includes(pc.id));
+            const pactPool = avail.length ? avail : PACTS_DB;
+            const pact = pactPool[Math.floor(Math.random() * pactPool.length)];
+            const pcard = document.createElement('div');
+            pcard.className = 'upgrade-card card-locked rarity-pact';
+            const pName = (currentLang === 'pt') ? pact.name_pt : pact.name_en;
+            const pDesc = (currentLang === 'pt') ? pact.desc_pt : pact.desc_en;
+            const pCount = this.player.perksCounts[pact.id] || 0;
+            pcard.innerHTML = `<span class="card-tier">${TEXTS[currentLang].pactTitle}${pCount ? ' ×' + (pCount + 1) : ''}</span><div class="card-title">${pName}</div><div class="card-desc">${pDesc}</div>`;
+            let pPicked = false;
+            const pickPact = () => {
+                if (pPicked) return;
+                if (this.state !== 'UPGRADE_MENU') return;
+                if (pcard.classList.contains('card-locked')) return;
+                if (this._pickLock) return; // [v15] uma escolha por mesa
+                pPicked = true;
+                this._pickLock = true; // [v15]
+                clearInterval(this.menuTimer);
+                audioManager.playWav('botton');
+                audioManager.playSfx('golden_alert');
+                try {
+                    pact.apply(this.player);
+                    this.player.perksCounts[pact.id] = (this.player.perksCounts[pact.id] || 0) + 1;
+                    if (!this._pactsOffered) this._pactsOffered = [];
+                    this._pactsOffered.push(pact.id);
+                } catch (err) { console.error('Erro ao aplicar pacto:', err); }
+                // assinatura em sangue: chuva rubra + onda dourada
+                this.addFloatingText(this.player.x, this.player.y - 60,
+                    TEXTS[currentLang].pactPick + ': ' + pName, '#ff4466', 15, true);
+                this.spawnShockwave(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2, 190, '#ff4466', 660, 3);
+                this.addShake(7);
+                this.hitStop(70);
+                for (let i = 0; i < 18; i++) {
+                    if (this.particles.length >= this.particleCap) break;
+                    const a2 = Math.random() * Math.PI * 2;
+                    const p2 = ObjectPool.getParticle(this.player.x + this.player.width / 2, this.player.y + this.player.height / 2,
+                        Math.random() < 0.5 ? '#ff4466' : '#ffd700', 2.5 + Math.random() * 3, 700, 0);
+                    p2.vx = Math.cos(a2) * (1.5 + Math.random() * 3.5);
+                    p2.vy = Math.sin(a2) * (1.5 + Math.random() * 3.5) - 1;
+                    this.particles.push(p2);
+                }
+                container.classList.add('choosing');
+                pcard.classList.add('picked');
+                setTimeout(() => {
+                    menu.classList.add('hidden');
+                    container.classList.remove('choosing');
+                    this.resumeFromFreeze();
+                    if (this.player) this.player.updateStatsUI();
+                    this.advanceAfterPick(); // [v15] pacto também conta como a escolha da wave
+                }, 440);
+            };
+            pcard.onclick = pickPact;
+            createdCards.push(pickPact);
+            pcard.classList.add('card-in');
+            pcard.style.animationDelay = (this.upgradeChoices * 70) + 'ms';
+            container.appendChild(pcard);
         }
 
         this.menuTimer = setInterval(() => {
@@ -6396,15 +6660,20 @@ class Game {
         }
 
         const px = (this.player && this.state !== 'MENU') ? (this.player.x + this.player.width / 2) : this.width / 2 + Math.sin(t * 0.06) * 240;
-        const gx = -(((px - this.width / 2) * 0.03) % 96);
-        g.save();
-        g.strokeStyle = 'rgba(255,255,255,0.06)';
-        g.lineWidth = 1;
-        g.beginPath();
-        for (let x = gx - 96; x < this.width + 96; x += 96) { g.moveTo(x, 0); g.lineTo(x, this.height); }
-        for (let y = 0; y <= this.height; y += 96) { g.moveTo(0, y); g.lineTo(this.width, y); }
-        g.stroke();
-        g.restore();
+        // [v15] A GRADE HI-TECH MORRE NO FIM DO MUNDO: grade de laboratório
+        // contra o vazio do apocalipse lia como ARTEFATO (rastro fantasma
+        // por cima do nada). Só existe com o mundo vivo.
+        if (this.state !== 'FINALE') {
+            const gx = -(((px - this.width / 2) * 0.03) % 96);
+            g.save();
+            g.strokeStyle = 'rgba(255,255,255,0.06)';
+            g.lineWidth = 1;
+            g.beginPath();
+            for (let x = gx - 96; x < this.width + 96; x += 96) { g.moveTo(x, 0); g.lineTo(x, this.height); }
+            for (let y = 0; y <= this.height; y += 96) { g.moveTo(0, y); g.lineTo(this.width, y); }
+            g.stroke();
+            g.restore();
+        }
 
         // [v11] O CÉU ADOECE CONFORME AS WAVES PASSAM: um véu rubro-violeta cada
         // vez mais denso — na wave 1 é imperceptível, na 9999 o céu inteiro está
@@ -7443,6 +7712,21 @@ class Game {
 
         this.drawBossBar(ctx); // [JUICE] barra do chefe no topo
 
+        // [v15] FRENESI SANGRENTO: vinheta rubra PULSANDO nas bordas — o
+        // combo arde na tela (e no peito). Morre junto com o frenesi.
+        if (this.state !== 'FINALE' && this.bloodlustUntil && Date.now() < this.bloodlustUntil) {
+            const kRem = Math.min(1, (this.bloodlustUntil - Date.now()) / 8000);
+            const pulse = 0.55 + Math.sin(Date.now() * 0.012) * 0.45;
+            ctx.save();
+            ctx.globalCompositeOperation = 'lighter';
+            const vgB = ctx.createRadialGradient(this.width / 2, this.height / 2, this.height * 0.34,
+                this.width / 2, this.height / 2, this.width * 0.62);
+            vgB.addColorStop(0, 'rgba(0,0,0,0)');
+            vgB.addColorStop(1, 'rgba(255,30,60,' + (0.11 * (0.35 + kRem * 0.65) * (0.6 + pulse * 0.4)).toFixed(3) + ')');
+            ctx.fillStyle = vgB;
+            ctx.fillRect(0, 0, this.width, this.height);
+            ctx.restore();
+        }
         this.drawFinale(ctx); // [v10] o fim do mundo (overlay do FINALE)
 
         if (this.player && this.player.hurtFlashUntil > Date.now()) {
@@ -8471,7 +8755,10 @@ class Player {
                 this.laserLastTick = now;
             }
         } else {
-            if (game.state !== 'BOSS_DEATH_CINEMATIC' && !this.spectate && now - this.lastShot > this.stats.fireRate) {
+            // [v15] FRENESI SANGRENTO: a cadência DERRETE (+60%) enquanto o
+            // combo queima — o loop viciante: matar rápido mantém o frenesi
+            const blRate = (game.bloodlustUntil && now < game.bloodlustUntil) ? 0.625 : 1;
+            if (game.state !== 'BOSS_DEATH_CINEMATIC' && !this.spectate && now - this.lastShot > this.stats.fireRate * blRate) {
                 this.shoot();
                 this.lastShot = now;
             }
@@ -8569,9 +8856,9 @@ class Player {
 
         let finalDamage;
         if (kamikazeHit) {
-            finalDamage = amount;
+            finalDamage = amount * (game.pactDmgTaken || 1); // [v15] maldição dos pactos: kamikaze também dói mais
         } else {
-            finalDamage = amount * (1 - this.stats.defense);
+            finalDamage = amount * (1 - this.stats.defense) * (game.pactDmgTaken || 1); // [v15] idem
             const maxPctDamage = isBossAttack ? 0.20 : 0.15;
             const capLimit = this.maxHp * maxPctDamage;
             if (finalDamage > capLimit) finalDamage = capLimit;
@@ -9009,7 +9296,7 @@ class Enemy {
         this.trailTick = 0;
         
         let hpBaseBruto = CONFIG.baseEnemyHP;
-        let hpMult = 1 + (game.wave * 0.15) + Math.pow(game.wave / 10, 2); 
+        let hpMult = waveHpMult(game.wave); // [v15] curva do abismo (quadrática até 400, linear depois)
         
         let perkHpBonus = 0;
         if (game && game.player) {
@@ -9028,7 +9315,7 @@ class Enemy {
             perkHpBonus += (resCount * 0.03) + (resPlusCount * 0.05);
         }
         let perkMultiplier = 1 + perkHpBonus;
-        let hpEscalonadoTotal = hpBaseBruto * hpMult * perkMultiplier;
+        let hpEscalonadoTotal = hpBaseBruto * hpMult * perkMultiplier * (game.pactEnemyHp || 1); // [v15] maldição do Engolidor
         
         this.hp = hpEscalonadoTotal; 
         this.maxHp = this.hp;
@@ -9591,7 +9878,7 @@ class Boss extends Enemy {
         this.escalaVisual = window.isMobileDevice ? 2.5 : 2.0; // [v10] celular: boss maior também
         
         let hpBase = isBigBoss ? CONFIG.baseEnemyHP * 12 : CONFIG.baseEnemyHP * 7;
-        let hpMult = 1 + (game.wave * 0.15) + Math.pow(game.wave / 10, 2); 
+        let hpMult = waveHpMult(game.wave) * (game.pactEnemyHp || 1); // [v15] curva do abismo + maldição
         let hpTotalBruto = hpBase * hpMult;
         
         this.hp = hpTotalBruto * 0.80;
@@ -12092,6 +12379,34 @@ Game.prototype.startFinale = function () {
     if (this.meteorImpacts) this.meteorImpacts.length = 0;
     this.isMeteorWave = false;
     this.isGoldenWave = false;
+    // [v15] CAÇA-FANTASMAS: tudo que vivia no cenário e CONGELA no ar quando
+    // o estado vira FINALE (bgAlive=false para os updates, mas o draw
+    // continua) é purgado AGORA — meteoro de fundo parado no céu com rastro
+    // de fogo, tijolos/faíscas/fumaça suspensos, brasas de prédio já comido,
+    // engrenagens flutuando no vazio... o apocalipse não deixa FANTASMA da
+    // construção pra trás (era o "rastro esquisito" da v14).
+    if (this.bgMeteors) this.bgMeteors.length = 0;
+    if (this.bgBits) this.bgBits.length = 0;
+    if (this.bgBricks) this.bgBricks.length = 0;
+    if (this.citySmoke) this.citySmoke.length = 0;
+    if (this.bgSmokePuffs) this.bgSmokePuffs.length = 0;
+    if (this.cityBurns) this.cityBurns.length = 0;
+    if (this.bgFlashes) this.bgFlashes.length = 0;
+    if (this.groundJunk) this.groundJunk.length = 0;
+    if (this.kamiCraters) this.kamiCraters.length = 0;
+    if (this.meteorCraters) this.meteorCraters.length = 0;
+    this.shockwaves.length = 0;
+    this.lightningEffects.length = 0;
+    // o CLIMA morre junto: sem chuva de éter e sem RELÂMPAGO que "acende"
+    // uma cidade pela metade (o flash iluminava prédios devorados)
+    if (this.weather) {
+        this.weather.mode = 'clear';
+        this.weather.drops.length = 0;
+        this.weather.splashes.length = 0;
+        this.weather.puddles.length = 0;
+        this.weather.bolts.length = 0;
+        this.weather.flashUntil = 0;
+    }
     this.floatingTexts.length = 0;
     this.flushSoulOrbs();
     this.waveLock = false;
@@ -12173,6 +12488,13 @@ Game.prototype.startFinale = function () {
         this._finalePrepCity(this.cityFar, CITY_DUR, 0),
         this._finalePrepCity(this.cityNear, CITY_DUR, 1)
     ];
+    // [v15] A CIDADE SOB A LUZ DO FIM: bake ÚNICO na abertura — as fachadas
+    // ganham o banho ÂMBAR do disco de acreção vindo do centro e o mundo
+    // LONGE do buraco afunda no breu (contraste e volume: a cidade "flat"
+    // da v14 era o "parece porcaria" do chefão). Os pedaços que voam saem
+    // do PRISTINE assado — carregam o brilho da fachada de onde saíram.
+    this._finaleBakeCityLight(this.cityFar);
+    this._finaleBakeCityLight(this.cityNear);
     // as RACHADURAS da plataforma (polilinhas pré-geradas)
     f.cracks = this._finaleBuildCracks();
     f.crackDrawn = 0;
@@ -12389,8 +12711,13 @@ Game.prototype.finaleTick = function () {
         //  [v14] cada pedaço tem CURVATURA PRÓPRIA — as trajetórias divergem,
         //  o céu inteiro espirala em fios diferentes, não num funil único)
         const massK = d.kind === 'snap' ? 0.82 : (d.kind === 'glass' ? 1.45 : 1);
-        const tang = d.spinK != null ? d.spinK : 0.6;
-        const pull = 0.0027 * (dtMs / 16) * (1 + 620 / (dd + 90)) * massK;
+        // [v15] MARÉ QUE TORCE: perto do horizonte a componente TANGENCIAL
+        // INFLA (a espiral fecha) e a sucção radical engorda — a trajetória
+        // se DEFORMA de verdade, cada pedaço engelhotando na própria curva
+        // (é o "pro centro, de forma distorcida" do chefão)
+        const nearK = Math.max(0, 1 - dd / (bhR * 1.5));
+        const tang = (d.spinK != null ? d.spinK : 0.6) * (1 + nearK * nearK * 2.6);
+        const pull = 0.0027 * (dtMs / 16) * (1 + 620 / (dd + 90)) * massK * (1 + nearK * 0.85);
         d.vx += (dx / dd) * pull + (-dy / dd) * pull * tang;
         d.vy += (dy / dd) * pull + (dx / dd) * pull * tang;
         // [v14] arrasto leve + TETO DE VELOCIDADE que abre perto do horizonte:
@@ -12446,6 +12773,51 @@ Game.prototype.finaleTick = function () {
         s.life -= dtMs;
         if (s.life <= 0 || dd < 20) f.streaks.splice(i, 1);
     }
+};
+
+// [v15] BAKE DA LUZ DO APOCALIPSE: uma ÚNICA passada por camada na abertura
+// do finale. 'source-atop' pinta SÓ nos pixels de prédio (o céu da camada
+// não é afetado): (1) banho ÂMBAR vindo do buraco (centro da tela), mais
+// forte nas fachadas viradas pra ele; (2) vinheta da morte — o mundo LONGE
+// do buraco afunda no breu; (3) luar frio nas coroas dos tocos. O PRISTINE
+// recebe o mesmo bake: o pedaço que arranca carrega o brilho da fachada
+// de onde saiu (nada de pedaço "apagado" flutuando contra o céu).
+Game.prototype._finaleBakeCityLight = function (layer) {
+    if (!layer || !layer.canvas) return;
+    const W = layer.canvas.width, H = layer.canvas.height;
+    // a camada desenha com parallax -64 → o centro da tela (o buraco) é
+    // x=736 na TELA = x=800 na CAMADA; y = centro da tela
+    const lx = this.width / 2 + 64, ly = this.height / 2;
+    const maxD = Math.max(W, H) * 0.80;
+    const bake = (cv) => {
+        if (!cv) return;
+        const g = cv.getContext('2d');
+        g.save();
+        g.globalCompositeOperation = 'source-atop';
+        // (1) o disco de acreção banhando a pedra
+        const warm = g.createRadialGradient(lx, ly, 60, lx, ly, maxD * 0.78);
+        warm.addColorStop(0, 'rgba(255,172,92,0.34)');
+        warm.addColorStop(0.28, 'rgba(255,142,82,0.19)');
+        warm.addColorStop(0.60, 'rgba(158,86,204,0.09)');
+        warm.addColorStop(1, 'rgba(42,22,72,0)');
+        g.fillStyle = warm;
+        g.fillRect(0, 0, W, H);
+        // (2) a escuridão comendo as bordas do mundo
+        const vd = g.createRadialGradient(lx, ly, maxD * 0.34, lx, ly, maxD * 0.82);
+        vd.addColorStop(0, 'rgba(0,0,0,0)');
+        vd.addColorStop(1, 'rgba(2,1,6,0.50)');
+        g.fillStyle = vd;
+        g.fillRect(0, 0, W, H);
+        // (3) luar frio nas coroas (os tocos contra o cosmos)
+        const moon = g.createLinearGradient(0, 0, 0, H * 0.5);
+        moon.addColorStop(0, 'rgba(150,175,255,0.10)');
+        moon.addColorStop(1, 'rgba(0,0,0,0)');
+        g.fillStyle = moon;
+        g.fillRect(0, 0, W, H);
+        g.restore();
+    };
+    bake(layer.canvas);
+    if (layer.pristine) bake(layer.pristine);
 };
 
 // [v12] prepara uma camada da cidade pra ser devorada em TRÊS estágios:
@@ -12617,7 +12989,7 @@ Game.prototype._finaleEatCity = function (dt, k, now) {
                             Math.round(cx0), Math.round(yTop), Math.round(sw * split), Math.round(ch), opts);
                         this._finaleSpawnSnap(off + cx0 + sw * split, yTop, pristine,
                             Math.round(cx0 + sw * split), Math.round(yTop), Math.round(sw * (1 - split)), Math.round(ch),
-                            { up: opts.up * 0.8, spin: 0.05, drift: opts.drift, delay: 70 + Math.random() * 130 });
+                            { up: opts.up * 0.8, spin: 0.05, drift: opts.drift, delay: 40 + Math.random() * 80 }); // [v15] range menor: pedra presa não congela no ar
                     } else {
                         this._finaleSpawnSnap(off + cx0, yTop, pristine,
                             Math.round(cx0), Math.round(yTop), sw, Math.round(ch), opts);
@@ -12703,7 +13075,7 @@ Game.prototype._finaleRoofOff = function (g, pristine, b, off, cx, cy, far, now)
             this._finaleSpawnSnap(off + sx, sy, pristine,
                 Math.round(sx), Math.round(sy), Math.round(sw), Math.round(bandH - Math.random() * 8),
                 { up: 0.7 + Math.random() * 1.1, drift: 0.05 + Math.random() * 0.15, spin: 0.05, delay: dly });
-            dly += 90 + Math.random() * 140;
+            dly += 60 + Math.random() * 90; // [v15] range menor: desmonta rápido, sem pedra congelada
             sx += sw * (0.85 + Math.random() * 0.3);
         }
     }
@@ -12945,7 +13317,9 @@ Game.prototype._finaleCellBite = function (c, cx, cy) {
     // o pedaço que voa (pixels reais do cenário) — [v14] com o pré-render
     // dentado + luz (o cenário é mais claro que a cidade: véu mais fraco)
     if (f.terrainPristine && c.w >= 12 && c.h >= 10) {
-        const hang = Math.random() < 0.28 ? 60 + Math.random() * 200 : 0;
+        // [v15] pendurar menos (50–170ms): o pedaço RANGE e solta — um delay
+        // longo lia como FANTASMA da construção parado no ar
+        const hang = Math.random() < 0.26 ? 50 + Math.random() * 120 : 0;
         this._finaleSpawnSnap(c.x, c.y, f.terrainPristine,
             Math.round(c.x), Math.round(c.y), Math.round(c.w), Math.round(c.h),
             { up: 0.1 + Math.random() * 0.4, spin: 0.045, drift: 0.14 + Math.random() * 0.2, delay: hang, bright: 0.55 });
@@ -13337,8 +13711,21 @@ Game.prototype.drawFinale = function (g) {
             const dx = ccx - d.x, dy = ccy - d.y;
             const dd = Math.hypot(dx, dy) || 1;
             const k = Math.min(1, d.life / 700);
-            // ESPAGUETIFICAÇÃO perto do horizonte: estica e afina (escala com R)
-            const stretch = Math.min(2.2, 1 + Math.max(0, 1 - dd / (bhR * 0.85)) * 1.9);
+            // [v15] PEDRA PRESA RANGE, NÃO CONGELA: durante o delay o pedaço
+            // ainda está "grudado" na construção — ele TREME no lugar (o
+            // estalo acumulando) e só então arranca. Antes: pedaço PARADO
+            // no ar onde o prédio acabou de ser apagado = o fantasma da
+            // construção que o chefão viu. (não mexe na física — só no draw)
+            let jx = 0, jy = 0;
+            if (d.delay > 0) {
+                jx = (Math.random() - 0.5) * 2.4;
+                jy = (Math.random() - 0.5) * 2.4;
+            }
+            // [v15] DISTORÇÃO DE VERDADE perto da singularidade: esticão de
+            // maré até 3.4x + TORÇÃO senoidal engelhotando no eixo da queda
+            const warp = Math.max(0, 1 - dd / (bhR * 0.9));
+            const stretch = Math.min(3.4, 1 + warp * warp * 3.0);
+            const shear = Math.sin(nowD * 0.02 + d.rot * 7 + dd * 0.03) * 0.42 * warp * warp;
             g.save();
             g.globalAlpha = k;
             if (d.kind === 'snap' && (d.cv || d.snap)) {
@@ -13358,17 +13745,19 @@ Game.prototype.drawFinale = function (g) {
                 // (pixels de verdade + luar + quinas + volume), esticado no
                 // eixo da maré perto do horizonte
                 const ang = Math.atan2(ccy - d.y, ccx - d.x);
-                g.translate(d.x, d.y);
+                g.translate(d.x + jx, d.y + jy);
                 g.rotate(ang);
                 g.scale(stretch, 1 / Math.sqrt(stretch));
                 g.rotate(-ang + d.rot);
+                g.transform(1, shear * 0.6, shear, 1, 0, 0); // [v15] a torção da maré
                 if (d.cv) g.drawImage(d.cv, -d.sw / 2, -d.sh / 2, d.sw, d.sh);
                 else g.drawImage(d.snap, d.sxi, d.syi, d.sw, d.sh, -d.sw / 2, -d.sh / 2, d.sw, d.sh);
             } else if (d.kind === 'glass') {
                 // [v13] CACO DE VIDRO: lasca fina com glint piscando
-                g.translate(d.x, d.y);
+                g.translate(d.x + jx, d.y + jy);
                 g.rotate(d.rot);
                 g.scale(stretch * 0.8, 1);
+                g.transform(1, shear * 0.5, shear * 0.5, 1, 0, 0); // [v15] torção
                 g.fillStyle = d.color;
                 g.beginPath();
                 g.moveTo(-d.w * 0.5, 0);
@@ -13386,9 +13775,10 @@ Game.prototype.drawFinale = function (g) {
             } else {
                 // TIJOLO DE ALVENARIA: 3 faces (luz/body/sombra) + bisel
                 // + fiada de argamassa no meio ([v13] lê como tijolo de longe)
-                g.translate(d.x, d.y);
+                g.translate(d.x + jx, d.y + jy);
                 g.rotate(d.rot);
                 g.scale(stretch, 1 / Math.sqrt(stretch));
+                g.transform(1, shear * 0.6, shear, 1, 0, 0); // [v15] torção da maré
                 const bh2 = Math.max(0.8, d.h * 0.16);
                 g.fillStyle = d.cTop || d.color;
                 g.fillRect(-d.w / 2, -d.h / 2, d.w, d.h * 0.4);
@@ -13417,11 +13807,12 @@ Game.prototype.drawFinale = function (g) {
                     g.fillStyle = '#ff9a4e';
                     g.fillRect(-d.w / 2 - 1, -d.h / 2 - 1, d.w + 2, d.h + 2);
                 }
-            } else if (dd < bhR * 0.65) {
+            } else if (dd < bhR * 0.8) {
                 // AQUECIMENTO DE MARÉ: perto do horizonte a própria
                 // tração esquenta a pedra — um brilho violeta sutil cresce
+                // ([v15] alcance maior: a fornalha acompanha o horizonte gigante)
                 const dA = (f.bhDiskAlpha != null) ? f.bhDiskAlpha : 1;
-                const heat = (1 - dd / (bhR * 0.65)) * 0.30 * dA;
+                const heat = (1 - dd / (bhR * 0.8)) * 0.36 * dA;
                 if (heat > 0.02) {
                     g.globalCompositeOperation = 'lighter';
                     g.globalAlpha = k * heat;
