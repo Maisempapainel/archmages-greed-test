@@ -6331,7 +6331,10 @@ class Game {
             const bDt = Math.min(50, bNow - (this._bhLastT || bNow)) / 1000;
             this._bhLastT = bNow;
             const bt = bNow / 1000;
-            const rot = -0.14, cosR = Math.cos(rot), sinR = Math.sin(rot);
+            // [v13] PRECESSÃO: no finale o disco inteiro INCLINA devagar —
+            // o Gargantua se ajeitando pro jantar (fora do finale: estático)
+            const rot = -0.14 + (this.state === 'FINALE' ? Math.sin(bt * 0.055) * 0.09 : 0);
+            const cosR = Math.cos(rot), sinR = Math.sin(rot);
             const proj = (ex, ey) => [bx + ex * cosR - ey * sinR, by + ex * sinR + ey * cosR];
 
             // 0) bruma violeta respirando (o campo gravitacional "pesa" no ar)
@@ -6343,8 +6346,8 @@ class Game {
             g.drawImage(bh.haze, bx - hzS / 2, by - hzS / 2, hzS, hzS);
             g.restore();
 
-            const lim = [64, 44, 28][Perf.level] || 44;
             const passos = bh.disk;
+            const lim = Math.min(passos.length, ([64, 44, 28][Perf.level] || 44) + (finG > 0.2 ? 14 : 0)); // [v13] no finale o disco ENGROSSA (está se alimentando)
             const pal = bh.pal || this._bhPal;
             const cor = (heat, dop) => pal[(heat > 0.72 ? 0 : heat > 0.45 ? 1 : heat > 0.22 ? 2 : 3) * 2 + (dop > 0.58 ? 1 : 0)];
             const heatOf = (p) => Math.max(0, 1 - (p.r - 1.10) / 1.55);
@@ -6353,7 +6356,7 @@ class Game {
             // [v7] MOVIMENTO KEPLERIANO de verdade: o plasma ORBITA — ferve colado
             // no horizonte e arrasta lá fora. O disco agora FLUI (não é quadro parado)
             if (this.state !== 'PAUSED' && !this.paused) {
-                for (let pi = 0; pi < passos.length; pi++) passos[pi].a += passos[pi].w * bDt * 1.5;
+                for (let pi = 0; pi < passos.length; pi++) passos[pi].a += passos[pi].w * bDt * (1.5 + finG * 0.45); // [v13] acelera ao se alimentar
             }
 
             // ===== LENTE GRAVITACIONAL — o disco de TRÁS é DOBRADO por cima
@@ -6367,11 +6370,11 @@ class Game {
             g.lineCap = 'round';
             // corpo-base do halo: meia-elipse vertical GROSSA, COLADA na
             // borda superior da sombra (o arco "abraça" o buraco negro)
-            g.globalAlpha = 0.15;
+            g.globalAlpha = 0.15 + Math.min(0.10, finG * 0.04);
             g.strokeStyle = '#ffce8a';
             g.lineWidth = R * 0.13;
             g.beginPath(); g.ellipse(0, 0, R * 1.42, R * 1.025, 0, Math.PI, Math.PI * 2); g.stroke();
-            g.globalAlpha = 0.12;
+            g.globalAlpha = 0.12 + Math.min(0.08, finG * 0.03);
             g.strokeStyle = '#c95cff';
             g.lineWidth = R * 0.24;
             g.beginPath(); g.ellipse(0, 0, R * 1.95, R * 1.055, 0, Math.PI + 0.05, Math.PI * 2 - 0.05); g.stroke();
@@ -6433,8 +6436,8 @@ class Game {
             // [v7] bloom volumétrico no ápice do halo (a luz "vaza" da lente)
             g.save();
             g.globalCompositeOperation = 'lighter';
-            g.globalAlpha = 0.55 + Math.sin(bt * 0.5) * 0.12;
-            const bs2 = R * 3.1;
+            g.globalAlpha = 0.55 + Math.sin(bt * 0.5) * 0.12 + Math.min(0.18, finG * 0.06);
+            const bs2 = R * (3.1 + Math.min(0.5, finG * 0.22));
             g.drawImage(bh.bloom, bx - bs2 / 2, by - R * 1.05 - bs2 / 2, bs2, bs2);
             g.restore();
 
@@ -6459,32 +6462,41 @@ class Game {
             rg.addColorStop(1, 'rgba(230,215,255,0.55)');
             // 3 camadas: núcleo BRANCO afiado -> corpo âmbar -> halo violeta
             g.strokeStyle = rg;
-            g.lineWidth = 2.4;
+            g.lineWidth = Math.max(2.4, R * 0.008); // [v13] o anel ENGLECE junto com o horizonte (num Gargantua de tela inteira, 2px some)
             g.beginPath();
             g.arc(bx, by, (R + 1.2) * breathe, Math.PI + 0.22, Math.PI * 2 - 0.22);
             g.stroke();
             g.globalAlpha = 0.5;
-            g.lineWidth = 6;
+            g.lineWidth = Math.max(6, R * 0.016);
             g.strokeStyle = 'rgba(255,214,150,0.55)';
             g.beginPath();
             g.arc(bx, by, (R + 2.2) * breathe, Math.PI + 0.26, Math.PI * 2 - 0.26);
             g.stroke();
             g.globalAlpha = 0.22;
-            g.lineWidth = 11;
+            g.lineWidth = Math.max(11, R * 0.026);
             g.strokeStyle = 'rgba(210,170,255,0.5)';
             g.beginPath();
             g.arc(bx, by, (R + 3.5) * breathe, Math.PI + 0.3, Math.PI * 2 - 0.3);
             g.stroke();
             // [v12] NO FINALE o photon ring GANHA uma coroa violeta extra — o
             // horizonte sob carga, prestes a engolir o mundo inteiro
+            // [v13] mais GROSSA e mais viva (o anel de um Gargantua faminto)
             if (finG > 0.25) {
-                g.globalAlpha = Math.min(0.42, finG * 0.17);
-                g.lineWidth = 15 + finG * 3;
+                g.globalAlpha = Math.min(0.52, finG * 0.20);
+                g.lineWidth = Math.max(17, R * 0.030) + finG * 6;
                 g.strokeStyle = 'rgba(125,72,225,0.55)';
                 g.beginPath();
                 g.arc(bx, by, (R + 6.5) * breathe, Math.PI + 0.36, Math.PI * 2 - 0.36);
                 g.stroke();
             }
+            // [v13] SEGUNDA IMAGEM do photon ring: um arco fino e fantasma um
+            // tico mais longe — a luz que dobrou DUAS voltas no horizonte
+            g.globalAlpha = 0.30;
+            g.lineWidth = Math.max(1.4, R * 0.004);
+            g.strokeStyle = 'rgba(255,238,255,0.85)';
+            g.beginPath();
+            g.arc(bx, by, (R * 1.05 + 1.5) * breathe, Math.PI + 0.34, Math.PI * 2 - 0.34);
+            g.stroke();
             g.restore();
 
             // ===== DISCO FRONTAL: massa de plasma quase de perfil, passando
@@ -6557,9 +6569,9 @@ class Game {
             // (embaixo da sombra não há ring: o disco frontal cobre) =====
             // [v12] no finale: MAIS faíscas correndo (e mais rápido)
             {
-                const nHs = finG > 0.2 ? 5 : 3;
+                const nHs = finG > 0.2 ? 6 : 3;
                 for (let i = 0; i < nHs; i++) {
-                    const ha = Math.PI + 0.3 + ((bt * (0.30 + finG * 0.05) + i / nHs) % 1) * (Math.PI - 0.6);
+                    const ha = Math.PI + 0.3 + ((bt * (0.30 + finG * 0.08) + i / nHs) % 1) * (Math.PI - 0.6);
                     for (let k = 0; k < 3; k++) {
                         const ta = ha - k * 0.08;
                         const hx = bx + Math.cos(ta) * (R + 2.5);
@@ -6574,26 +6586,30 @@ class Game {
             g.globalAlpha = 1;
 
             // 1e) matéria ESPAGUETIFICANDO: estica e dissolve no horizonte
-            for (let i = 0; i < bh.infall.length; i++) {
-                const s = bh.infall[i];
-                const life = ((bt + s.ph * s.dur) % s.dur) / s.dur;
-                const ang = s.seed + bt * 0.22 + life * 3.1;
-                const rr = R * (2.45 - life * 1.33);
-                const ex = Math.cos(ang) * rr;
-                const ey2 = Math.sin(ang) * rr * 0.30;
-                const fx = bx + ex * cosR - ey2 * sinR;
-                const fy = by + ex * sinR + ey2 * cosR;
-                const fa = (0.55 - life * 0.32) * (1 + finG * 0.35);
-                if (fa <= 0.04) continue;
-                const stretch = 1 + life * (4.2 + finG * 1.2);
-                const fsz = 2 + (1 - life) * 2.2;
-                g.save();
-                g.globalAlpha = fa;
-                g.translate(fx, fy);
-                g.rotate(rot + ang + Math.PI / 2);
-                g.fillStyle = life > 0.72 ? '#fff4ff' : '#a97fff';
-                g.fillRect(-fsz * stretch / 2, -fsz / 2, fsz * stretch, fsz);
-                g.restore();
+            // [v13] no finale o DOBRO de correntes de matéria caindo (banquete)
+            {
+                const infN = bh.infall.length * (finG > 0.5 ? 2 : 1);
+                for (let i = 0; i < infN; i++) {
+                    const s = bh.infall[i % bh.infall.length];
+                    const life = ((bt + (s.ph + (i >= bh.infall.length ? 0.41 : 0)) * s.dur) % s.dur) / s.dur;
+                    const ang = s.seed + bt * 0.22 + life * 3.1;
+                    const rr = R * (2.45 - life * 1.33);
+                    const ex = Math.cos(ang) * rr;
+                    const ey2 = Math.sin(ang) * rr * 0.30;
+                    const fx = bx + ex * cosR - ey2 * sinR;
+                    const fy = by + ex * sinR + ey2 * cosR;
+                    const fa = (0.55 - life * 0.32) * (1 + finG * 0.35);
+                    if (fa <= 0.04) continue;
+                    const stretch = 1 + life * (4.2 + finG * 1.2);
+                    const fsz = 2 + (1 - life) * 2.2;
+                    g.save();
+                    g.globalAlpha = fa;
+                    g.translate(fx, fy);
+                    g.rotate(rot + ang + Math.PI / 2);
+                    g.fillStyle = life > 0.72 ? '#fff4ff' : '#a97fff';
+                    g.fillRect(-fsz * stretch / 2, -fsz / 2, fsz * stretch, fsz);
+                    g.restore();
+                }
             }
 
             // 1f) ONDAS DE LENTE: o espaço-tempo ondula saindo do horizonte
@@ -6625,7 +6641,7 @@ class Game {
                     const d = Math.hypot(dx, dy);
                     if (d > R * 2.9 || d < R * 1.15) continue;
                     const tang = Math.atan2(dy, dx) + Math.PI / 2;
-                    const len = (1 - (d - R * 1.15) / (R * 1.75)) * 16 + 3;
+                    const len = ((1 - (d - R * 1.15) / (R * 1.75)) * 16 + 3) * (1 + Math.min(1.2, finG * 0.35)); // [v13] a lente estica o céu INTEIRO no finale
                     g.save();
                     g.globalAlpha = 0.30 + Math.sin(bt * 1.7 + st.ph) * 0.12;
                     g.translate(st.x, st.y);
@@ -6661,8 +6677,8 @@ class Game {
             // [v12] O VÉU DA MORTE: com o buraco engolindo o mundo, a luz morre
             // nas BEIRAS da tela — o resto do universo se apaga ao redor dele
             // (radial, por cima do brilho: a escuridão avança DE DENTRO pra fora)
-            if (this.finale && this.state === 'FINALE' && finG > 0.25) {
-                const dv = Math.min(0.62, finG * 0.27);
+            if (this.finale && this.state === 'FINALE' && finG > 0.2) {
+                const dv = Math.min(0.85, finG * 0.30);
                 const dg = g.createRadialGradient(bx, by, R * 0.9, bx, by, Math.max(this.width, this.height) * 0.82);
                 dg.addColorStop(0, 'rgba(4,1,10,0)');
                 dg.addColorStop(0.55, 'rgba(4,1,10,' + (dv * 0.45).toFixed(3) + ')');
@@ -6680,7 +6696,7 @@ class Game {
         if (this.state === 'FINALE' && this.finale) {
             const dA = (this.finale.bhDiskAlpha != null) ? this.finale.bhDiskAlpha : 1;
             if (dA < 0.999) {
-                g.fillStyle = 'rgba(2,1,7,' + (1 - dA).toFixed(3) + ')';
+                g.fillStyle = 'rgba(2,1,7,' + ((1 - dA) * 0.88).toFixed(3) + ')';
                 g.fillRect(0, 0, this.width, this.height);
             }
         }
@@ -11746,6 +11762,11 @@ function buyMetaUpgrade(id) {
  * cenário inteiro (30s), zoom nas últimas palavras, risadas.mp3 (15s em
  * loop), o mago é engolido numa espiral dramática, tela preta, frase
  * final em vermelho escorrendo sangue, reset e a conquista suprema.
+ * [v13] O FINALE DOS PEDANÇOS: prédios e plataforma agora morrem em CHUNKS
+ * de verdade (bordas dentadas, pixels reais, fumaça, vidro, feridas que
+ * brilham), o Gargantua cresce quase 5x (disco engrossa, precessa, anel
+ * duplo), cada pedaço morre ao CRUZAR o horizonte (clarão de alimentação)
+ * e o mago é sugado INTEIRO, sem espaguetificação (esticão máx. 14%).
  * ======================================================================
  */
 
@@ -11930,6 +11951,8 @@ Game.prototype.startFinale = function () {
             { text: T.fFinal2, start: TITLE_DUR + CITY_DUR + PLAT_DUR + 3200, spd: 40, hold: 1150 }
         ],
         debris: [], streaks: [],
+        puffs: [], feeds: [], pending: [], recentBites: [],
+        eatL: 0, eatR: 1472,
         lastBoomAt: 0, lastShatterAt: 0, lastStreakAt: 0, lastRumbleAt: 0, lastCrackleAt: 0, lastRoofAt: 0,
         swallow: null, blackAlpha: 0, flashUntil: 0, laughOn: false,
         ended: false
@@ -12023,7 +12046,7 @@ Game.prototype.finaleTick = function () {
         // ===== A CIDADE SENDO ENGOLIDA (de cima pra baixo, aos poucos) =====
         const k = (e - f.titleEnd) / f.cityDur;
         f.cityK = k;
-        f.bhGrow = 0.95 * k;   // o buraco cresce enquanto devora
+        f.bhGrow = 1.30 * k;   // [v13] GARGANTUA: cresce bem mais enquanto devora
         this.shake = 1.6 + 3.4 * k + Math.random() * 1.3; // fraco -> forte
         setRumble(0.28 + 0.32 * k);
         this._finaleEatCity(dtMs, k, now);
@@ -12031,18 +12054,20 @@ Game.prototype.finaleTick = function () {
     } else if (ph === 2) {
         // ===== A PLATAFORMA: racha, solta as laterais e vira TIJOLO =====
         const k = (e - f.cityEnd) / f.platDur;
-        f.bhGrow = 0.95 + Math.min(1, k * 1.15);
+        f.bhGrow = 1.30 + 1.20 * Math.min(1, k * 1.15);   // [v13] GARGANTUA: 2.5x no fim da plataforma
         this.shake = 5.0 + 4.0 * k + Math.random() * 1.6;
         setRumble(0.6 + 0.32 * k);
+        this._finaleEatCity(dtMs, 1.0, now);   // [v13] escória da cidade: prédios atrasados terminam de cair
         this._finaleEatPlatform(dtMs, k, now);
         this._finaleSpawnStreak(now);
     } else if (ph === 3) {
         // ===== SINGULARIDADE: tudo vira o vazio, o horizonte de eventos SOME =====
         const k = (e - f.platEnd) / (f.singEnd - f.platEnd);
-        f.bhGrow = 1.95 + 0.5 * Math.min(1, k / 0.55);
+        f.bhGrow = 2.50 + 1.30 * Math.min(1, k / 0.55);   // [v13] singularidade COLOSSAL (3.8x)
         f.bhDiskAlpha = Math.max(0, 1 - k / 0.42); // o disco de luz morre
         this.shake = 9.2 + Math.random() * 2.4;
         setRumble(0.95);
+        this._finaleProcessCells(this.width / 2, this.height / 2, now); // [v13] as últimas células da plataforma terminam de cair aqui
         this._finaleSpawnStreak(now);
     } else if (ph === 4) {
         // ===== O ENGOLIDO: o mago + o ÚLTIMO PEDAÇO (risadas AQUI, 1x 15s) =====
@@ -12065,21 +12090,20 @@ Game.prototype.finaleTick = function () {
             };
             this.finaleHide = true; // o mago agora é desenhado na mão (espiral)
         }
-        f.bhGrow = 2.45 + 0.3 * k;   // continua "se aproximando" até o fim
+        f.bhGrow = 3.80 + 0.9 * k;   // [v13] continua "se aproximando": 4.7x — o céu É o buraco
         f.bhDiskAlpha = 0;
         const kE = k * k * (3 - 2 * k);
         const s = f.swallow;
-        s.r = s.r * (1 - 0.0042 * (1 + k * 2.4) * dtMs / 4);  // o raio fecha
+        s.r = s.r * (1 - 0.0037 * (1 + k * 2.2) * dtMs / 4);  // o raio fecha
         if (s.r < 2) s.r = 2;
-        s.ang += (0.0026 + k * 0.011) * dtMs;                 // gira cada vez mais rápido
+        s.ang += (0.0017 + k * 0.0062) * dtMs;                // [v13] espiral ELEGANTE (2-3 voltas, não liquidificador)
         s.spin += (0.004 + k * 0.02) * dtMs;
-        s.scale = Math.max(0.04, 1 - kE * 0.97);
-        // [v12] ESPAGUETIFICAÇÃO RADIAL de verdade: quanto mais perto do
-        // horizonte, mais o corpo estica na direção do buraco (e afina) — mas
-        // com curva QUADRÁTICA: legível quase até o fim, fio só no último suspiro
-        s.stretch = 1 + Math.pow(Math.max(0, 1 - s.r / Math.max(40, s.r0)), 2.2) * 3.4;
-        // [v12] o DEBATE: o mago se debate no início e desiste perto do fim
-        s.flail = Math.sin(now * 0.021) * 0.55 * Math.max(0, 1 - k * 0.75);
+        s.scale = Math.max(0.05, 1 - Math.pow(kE, 1.45) * 0.95); // [v13] fica GRANDE por mais tempo e some no fim
+        // [v13] SEM ESPAGUETIFICAÇÃO: o chefão mandou o mago ser sugado
+        // NORMAL — corpo inteiro, no máx. um esticão sutil de 14% na tração
+        s.stretch = 1 + Math.pow(Math.max(0, 1 - s.r / Math.max(40, s.r0)), 2.2) * 0.14;
+        // o DEBATE: ele se debate no começo e desiste perto do fim
+        s.flail = Math.sin(now * 0.021) * 0.38 * Math.max(0, 1 - k * 0.8);
         // [v12] FANTASMAS: cópias atrasadas da alma sendo puxada (afterimage)
         if (now - s.lastGhost > 46) {
             s.lastGhost = now;
@@ -12113,6 +12137,8 @@ Game.prototype.finaleTick = function () {
     } else if (ph === 5) {
         // a tela inteira fica PRETA
         const k = (e - f.swallowEnd) / (f.blackEnd - f.swallowEnd);
+        // [v13] fim do engolido: a fila de células do ÚLTIMO chão esvazia AGORA
+        if (!f.lastPieceDone) this._finaleEatLastPiece(1.0);
         f.blackAlpha = k;
         this.shake = (3.5 + Math.random() * 2) * (1 - k);
         setRumble(0.3 * (1 - k));
@@ -12138,26 +12164,58 @@ Game.prototype.finaleTick = function () {
     }
 
     // o vazio atrás de tudo (cresce junto com o buraco; 1 quando R ~ 612+)
-    f.voidAlpha = Math.max(0, Math.min(1, (f.bhGrow - 1.45) / 0.55));
+    f.voidAlpha = Math.max(0, Math.min(1, (f.bhGrow - 2.0) / 0.55));
 
     // ===== destroços e riscos continuam voando pro buraco (espiral) =====
+    // [v13] o horizonte agora é GIGANTE: os pedaços morrem ao CRUZAR a borda
+    // de verdade do buraco (não num raio fixo) — e cada entrada vira um
+    // clarinho de matéria sendo comida (feed flash)
     const ccx = this.width / 2, ccy = this.height / 2;
+    const bhR = 102 * (2 + (f.bhGrow || 0));           // raio real do horizonte na tela
+    const killR = Math.max(30, bhR * 0.92);
     for (let i = f.debris.length - 1; i >= 0; i--) {
         const d = f.debris[i];
+        if (d.delay > 0) { d.delay -= dtMs; continue; } // pedaço "preso" ainda: range e solta depois
         const dx = ccx - d.x, dy = ccy - d.y;
         const dd = Math.hypot(dx, dy) || 1;
         // SUCÇÃO gravitacional + componente tangencial = espiral de verdade
-        // ([v12] pedaços GRANDES aceleram mais devagar: massa maior, arranco
-        // mais lento — o telhado inteiro desliza pro abismo, o tijolo voa)
-        const massK = d.kind === 'snap' ? 0.82 : 1;
-        const pull = 0.0032 * (dtMs / 16) * (1 + 620 / (dd + 90)) * massK;
+        // ([v12] pedaços GRANDES aceleram mais devagar; [v13] vidro é leve e voa)
+        const massK = d.kind === 'snap' ? 0.82 : (d.kind === 'glass' ? 1.45 : 1);
+        const pull = 0.0027 * (dtMs / 16) * (1 + 620 / (dd + 90)) * massK;
         d.vx += (dx / dd) * pull + (-dy / dd) * pull * 0.6;
         d.vy += (dy / dd) * pull + (dx / dd) * pull * 0.6;
+        d.px = d.x; d.py = d.y;                        // [v13] posição anterior (rastro do movimento)
         d.x += d.vx * dtMs / 16;
         d.y += d.vy * dtMs / 16;
         d.rot += d.vrot * dtMs / 16;
         d.life -= dtMs;
-        if (d.life <= 0 || dd < 26) f.debris.splice(i, 1);
+        if (d.life <= 0 || dd < killR) {
+            // [v13] FLASH DE ALIMENTAÇÃO: a matéria encostou no horizonte —
+            // o buraco "morde" com um clarãozinho onde ela entrou
+            if (dd < killR && f.feeds.length < 26) {
+                f.feeds.push({ x: d.x, y: d.y, t0: now, big: d.kind === 'snap' && d.sw > 30 });
+            }
+            f.debris.splice(i, 1);
+        }
+    }
+    // [v13] poeira viva: sobe, cresce e morre (fumaça de demolição de verdade)
+    for (let i = f.puffs.length - 1; i >= 0; i--) {
+        const pf = f.puffs[i];
+        pf.life -= dtMs;
+        if (pf.life <= 0) { f.puffs.splice(i, 1); continue; }
+        pf.r += pf.gr * dtMs;
+        if (pf.r > pf.rMax) pf.r = pf.rMax;
+        pf.x += pf.vx * dtMs / 16;
+        pf.y += pf.vy * dtMs / 16;
+        pf.vx *= 0.985; pf.vy *= 0.985;
+    }
+    // [v13] clarões de alimentação morrem sozinhos (380ms)
+    for (let i = f.feeds.length - 1; i >= 0; i--) {
+        if (now - f.feeds[i].t0 > 380) f.feeds.splice(i, 1);
+    }
+    // [v13] mordidas recentes (a ferida aberta brilha e esfria)
+    for (let i = f.recentBites.length - 1; i >= 0; i--) {
+        if (now - f.recentBites[i].t0 > 620) f.recentBites.splice(i, 1);
     }
     for (let i = f.streaks.length - 1; i >= 0; i--) {
         const s = f.streaks[i];
@@ -12184,10 +12242,20 @@ Game.prototype._finalePrepCity = function (layer, durMs, depth) {
     for (const b of layer.buildings) {
         b._h = this.height - b.top;
         b._delay = Math.random() * 0.7;
-        b._rate = (b._h + 18) / Math.max(0.8, (1 - b._delay) * durS);
+        // [v13] CORREÇÃO GRAVE: _rate era px/SEGUNDO usado como px/MS — o
+        // prédio inteiro era apagado NUM ÚNICO TICK (a "evaporação" que o
+        // chefão odiou). Agora é px/ms de verdade: a demolição dura a janela
+        // do prédio, pedaço por pedaço, do jeito que foi coreografada.
+        b._rate = (b._h + 18) / (Math.max(0.8, (1 - b._delay) * durS) * 1000);
         b._eatY = 0;
         b._eraseY = 0;
         b._eaten = false;
+        // [v13] mordidas em CHUNKS GRANDES e LEGÍVEIS: um andar inteiro por
+        // mordida, com largura generosa — o prédio perde PAREDES INTEIRAS,
+        // não farelo
+        b._floorH = 26 + Math.random() * 16;
+        b._nextBite = 0;
+        b._rush = false;
         // [v12] estágio 1 — as RACHADURAS que vão crescer na fachada:
         // polilinhas dentadas descendo do alto, com galhos laterais
         b._cracks = [];
@@ -12293,46 +12361,75 @@ Game.prototype._finaleEatCity = function (dt, k, now) {
                 b._eraseY = Math.max(b._eraseY, skip);
             }
 
-            // ===== ATO 3 — MORDIDAS fileira a fileira (de cima pra baixo) =====
+            // ===== ATO 3 — PEDAÇOS DE FACHADA (chunk a chunk, de cima pra baixo) =====
+            // [v13] nada de evaporar em tirinhas: cada mordida arranca um
+            // CHUNK de parede COM DENTES na borda, e o que voa é o PEDANÇO
+            // de verdade (pixels: janelas, lajes, quinas) + tijolinhos +
+            // cacos de vidro + poeira de demolição
             b._eatY += b._rate * dt;
-            while (b._eatY - b._eraseY > 7) {
-                b._eraseY = Math.min(b._eatY, b._eraseY + 7);
-                const yA = b.top - 12 + b._eraseY - 7;
-                const yB = b.top - 12 + b._eraseY + 1;
+            let biteGuard = 0;
+            while (b._eatY > b._nextBite && biteGuard++ < 4) {
+                b._nextBite += b._floorH * (0.75 + Math.random() * 0.55);
+                const remain = b._h + 14 - b._eraseY;
+                if (remain <= 5) break;
+                const yTop = b.top - 12 + b._eraseY;
+                const ch = Math.min(remain, b._floorH * (0.9 + Math.random() * 0.5));
+                const fullW = Math.random() < 0.20; // às vezes a LAJE INTEIRA cede de vez
+                const cw = fullW ? b.w : Math.max(22, b.w * (0.44 + Math.random() * 0.40));
+                const cx0 = fullW ? b.x : b.x + Math.random() * Math.max(2, b.w - cw);
+                // recorte DENTADO, clipado na faixa deste prédio (não come o vizinho)
                 g.save();
-                g.globalCompositeOperation = 'destination-out';
-                g.fillStyle = '#000'; // OPACO: sem isso o fillStyle sobrante apaga só pela metade
-                // bordas JAGGED: duas tiras dessincronizadas = topo arrancado
-                g.fillRect(b.x - 2 + Math.random() * 3, yA, b.w + 4, (yB - yA) * 0.55);
-                g.fillRect(b.x - 2 + Math.random() * 3, yA + (yB - yA) * 0.45, b.w + 4, (yB - yA) * 0.62);
+                g.beginPath();
+                g.rect(b.x - 3, yTop - 2, b.w + 6, ch + 5);
+                g.clip();
+                this._finaleJagErase(g, cx0, yTop, cw, ch, Math.max(3, Math.round(cw / 15)));
                 g.restore();
-                // [v12] o que ARRANCA da mordida: pedaço de FACHADA de verdade
-                // (pixels do prédio: janelas, lajes, quinas) na maioria das
-                // mordidas; tijolinho solto nas outras — nada de "partícula do nada"
-                const roll = Math.random();
-                if (roll < 0.52 && pristine && b.w > 42) {
-                    const pw = Math.max(16, b.w * (0.34 + Math.random() * 0.36));
-                    const px0 = b.x + Math.random() * Math.max(2, b.w - pw);
-                    const py0 = yA + Math.random() * 3;
-                    this._finaleSpawnSnap(off + px0, py0, pristine,
-                        Math.round(px0), Math.round(py0), Math.round(pw), Math.round((yB - yA) + 3),
-                        { up: 0.15 + Math.random() * 0.45 });
-                } else {
-                    const nD = far ? 1 : (1 + (Math.random() < 0.6 ? 1 : 0));
-                    for (let d = 0; d < nD && f.debris.length < 160; d++) {
-                        const dx = off + b.x + Math.random() * b.w;
-                        const dy = b.top + b._eraseY - Math.random() * 10;
-                        this._finaleSpawnDebris(dx, dy, cx, cy,
-                            far ? ['#231a38', '#0c0916'] : ['#171021', '#050308', '#231a38'],
-                            far ? 5 + Math.random() * 8 : 7 + Math.random() * 12,
-                            far ? 0.15 : 0.35, !far);
+                // o CHUNK que voa: os PIXELS de verdade dessa parede
+                const sw = Math.round(Math.max(10, Math.min(cw, b.x + b.w - cx0)));
+                if (pristine && sw >= 10 && ch >= 8) {
+                    // [v13] o pedaço ARRANCA pra cima primeiro (pop vertical
+                    // forte, deriva mínima) — ele LENTA na cara do jogador
+                    // antes de ser arrastado pro abismo
+                    const opts = { up: 0.55 + Math.random() * 0.8, spin: 0.045, drift: 0.07 + Math.random() * 0.13 };
+                    if (sw > 66 && ch > 14) {
+                        // pedaço grande demais: PARTE em dois no ar (falha de tensão)
+                        const split = 0.38 + Math.random() * 0.26;
+                        this._finaleSpawnSnap(off + cx0, yTop, pristine,
+                            Math.round(cx0), Math.round(yTop), Math.round(sw * split), Math.round(ch), opts);
+                        this._finaleSpawnSnap(off + cx0 + sw * split, yTop, pristine,
+                            Math.round(cx0 + sw * split), Math.round(yTop), Math.round(sw * (1 - split)), Math.round(ch),
+                            { up: opts.up * 0.8, spin: 0.05, drift: opts.drift, delay: 70 + Math.random() * 130 });
+                    } else {
+                        this._finaleSpawnSnap(off + cx0, yTop, pristine,
+                            Math.round(cx0), Math.round(yTop), sw, Math.round(ch), opts);
                     }
                 }
+                // tijolinhos soltos na beirada do corte (POUCOS: o pedaço
+                // grande é a estrela; o farelo é só tempero)
+                const nD = far ? 1 : (1 + (Math.random() < 0.45 ? 1 : 0));
+                for (let d = 0; d < nD && f.debris.length < 240; d++) {
+                    this._finaleSpawnDebris(off + cx0 + Math.random() * sw, yTop + Math.random() * ch, cx, cy,
+                        far ? ['#231a38', '#0c0916'] : ['#171021', '#050308', '#231a38'],
+                        far ? 5 + Math.random() * 8 : 7 + Math.random() * 12,
+                        far ? 0.15 : 0.35, !far);
+                }
+                // cacos de janela (o vidro arcano estilhaçando)
+                if (!far && Math.random() < 0.5) {
+                    for (let ig = 0; ig < 1 + (Math.random() < 0.5 ? 1 : 0) && f.debris.length < 240; ig++)
+                        this._finaleSpawnGlass(off + cx0 + Math.random() * sw, yTop + Math.random() * ch, cx, cy);
+                }
+                // poeira de demolição rolando do corte
+                this._finalePuff(off + cx0 + sw * 0.5, yTop + ch * 0.5, 0.8 + Math.random() * 0.8, far ? 0.5 : 1, 'dust');
+                if (Math.random() < 0.5) this._finalePuff(off + cx0 + Math.random() * sw, yTop + ch, 0.6 + Math.random() * 0.7, far ? 0.4 : 0.8, 'dust');
+                b._eraseY += ch;
             }
             // o fogo da cidade morre junto com o pedaço engolido
             const eatLine = b.top + b._eatY;
             if (layer.fires) layer.fires = layer.fires.filter(fr => !(fr.x >= b.x - 2 && fr.x <= b.x + b.w + 2 && fr.y < eatLine));
-            if (b._eatY >= b._h + 14) {
+            // acabou a janela dele? drena as últimas mordidas em rajada
+            // (3.2x UMA vez — o prédio cedendo de vez, sem ainda estar evaporando)
+            if (b._eatY >= b._h + 14 && !b._rush) { b._rush = true; b._rate *= 3.2; }
+            if (b._eraseY >= b._h + 10 || b._h + 14 - b._eraseY <= 5.01) {
                 b._eaten = true;
                 g.save();
                 g.globalCompositeOperation = 'destination-out';
@@ -12373,9 +12470,12 @@ Game.prototype._finaleRoofOff = function (g, pristine, b, off, cx, cy, far, now)
     }
     g.restore();
     // estilhaços: fatias HORIZONTAIS da banda (pixels de verdade do telhado)
+    // [v13] DECAPITAÇÃO EM SÉRIE: as fatias soltam UMA DEPOIS DA OUTRA
+    // (delay escalonado) — o telhado se DESMONTA, não explode
     if (pristine) {
         const nSh = 2 + Math.floor(Math.random() * 2) + (b.w > 110 ? 1 : 0);
         let sx = b.x - 3;
+        let dly = 0;
         for (let i = 0; i < nSh; i++) {
             const rest = (b.x + b.w + 3) - sx;
             if (rest < 10) break;
@@ -12383,10 +12483,14 @@ Game.prototype._finaleRoofOff = function (g, pristine, b, off, cx, cy, far, now)
             const sy = bandTop + Math.random() * 4;
             this._finaleSpawnSnap(off + sx, sy, pristine,
                 Math.round(sx), Math.round(sy), Math.round(sw), Math.round(bandH - Math.random() * 8),
-                { up: 0.7 + Math.random() * 1.1, drift: 0.05 + Math.random() * 0.15, spin: 0.05 });
+                { up: 0.7 + Math.random() * 1.1, drift: 0.05 + Math.random() * 0.15, spin: 0.05, delay: dly });
+            dly += 90 + Math.random() * 140;
             sx += sw * (0.85 + Math.random() * 0.3);
         }
     }
+    // [v13] fumaça de demolição rolando da linha do corte
+    this._finalePuff(off + b.x + b.w * 0.3, b.top + b._roofH - 6, 0.9 + Math.random() * 0.6, far ? 0.5 : 1, 'dust');
+    this._finalePuff(off + b.x + b.w * 0.7, b.top + b._roofH - 6, 0.9 + Math.random() * 0.6, far ? 0.5 : 1, 'dust');
     // poeira do arranque + tijolinhos soltos da coroa
     const nP = far ? 4 : 8;
     for (let i = 0; i < nP && this.particles.length < this.particleCap; i++) {
@@ -12397,7 +12501,7 @@ Game.prototype._finaleRoofOff = function (g, pristine, b, off, cx, cy, far, now)
         pr.vy = -0.2 - Math.random() * 0.9;
         this.particles.push(pr);
     }
-    for (let i = 0; i < (far ? 1 : 2) && f.debris.length < 160; i++) {
+    for (let i = 0; i < (far ? 1 : 2) && f.debris.length < 240; i++) {
         this._finaleSpawnDebris(off + b.x + Math.random() * b.w, b.top + b._roofH - Math.random() * 10,
             cx, cy, far ? ['#231a38', '#0c0916'] : ['#171021', '#050308'],
             6 + Math.random() * 10, 0.2, !far);
@@ -12414,7 +12518,7 @@ Game.prototype._finaleRoofOff = function (g, pristine, b, off, cx, cy, far, now)
 // no spawn — desenhar é só 2 fillRect + 2 linhas por tijolo)
 Game.prototype._finaleSpawnDebris = function (x, y, cx, cy, colors, sz, litK, withWindows) {
     const f = this.finale;
-    if (!f || f.debris.length >= 160) return;
+    if (!f || f.debris.length >= 240) return;
     const dx = cx - x, dy = cy - y;
     const dd = Math.hypot(dx, dy) || 1;
     const colHex = colors[Math.floor(Math.random() * colors.length)];
@@ -12422,7 +12526,7 @@ Game.prototype._finaleSpawnDebris = function (x, y, cx, cy, colors, sz, litK, wi
     const r = parseInt(colHex.substr(1, 2), 16), gg = parseInt(colHex.substr(3, 2), 16), b2 = parseInt(colHex.substr(5, 2), 16);
     const cl = (v, a) => Math.max(0, Math.min(255, Math.round(v + a)));
     f.debris.push({
-        x: x, y: y,
+        x: x, y: y, px: x, py: y, delay: 0,
         vx: dx / dd * (0.5 + Math.random() * 0.9),
         vy: dy / dd * (0.5 + Math.random() * 0.9) - 0.5,
         rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.14,
@@ -12442,7 +12546,7 @@ Game.prototype._finaleSpawnDebris = function (x, y, cx, cy, colors, sz, litK, wi
 // PRÓPRIA parede/telhado/laje, com janelas, runas e tijolos visíveis.
 Game.prototype._finaleSpawnSnap = function (x, y, src, sx, sy, sw, sh, opts) {
     const f = this.finale;
-    if (!f || !src || f.debris.length >= 160 || sw < 4 || sh < 3) return;
+    if (!f || !src || f.debris.length >= 240 || sw < 4 || sh < 3) return;
     const o = opts || {};
     const cx = this.width / 2, cy = this.height / 2;
     const mx = x + sw / 2, my = y + sh / 2;
@@ -12450,7 +12554,7 @@ Game.prototype._finaleSpawnSnap = function (x, y, src, sx, sy, sw, sh, opts) {
     const dd = Math.hypot(dx, dy) || 1;
     const drift = o.drift != null ? o.drift : (0.10 + Math.random() * 0.28);
     f.debris.push({
-        x: mx, y: my,
+        x: mx, y: my, px: mx, py: my, delay: o.delay || 0,
         vx: (dx / dd) * drift + (Math.random() - 0.5) * 0.25,
         vy: (dy / dd) * drift - (o.up || 0) + (Math.random() - 0.5) * 0.25,
         rot: (Math.random() - 0.5) * 0.16,
@@ -12462,27 +12566,136 @@ Game.prototype._finaleSpawnSnap = function (x, y, src, sx, sy, sw, sh, opts) {
     });
 };
 
-// [v12] uma mordida na plataforma vira PEDANÇOS DE PLATAFORMA DE VERDADE
-// (pixels: tijolos, runas, cristais, brilho do palco) ou tijolos soltos
-Game.prototype._finaleBitePlatformPiece = function (x, y, w, h, cx, cy) {
+// [v13] APAGAR COM DENTES: um recorte de "destination-out" com bordas
+// irregulares (nada de retângulo clínico) — a cicatriz fica quebrada,
+// como alvenaria arrancada a tranco. O polígono é construído com jitter
+// nas 4 bordas: topo e fundo em dentes, laterais tortas.
+Game.prototype._finaleJagErase = function (g, x, y, w, h, teeth) {
+    g.save();
+    g.globalCompositeOperation = 'destination-out';
+    g.fillStyle = '#000';
+    g.beginPath();
+    const t = Math.max(2, Math.round(teeth || Math.max(2, w / 12)));
+    const jx = Math.min(4, w * 0.18);
+    const jy = Math.min(3.5, Math.max(1.5, h * 0.28));
+    g.moveTo(x + Math.random() * jx, y + Math.random() * jy);
+    for (let i = 1; i <= t; i++) {
+        g.lineTo(x + (w * i) / t + (Math.random() - 0.5) * jx, y + Math.random() * jy * 2 - jy);
+    }
+    g.lineTo(x + w + (Math.random() - 0.5) * jx, y + h * (0.35 + Math.random() * 0.4));
+    g.lineTo(x + w + (Math.random() - 0.5) * jx, y + h - Math.random() * jy);
+    for (let i = t; i >= 0; i--) {
+        g.lineTo(x + (w * i) / t + (Math.random() - 0.5) * jx, y + h - Math.random() * jy * 1.6);
+    }
+    g.lineTo(x + (Math.random() - 0.5) * jx, y + h * (0.4 + Math.random() * 0.4));
+    g.closePath();
+    g.fill();
+    g.restore();
+};
+
+// [v13] CACO DE VIDRO: estilhaço fino e brilhante (a janela arcanamente
+// iluminada estourando) — leve, voa fácil, e pisca um glint de luz
+Game.prototype._finaleSpawnGlass = function (x, y, cx, cy, violet) {
     const f = this.finale;
-    if (!f) return;
-    const roll = Math.random();
-    if (roll < 0.55 && f.terrainPristine && w >= 16 && h >= 12) {
-        // pedaço com os PIXELS do cenário (alvenaria de verdade)
-        const px0 = x + Math.random() * Math.max(0, w * 0.15);
-        const pw = Math.max(8, w - Math.abs(px0 - x));
-        this._finaleSpawnSnap(x, y, f.terrainPristine,
-            Math.round(px0), Math.round(y), Math.round(pw), Math.round(h),
-            { up: 0.12 + Math.random() * 0.4 });
-    } else {
-        const brickC = ['#4a4258', '#332b44', '#262133', '#3a3348'];
-        const n = 1 + Math.floor(w / 17);
-        for (let i = 0; i < n && f.debris.length < 160; i++) {
-            this._finaleSpawnDebris(x + Math.random() * w, y + Math.random() * h,
-                cx, cy, brickC, 9 + Math.random() * 12, 0, false);
+    if (!f || f.debris.length >= 240) return;
+    const dx = cx - x, dy = cy - y;
+    const dd = Math.hypot(dx, dy) || 1;
+    f.debris.push({
+        x: x, y: y, px: x, py: y, delay: 0,
+        vx: (dx / dd) * (0.3 + Math.random() * 0.8) + (Math.random() - 0.5) * 1.7,
+        vy: (dy / dd) * (0.3 + Math.random() * 0.8) - 0.45 + (Math.random() - 0.5) * 1.3,
+        rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.55,
+        kind: 'glass', w: 2.6 + Math.random() * 3.6, h: 1.1 + Math.random() * 1.9,
+        color: violet ? '#d7b6ff' : (Math.random() < 0.5 ? '#cfe2ff' : '#e8dcff'),
+        life: 1300 + Math.random() * 800, glint: Math.random() * 6.28
+    });
+};
+
+// [v13] SPRITES DE FUMAÇA (pré-renderizados: desenhar poeira é 1 drawImage)
+Game.prototype._finalePuffSprite = function (tone) {
+    if (!this._puffSpr) {
+        const mk = (c0, c1, c2) => {
+            const s = document.createElement('canvas');
+            s.width = s.height = 64;
+            const sg = s.getContext('2d');
+            const gr = sg.createRadialGradient(30, 30, 2, 32, 32, 30);
+            gr.addColorStop(0, c0);
+            gr.addColorStop(0.55, c1);
+            gr.addColorStop(1, c2);
+            sg.fillStyle = gr;
+            sg.beginPath(); sg.arc(32, 32, 30, 0, Math.PI * 2); sg.fill();
+            return s;
+        };
+        this._puffSpr = {
+            dust: mk('rgba(172,162,200,0.50)', 'rgba(122,113,150,0.26)', 'rgba(90,84,116,0)'),
+            void: mk('rgba(186,140,255,0.42)', 'rgba(128,86,226,0.20)', 'rgba(80,50,160,0)')
+        };
+    }
+    return this._puffSpr[tone === 'void' ? 'void' : 'dust'];
+};
+
+// [v13] FUMAÇA DE DEMOLIÇÃO: uma nuvenzinha macia que cresce, deriva e morre
+Game.prototype._finalePuff = function (x, y, sc, aK, tone) {
+    const f = this.finale;
+    if (!f || f.puffs.length >= 90) return;
+    const life = 700 + Math.random() * 600;
+    f.puffs.push({
+        x: x, y: y,
+        vx: (Math.random() - 0.5) * 0.5, vy: -0.12 - Math.random() * 0.3,
+        r: 7 * sc, gr: (0.014 + Math.random() * 0.012) * sc,
+        rMax: (20 + Math.random() * 18) * sc,
+        life: life, maxLife: life, a0: aK == null ? 1 : aK, tone: tone || 'dust'
+    });
+};
+
+// [v13] A MORDIDA DE CÉLULA (plataforma): apaga um bloco de alvenaria com
+// dentes, e o que sai é o PEDANÇO de cenário de verdade (pixels: tijolos,
+// runas, cristais, brilho do palco) + tijolinhos + poeira. A célula pode
+// "pendurar" (delay) antes de voar — o pedaço range, range, e SOLTA
+Game.prototype._finaleCellBite = function (c, cx, cy) {
+    const f = this.finale;
+    const g = this.terrainCanvas.getContext('2d');
+    this._finaleJagErase(g, c.x, c.y, c.w, c.h, Math.max(3, Math.round(c.w / 13)));
+    // o pedaço que voa (pixels reais do cenário)
+    if (f.terrainPristine && c.w >= 12 && c.h >= 10) {
+        const hang = Math.random() < 0.28 ? 60 + Math.random() * 200 : 0;
+        this._finaleSpawnSnap(c.x, c.y, f.terrainPristine,
+            Math.round(c.x), Math.round(c.y), Math.round(c.w), Math.round(c.h),
+            { up: 0.1 + Math.random() * 0.4, spin: 0.045, drift: 0.14 + Math.random() * 0.2, delay: hang });
+        if (c.w > 52 && Math.random() < 0.6) {
+            // célula grande: um calhau a mais racha dela
+            this._finaleSpawnSnap(c.x + c.w * 0.5, c.y, f.terrainPristine,
+                Math.round(c.x + c.w * 0.45), Math.round(c.y), Math.round(c.w * 0.5), Math.round(c.h),
+                { up: 0.2 + Math.random() * 0.4, spin: 0.05, drift: 0.2, delay: 90 + Math.random() * 160 });
         }
     }
+    // tijolinhos soltos (POUCOS: o SLAB de cenário é a estrela da mordida)
+    const brickC = ['#4a4258', '#332b44', '#262133', '#3a3348'];
+    const n = 1 + Math.floor(c.w / 30);
+    for (let i = 0; i < n && f.debris.length < 240; i++) {
+        this._finaleSpawnDebris(c.x + Math.random() * c.w, c.y + Math.random() * c.h,
+            cx, cy, brickC, 8 + Math.random() * 12, 0, false);
+    }
+    // fagulha rúnica (o brilho do palco estourando)
+    if (Math.random() < 0.22) this._finaleSpawnGlass(c.x + Math.random() * c.w, c.y + c.h * 0.5, cx, cy, true);
+    // poeira do vazio vazando pela ferida (o piso abre pra luz de baixo)
+    this._finalePuff(c.x + c.w / 2, c.y + c.h / 2, 0.7 + Math.random() * 0.7, 0.85, c.floor ? 'void' : 'dust');
+    // a ferida recente (brilha e esfria — desenhada no drawFinale)
+    if (f.recentBites.length < 24) f.recentBites.push({ x: c.x + c.w / 2, y: c.y, h: c.h, t0: Date.now() });
+    if (c.side === 'L') f.eatL = Math.max(f.eatL, c.x + c.w);
+    else if (c.side === 'R') f.eatR = Math.min(f.eatR, c.x);
+};
+
+// [v13] processa a fila de células: poucas por tick = desmoronamento
+// PROGRESSIVO de verdade (a platibanda cede aos poucos, na cara do mago)
+Game.prototype._finaleProcessCells = function (cx, cy, now) {
+    const f = this.finale;
+    if (!f || !f.pending.length) return;
+    let n = 3 + (Perf.level === 0 ? 1 : 0);
+    while (f.pending.length && n-- > 0) {
+        this._finaleCellBite(f.pending.shift(), cx, cy);
+    }
+    if (now - f.lastShatterAt > 1500) { f.lastShatterAt = now; audioManager.playSfx('shatter'); }
 };
 
 // [v12] RACHADURAS da plataforma: polilinhas dentadas pré-geradas nas juntas
@@ -12577,18 +12790,12 @@ Game.prototype._finaleEatPlatform = function (dt, k, now) {
     const f = this.finale;
     const g = this.terrainCanvas.getContext('2d');
     const cx = this.width / 2, cy = this.height / 2;
-    const bite = (x, y, w, h) => {
-        g.save();
-        g.globalCompositeOperation = 'destination-out';
-        g.fillStyle = '#000'; // OPACO: apagar de verdade, não pela metade
-        g.fillRect(x, y, w, h);
-        // DENTES na beira da mordida: o que sobra fica irregular, quebrado
-        const nT = 1 + Math.floor(w / 14);
-        for (let t = 0; t < nT; t++) {
-            g.fillRect(x + Math.random() * w, y - 1 - Math.random() * 3, 3 + Math.random() * 7, 2 + Math.random() * 4);
-        }
-        g.restore();
-    };
+
+    // ---- 0) [v13] as células na fila desmoronam POUCO A POUCO (sempre) ----
+    // A frente de devoração AVANÇA rápido, mas a FILEIRA de células sai
+    // atrasada, umas poucas por tick: o que se VÊ é o muro rachando e
+    // cedindo progressivamente, não a platibanda evaporando
+    this._finaleProcessCells(cx, cy, now);
 
     // ---- 1) RACHADURAS crescendo (0 -> 30% da fase) ----
     if (k < 0.30) {
@@ -12653,7 +12860,9 @@ Game.prototype._finaleEatPlatform = function (dt, k, now) {
         return;
     }
 
-    // ---- 2) TORRES + DEGRAUS soltando em CÉLULAS DE ALVENARIA (30% -> 62%) ----
+    // ---- 2) TORRES + DEGRAUS (30% -> 62%): a frente avança e as CÉLULAS
+    //         entram na fila (o desmoronamento sai aos poucos, célula a
+    //         célula, de cima pra baixo em cada tira) ----
     // ---- 3) PISO comido das pontas até o pedacinho (62% -> 100%) ----
     const towersK = Math.max(0, Math.min(1, (k - 0.30) / 0.32));
     const floorK = Math.max(0, Math.min(1, (k - 0.62) / 0.38));
@@ -12662,27 +12871,23 @@ Game.prototype._finaleEatPlatform = function (dt, k, now) {
         const targetL = 200 * towersK;
         const targetR = 1472 - 200 * towersK;
         let guard = 0;
-        while (f.leftFront < targetL && guard++ < 10) {
-            const w = 16 + Math.random() * 20;
-            // cada tira solta em FIADAS de alvenaria (~26px), borda dentada:
-            // tijolo por tijolo, fileira por fileira
+        while (f.leftFront < targetL && guard++ < 10 && f.pending.length < 140) {
+            const w = 20 + Math.random() * 26;
             let ry = 474 + Math.random() * 5;
             while (ry < 700) {
-                const rh = Math.min(22 + Math.random() * 12, 702 - ry);
-                bite(f.leftFront + (ry % 2 ? Math.random() * 4 : 0), ry, w + 1, rh);
-                this._finaleBitePlatformPiece(f.leftFront, ry, w, rh, cx, cy);
+                const rh = Math.min(26 + Math.random() * 16, 702 - ry);
+                f.pending.push({ x: f.leftFront + (ry % 2 ? Math.random() * 4 : 0), y: ry, w: w, h: rh, side: 'L', floor: false });
                 ry += rh + 1;
             }
             f.leftFront += w;
         }
         guard = 0;
-        while (f.rightFront > targetR && guard++ < 10) {
-            const w = 16 + Math.random() * 20;
+        while (f.rightFront > targetR && guard++ < 10 && f.pending.length < 140) {
+            const w = 20 + Math.random() * 26;
             let ry = 474 + Math.random() * 5;
             while (ry < 700) {
-                const rh = Math.min(22 + Math.random() * 12, 702 - ry);
-                bite(f.rightFront - w - (ry % 2 ? Math.random() * 4 : 0), ry, w + 1, rh);
-                this._finaleBitePlatformPiece(f.rightFront - w, ry, w, rh, cx, cy);
+                const rh = Math.min(26 + Math.random() * 16, 702 - ry);
+                f.pending.push({ x: f.rightFront - w - (ry % 2 ? Math.random() * 4 : 0), y: ry, w: w, h: rh, side: 'R', floor: false });
                 ry += rh + 1;
             }
             f.rightFront -= w;
@@ -12702,34 +12907,30 @@ Game.prototype._finaleEatPlatform = function (dt, k, now) {
         const targetL = 200 + 490 * floorK;   // 200 -> 690
         const targetR = 1272 - 490 * floorK;  // 1272 -> 782
         let guard = 0;
-        while (f.leftFront < targetL && guard++ < 8) {
-            const w = 18 + Math.random() * 22;
-            // [v12] o chão RACHA primeiro: linha de falha À FRENTE do colapso
+        while (f.leftFront < targetL && guard++ < 8 && f.pending.length < 140) {
+            const w = 22 + Math.random() * 28;
+            // o chão RACHA primeiro: linha de falha À FRENTE do colapso
             this._finaleFaultCrack(g, f.leftFront + w + Math.random() * 8, 646, 690);
-            // 1) a LAJOTA do topo (a face do palco) solta PRIMEIRO
-            bite(f.leftFront, 644, w + 1, 14);
-            this._finaleBitePlatformPiece(f.leftFront, 644, w, 13, cx, cy);
-            // 2) o corpo do piso desce em 2 fiadas
+            // 1) a LAJOTA do topo (a face do palco) solta PRIMEIRO (célula própria)
+            f.pending.push({ x: f.leftFront, y: 644, w: w, h: 14, side: 'L', floor: true });
+            // 2) o corpo do piso desce em fiadas (células na fila)
             let ry = 658;
             while (ry < 702) {
-                const rh = Math.min(19 + Math.random() * 9, 704 - ry);
-                bite(f.leftFront + Math.random() * 3, ry, w + 1, rh);
-                this._finaleBitePlatformPiece(f.leftFront, ry, w, rh, cx, cy);
+                const rh = Math.min(22 + Math.random() * 12, 704 - ry);
+                f.pending.push({ x: f.leftFront, y: ry, w: w, h: rh, side: 'L', floor: true });
                 ry += rh + 1;
             }
             f.leftFront += w;
         }
         guard = 0;
-        while (f.rightFront > targetR && guard++ < 8) {
-            const w = 18 + Math.random() * 22;
+        while (f.rightFront > targetR && guard++ < 8 && f.pending.length < 140) {
+            const w = 22 + Math.random() * 28;
             this._finaleFaultCrack(g, f.rightFront - w - Math.random() * 8, 646, 690);
-            bite(f.rightFront - w, 644, w + 1, 14);
-            this._finaleBitePlatformPiece(f.rightFront - w, 644, w, 13, cx, cy);
+            f.pending.push({ x: f.rightFront - w, y: 644, w: w, h: 14, side: 'R', floor: true });
             let ry = 658;
             while (ry < 702) {
-                const rh = Math.min(19 + Math.random() * 9, 704 - ry);
-                bite(f.rightFront - w - Math.random() * 3, ry, w + 1, rh);
-                this._finaleBitePlatformPiece(f.rightFront - w, ry, w, rh, cx, cy);
+                const rh = Math.min(22 + Math.random() * 12, 704 - ry);
+                f.pending.push({ x: f.rightFront - w, y: ry, w: w, h: rh, side: 'R', floor: true });
                 ry += rh + 1;
             }
             f.rightFront -= w;
@@ -12745,7 +12946,6 @@ Game.prototype._finaleEatPlatform = function (dt, k, now) {
             this.particles.push(pr);
         }
     }
-    if (now - f.lastShatterAt > 2100) { f.lastShatterAt = now; audioManager.playSfx('shatter'); }
     if (now - f.lastBoomAt > 3200) { f.lastBoomAt = now; audioManager.playSfx('bg_boom'); }
 };
 
@@ -12757,49 +12957,43 @@ Game.prototype._finaleEatLastPiece = function (k) {
     if (f.lastPieceDone) return;
     const g = this.terrainCanvas.getContext('2d');
     const cx = this.width / 2, cy = this.height / 2;
+    const now = Date.now();
+    // [v13] o pedacinho final morre na FILA DE CÉLULAS também: mordida a
+    // mordida, nas barbas do mago, enquanto ele espirala pro abismo
+    this._finaleProcessCells(cx, cy, now);
     const targetL = 690 + 92 * k;
     const targetR = 782 - 92 * k;
-    const bite = (x, y, w, h) => {
-        g.save();
-        g.globalCompositeOperation = 'destination-out';
-        g.fillStyle = '#000';
-        g.fillRect(x, y, w, h);
-        for (let t = 0; t < 2; t++) {
-            g.fillRect(x + Math.random() * w, y - 1 - Math.random() * 3, 3 + Math.random() * 7, 2 + Math.random() * 4);
-        }
-        g.restore();
-    };
     let guard = 0;
-    while (f.leftFront < targetL && guard++ < 10) {
-        const w = 12 + Math.random() * 12;
+    while (f.leftFront < targetL && guard++ < 8 && f.pending.length < 120) {
+        const w = 14 + Math.random() * 16;
         this._finaleFaultCrack(g, f.leftFront + w + Math.random() * 6, 646, 690);
-        bite(f.leftFront, 644, w + 1, 14);
-        this._finaleBitePlatformPiece(f.leftFront, 644, w, 13, cx, cy);
+        f.pending.push({ x: f.leftFront, y: 644, w: w, h: 14, side: 'L', floor: true });
         let ry = 658;
         while (ry < 702) {
             const rh = Math.min(18 + Math.random() * 9, 704 - ry);
-            bite(f.leftFront + Math.random() * 3, ry, w + 1, rh);
-            this._finaleBitePlatformPiece(f.leftFront, ry, w, rh, cx, cy);
+            f.pending.push({ x: f.leftFront, y: ry, w: w, h: rh, side: 'L', floor: true });
             ry += rh + 1;
         }
         f.leftFront += w;
     }
     guard = 0;
-    while (f.rightFront > targetR && guard++ < 10) {
-        const w = 12 + Math.random() * 12;
+    while (f.rightFront > targetR && guard++ < 8 && f.pending.length < 120) {
+        const w = 14 + Math.random() * 16;
         this._finaleFaultCrack(g, f.rightFront - w - Math.random() * 6, 646, 690);
-        bite(f.rightFront - w, 644, w + 1, 14);
-        this._finaleBitePlatformPiece(f.rightFront - w, 644, w, 13, cx, cy);
+        f.pending.push({ x: f.rightFront - w, y: 644, w: w, h: 14, side: 'R', floor: true });
         let ry = 658;
         while (ry < 702) {
             const rh = Math.min(18 + Math.random() * 9, 704 - ry);
-            bite(f.rightFront - w - Math.random() * 3, ry, w + 1, rh);
-            this._finaleBitePlatformPiece(f.rightFront - w, ry, w, rh, cx, cy);
+            f.pending.push({ x: f.rightFront - w, y: ry, w: w, h: rh, side: 'R', floor: true });
             ry += rh + 1;
         }
         f.rightFront -= w;
     }
-    if (k >= 1) f.lastPieceDone = true;
+    if (k >= 1) {
+        // o último chão: esvazia a fila NA HORA (o mundo acabou AGORA)
+        while (f.pending.length) this._finaleCellBite(f.pending.shift(), cx, cy);
+        f.lastPieceDone = true;
+    }
 };
 
 // estrelas distantes sendo SUGADAS pro buraco negro (riscos rápidos)
@@ -12831,29 +13025,77 @@ Game.prototype.drawFinale = function (g) {
     const ph = this._finalePhase(e);
     const p = this.player;
 
+    // ===== [v13] fumaça de demolição (embaixo dos destroços, por cima do mundo) =====
+    if (f.puffs.length) {
+        const nowPf = Date.now();
+        for (const pf of f.puffs) {
+            const kL = pf.life / pf.maxLife;
+            const al = Math.sin(Math.min(1, Math.max(0, kL)) * Math.PI) * 0.34 * pf.a0; // nasce, vive, morre
+            if (al <= 0.01) continue;
+            g.save();
+            g.globalAlpha = al;
+            g.drawImage(this._finalePuffSprite(pf.tone), pf.x - pf.r, pf.y - pf.r, pf.r * 2, pf.r * 2);
+            g.restore();
+        }
+    }
+
     // ===== destroços de mundo voando em espiral pro buraco =====
     if (ph >= 1 && ph <= 4) {
         const ccx = this.width / 2, ccy = this.height / 2;
+        // [v13] o R real do buraco AGORA: quanto maior o horizonte na tela,
+        // mais da tela está dentro da maré — os pedaços esticam de verdade
+        const bhR = 102 * (2 + (f.bhGrow || 0));
+        const nowD = Date.now();
         for (const d of f.debris) {
             const dx = ccx - d.x, dy = ccy - d.y;
             const dd = Math.hypot(dx, dy) || 1;
             const k = Math.min(1, d.life / 700);
-            // ESPAGUETIFICAÇÃO perto do horizonte: estica e afina
-            const stretch = 1 + Math.max(0, 1 - dd / 320) * 2.2;
+            // ESPAGUETIFICAÇÃO perto do horizonte: estica e afina (escala com R)
+            const stretch = Math.min(2.2, 1 + Math.max(0, 1 - dd / (bhR * 0.85)) * 1.9);
             g.save();
             g.globalAlpha = k;
             if (d.kind === 'snap' && d.snap) {
-                // [v12] PEDANÇO DE MUNDO: os PIXELS de verdade (parede com
-                // janelas / telhado / lajota do palco), esticados NO EIXO do
-                // buraco (a tração gravitacional alonga na direção dele)
+                // [v13] RASTRO do pedanço: a posição anterior dele fica um
+                // instante no ar (motion blur de corpo rígido — vende velocidade)
+                const spd = Math.hypot(d.x - (d.px != null ? d.px : d.x), d.y - (d.py != null ? d.py : d.y));
+                if (spd > 2.4 && dd > bhR * 0.7) {
+                    g.save();
+                    g.globalAlpha = k * 0.16;
+                    g.translate(d.px, d.py);
+                    g.rotate(d.rot);
+                    g.drawImage(d.snap, d.sxi, d.syi, d.sw, d.sh, -d.sw / 2, -d.sh / 2, d.sw, d.sh);
+                    g.restore();
+                }
+                // PEDANÇO DE MUNDO: os PIXELS de verdade (parede com janelas /
+                // telhado / lajota do palco), esticados NO EIXO do buraco
                 const ang = Math.atan2(ccy - d.y, ccx - d.x);
                 g.translate(d.x, d.y);
                 g.rotate(ang);
                 g.scale(stretch, 1 / Math.sqrt(stretch));
                 g.rotate(-ang + d.rot);
                 g.drawImage(d.snap, d.sxi, d.syi, d.sw, d.sh, -d.sw / 2, -d.sh / 2, d.sw, d.sh);
+            } else if (d.kind === 'glass') {
+                // [v13] CACO DE VIDRO: lasca fina com glint piscando
+                g.translate(d.x, d.y);
+                g.rotate(d.rot);
+                g.scale(stretch * 0.8, 1);
+                g.fillStyle = d.color;
+                g.beginPath();
+                g.moveTo(-d.w * 0.5, 0);
+                g.lineTo(0, -d.h * 0.5);
+                g.lineTo(d.w * 0.5, 0);
+                g.lineTo(0, d.h * 0.5);
+                g.closePath();
+                g.fill();
+                if (Math.sin(nowD * 0.02 + d.glint) > 0.9) {
+                    g.globalCompositeOperation = 'lighter';
+                    g.globalAlpha = k * 0.9;
+                    g.fillStyle = '#ffffff';
+                    g.fillRect(-d.w * 0.5, -0.5, d.w, 1);
+                }
             } else {
-                // [v12] TIJOLO DE ALVENARIA: 3 faces (luz/body/sombra) + bisel
+                // TIJOLO DE ALVENARIA: 3 faces (luz/body/sombra) + bisel
+                // + fiada de argamassa no meio ([v13] lê como tijolo de longe)
                 g.translate(d.x, d.y);
                 g.rotate(d.rot);
                 g.scale(stretch, 1 / Math.sqrt(stretch));
@@ -12868,6 +13110,8 @@ Game.prototype.drawFinale = function (g) {
                 g.fillRect(-d.w / 2, -d.h / 2, d.w, bh2);
                 g.fillStyle = 'rgba(0,0,0,0.42)';
                 g.fillRect(-d.w / 2, d.h / 2 - bh2, d.w, bh2);
+                g.fillStyle = 'rgba(0,0,0,0.25)';
+                g.fillRect(-d.w / 2, -d.h * 0.07, d.w, Math.max(0.6, d.h * 0.14));
                 if (d.lit) {
                     g.fillStyle = 'rgba(190,150,255,0.75)';
                     g.fillRect(-d.w / 2 + 1, -d.h / 2 + 1, Math.max(1.5, d.w * 0.3), Math.max(1, d.h * 0.4));
@@ -12883,11 +13127,11 @@ Game.prototype.drawFinale = function (g) {
                     g.fillStyle = '#ff9a4e';
                     g.fillRect(-d.w / 2 - 1, -d.h / 2 - 1, d.w + 2, d.h + 2);
                 }
-            } else if (dd < 250) {
-                // [v12] AQUECIMENTO DE MARÉ: perto do horizonte a própria
+            } else if (dd < bhR * 0.65) {
+                // AQUECIMENTO DE MARÉ: perto do horizonte a própria
                 // tração esquenta a pedra — um brilho violeta sutil cresce
                 const dA = (f.bhDiskAlpha != null) ? f.bhDiskAlpha : 1;
-                const heat = (1 - dd / 250) * 0.30 * dA;
+                const heat = (1 - dd / (bhR * 0.65)) * 0.30 * dA;
                 if (heat > 0.02) {
                     g.globalCompositeOperation = 'lighter';
                     g.globalAlpha = k * heat;
@@ -12909,6 +13153,75 @@ Game.prototype.drawFinale = function (g) {
             g.lineTo(s.x - s.vx * 3.4, s.y - s.vy * 3.4);
             g.stroke();
             g.restore();
+        }
+    }
+
+    // ===== [v13] CLARÕES DE ALIMENTAÇÃO: matéria cruzando o horizonte =====
+    if (f.feeds.length && ph >= 1) {
+        const nowFd = Date.now();
+        g.save();
+        g.globalCompositeOperation = 'lighter';
+        for (const fd of f.feeds) {
+            const k = 1 - (nowFd - fd.t0) / 380;
+            if (k <= 0) continue;
+            g.globalAlpha = k * 0.85;
+            const rr = 3 + (1 - k) * (fd.big ? 30 : 16);
+            g.strokeStyle = fd.big ? 'rgba(220,190,255,0.9)' : 'rgba(190,160,255,0.7)';
+            g.lineWidth = 1.6 + k * 1.4;
+            g.beginPath(); g.arc(fd.x, fd.y, rr, 0, Math.PI * 2); g.stroke();
+            g.globalAlpha = k;
+            g.fillStyle = '#f2e6ff';
+            const cs = fd.big ? 3.2 : 2;
+            g.fillRect(fd.x - cs / 2, fd.y - cs / 2, cs, cs);
+        }
+        g.restore();
+    }
+
+    // ===== [v13] A FERIDA ABERTA: mordidas recentes brilham e esfriam =====
+    if (f.recentBites.length && ph >= 2 && ph <= 4) {
+        const nowWb = Date.now();
+        g.save();
+        g.globalCompositeOperation = 'lighter';
+        for (const wb of f.recentBites) {
+            const k = 1 - (nowWb - wb.t0) / 620;
+            if (k <= 0) continue;
+            g.globalAlpha = k * 0.30;
+            const wg = g.createRadialGradient(wb.x, wb.y + wb.h / 2, 1, wb.x, wb.y + wb.h / 2, 26 + wb.h);
+            wg.addColorStop(0, 'rgba(178,128,255,0.55)');
+            wg.addColorStop(1, 'rgba(120,70,230,0)');
+            g.fillStyle = wg;
+            g.fillRect(wb.x - 30, wb.y - 12, 60, wb.h + 26);
+        }
+        g.restore();
+    }
+
+    // ===== [v13] A BOCA VISÍVEL: com o disco de luz morto, a borda do
+    // horizonte ainda ARDE — é nela que o mago e o mundo entram. Brilho
+    // FORTE de propósito: essa é a cena-clímax, não pode sumir no escuro =====
+    if (ph >= 3 && ph <= 4) {
+        const dA = (f.bhDiskAlpha != null) ? f.bhDiskAlpha : 1;
+        if (dA < 0.5) {
+            const bhR2 = 102 * (2 + (f.bhGrow || 0));
+            const rim = (1 - dA) * (0.30 + Math.sin(Date.now() * 0.006) * 0.10);
+            if (rim > 0.01) {
+                g.save();
+                g.globalCompositeOperation = 'lighter';
+                // o brilho INTERNO do horizonte (a matéria ardendo ao cruzar)
+                g.globalAlpha = rim * 0.7;
+                g.lineWidth = Math.max(10, bhR2 * 0.05);
+                g.strokeStyle = 'rgba(110,60,220,0.35)';
+                g.beginPath(); g.arc(this.width / 2, this.height / 2, bhR2 * 0.965, 0, Math.PI * 2); g.stroke();
+                // a borda afiada do horizonte
+                g.globalAlpha = rim;
+                g.strokeStyle = 'rgba(200,160,255,0.85)';
+                g.lineWidth = 2.6;
+                g.beginPath(); g.arc(this.width / 2, this.height / 2, bhR2, 0, Math.PI * 2); g.stroke();
+                g.globalAlpha = rim * 0.6;
+                g.lineWidth = 9;
+                g.strokeStyle = 'rgba(140,90,240,0.55)';
+                g.beginPath(); g.arc(this.width / 2, this.height / 2, bhR2 + 5, 0, Math.PI * 2); g.stroke();
+                g.restore();
+            }
         }
     }
 
@@ -12952,7 +13265,7 @@ Game.prototype.drawFinale = function (g) {
         }
     }
 
-    // ===== o mago sendo engolido (espiral + espaguetificação RADIAL) =====
+    // ===== o mago sendo engolido (espiral LIMPA — sem distorcer o corpo) =====
     if (ph === 4 && f.swallow) {
         const s = f.swallow;
         const mx = s.cx + Math.cos(s.ang) * s.r;
@@ -12962,48 +13275,48 @@ Game.prototype.drawFinale = function (g) {
         const mh = p.height;
         const mw = imgOk ? mh * (img.naturalWidth / img.naturalHeight) : p.width;
 
-        // [v12] FANTASMAS da alma: cópias atrasadas bruxuleando no rastro da
-        // espiral — o corpo já foi, a alma ainda resiste
+        // [v13] FANTASMAS SUAVES da alma: cópias INTEIRAS (sem esticar) no
+        // rastro da espiral — o corpo já foi, a alma ainda resiste
         for (let i = 0; i < s.hist.length; i++) {
             const h2 = s.hist[i];
             g.save();
             g.globalCompositeOperation = 'lighter';
-            g.globalAlpha = ((i + 1) / s.hist.length) * 0.30;
+            g.globalAlpha = ((i + 1) / s.hist.length) * 0.18;
             g.translate(h2.x, h2.y);
             g.rotate(h2.rot);
-            g.scale(h2.sc / Math.sqrt(h2.st), h2.sc * h2.st);
+            g.scale(h2.sc, h2.sc);
             if (imgOk) g.drawImage(img, -mw / 2, -mh / 2, mw, mh);
             else { g.fillStyle = '#b48aff'; g.fillRect(-p.width / 2, -p.height / 2, p.width, p.height); }
             g.restore();
         }
 
-        // [v12] A ÚLTIMA LUZ DO CORPO: aura alongada na direção do buraco
-        const auraK = Math.min(1, (s.stretch - 1) / 2.6);
-        if (auraK > 0.03) {
+        // [v13] A ÚLTIMA LUZ DO CORPO: aura MACIA e BRILHANTE em volta dele —
+        // é o clímax: o mago tem que ESTAR VISÍVEL contra a escuridão
+        {
+            const auraK = Math.min(1, (s.stretch - 1) / 0.14);
             g.save();
             g.globalCompositeOperation = 'lighter';
-            g.globalAlpha = 0.42 * auraK;
-            const ang = Math.atan2(s.cy - my, s.cx - mx);
-            g.translate(mx, my);
-            g.rotate(ang);
-            const aug = g.createLinearGradient(-34, 0, 74, 0);
-            aug.addColorStop(0, 'rgba(160,110,255,0)');
-            aug.addColorStop(1, 'rgba(225,190,255,0.75)');
+            g.globalAlpha = 0.26 + 0.42 * auraK;
+            const aR = 52 * s.scale + 34;
+            const aug = g.createRadialGradient(mx, my, 2, mx, my, aR);
+            aug.addColorStop(0, 'rgba(226,204,255,0.65)');
+            aug.addColorStop(0.55, 'rgba(170,124,255,0.28)');
+            aug.addColorStop(1, 'rgba(120,70,230,0)');
             g.fillStyle = aug;
-            g.fillRect(-34, -8 - auraK * 6, 108, 16 + auraK * 12);
+            g.beginPath(); g.arc(mx, my, aR, 0, Math.PI * 2); g.fill();
             g.restore();
         }
 
         g.save();
         g.translate(mx, my);
-        // [v12] PÉS PRO HORIZONTE: o corpo tomba de cabeça pra fora do buraco
+        // PÉS PRO HORIZONTE: o corpo tomba de cabeça pra fora do buraco
         // (é a orientação real de um corpo em queda livre numa maré gravitacional)
         g.rotate(s.ang + Math.PI / 2);
         // o DEBATE: ele se debate no começo e desiste perto do fim
         g.rotate(s.flail || 0);
-        // [v12] ESPAGUETIFICAÇÃO RADIAL: estica no eixo do buraco (chega a
-        // ~5x), afina no outro — o corpo virando um fio de luz
-        g.scale(s.scale / Math.sqrt(s.stretch), s.scale * s.stretch);
+        // [v13] SUCÇÃO LIMPA: o corpo entra INTEIRO — no máx. um esticão
+        // sutil de 14% no eixo da tração (nada de virar chiclete)
+        g.scale(s.scale * (1 - (s.stretch - 1) * 0.35), s.scale * s.stretch);
         if (imgOk) {
             g.drawImage(img, -mw / 2, -mh / 2, mw, mh);
         } else {
