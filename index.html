@@ -1232,6 +1232,19 @@ function getEnemyBaseDamage(wave) {
     return 20 + ((wave - 25) * 2.5);
 }
 
+// [v14] CURVA DE POPULAÇÃO da wave: cresce rápido no começo, DESACELERA e
+// Satura em 84 pra sempre. Antes era 2+wave SEM teto: a wave 9999 tinha
+// 10.001 inimigos e o jogo virava uma fila infinita (era matematicamente
+// impossível chegar na 10.000 — a simulação dava ~7.600 HORAS). Agora a
+// dificuldade tardia vem do PERIGO (cadência, velocidade, kamikazes,
+// elites, meteoros), não do tempo de relógio.
+function waveEnemyCount(w) {
+    if (w <= 25) return 2 + w;                          // 27 no pico inicial
+    if (w <= 60) return 27 + Math.floor((w - 25) / 2);  // 44
+    if (w <= 100) return 44 + Math.floor((w - 60) / 2); // 64
+    return Math.min(84, 64 + Math.floor((w - 100) / 10)); // satura em 84 (wave 300+)
+}
+
 // Verifica se a wave tem chuva de meteoros
 function isMeteorWave(wave) {
     if ([19, 29, 49, 79, 99].includes(wave)) return true;
@@ -1277,6 +1290,11 @@ const TEXTS = {
         goTime: "Tempo", goKills: "Abates", goDmg: "Dano causado",
         stMaxHp: "Vida Máx:", stDmg: "Dano Base:", stAtkSpd: "Vel. Ataque:", stCritC: "Chance Crítico:", stCritD: "Dano Crítico:", stLifesteal: "Roubo de Vida:", stHpNote: "(Máx 2% HP)",
         meteorSurv: "SOBREVIVEU AOS METEOROS!", heritageArc: "HERANÇA ARCANA",
+        // [v14] marcos, streak de dano e elites
+        milestoneWord: "MARCO", milestoneHeal: "BÊNÇÃO DA GANÂNCIA — VIDA RESTAURADA",
+        dmgWord: "DANO",
+        streakDmg5: "×2 ALMAS ×1.3 DANO", streakDmg10: "×3 ALMAS ×1.5 DANO", streakDmg20: "×3 ALMAS ×1.75 DANO",
+        eliteFuria: "FÚRIA", eliteVeloz: "VELOZ", eliteTanque: "TANQUE",
         fullscreenT: "Tela cheia", soundT: "Som",
         aimToggleTxt: "Joystick de Mira (mira manual)",
         // [v10] cheats com i18n
@@ -1326,6 +1344,11 @@ const TEXTS = {
         goTime: "Time", goKills: "Kills", goDmg: "Damage dealt",
         stMaxHp: "Max HP:", stDmg: "Base Damage:", stAtkSpd: "Atk Speed:", stCritC: "Crit Chance:", stCritD: "Crit Damage:", stLifesteal: "Lifesteal:", stHpNote: "(Max 2% HP)",
         meteorSurv: "SURVIVED THE METEORS!", heritageArc: "ARCANE HERITAGE",
+        // [v14] milestones, damage streak and elites
+        milestoneWord: "MILESTONE", milestoneHeal: "GREED'S BLESSING — HEALTH RESTORED",
+        dmgWord: "DMG",
+        streakDmg5: "×2 SOULS ×1.3 DMG", streakDmg10: "×3 SOULS ×1.5 DMG", streakDmg20: "×3 SOULS ×1.75 DMG",
+        eliteFuria: "FURY", eliteVeloz: "SWIFT", eliteTanque: "TANK",
         fullscreenT: "Fullscreen", soundT: "Sound",
         aimToggleTxt: "Aim joystick (manual aim)",
         // [v10] cheats i18n
@@ -2176,7 +2199,16 @@ const maxTierCheck = (p, id, max) => (p.perksCounts[id] || 0) >= max;
 const UPGRADES_DB = {
     common: [
         { id: 'pursuing_orb', name_en: 'Pursuing Orb', name_pt: 'Orbe Perseguidora', max: 3, desc_en: 'Orb shoots (30/50/70% of your dmg).', desc_pt: 'Orbe que atira (30%/50%/70% do seu dano).', apply: (p) => p.perks.pursuingOrb++ },
-        { id: 'catalyst', name_en: 'Catalyst', name_pt: 'Catalisador', max: 99, desc_en: 'Damage +20% of base (additive).', desc_pt: 'Dano +20% do base (aditivo).', apply: (p) => p.stats.damage = 10 * (1 + 0.2 * ((p.perksCounts['catalyst'] || 0) + 1) + 0.4 * (p.perksCounts['catalyst_plus'] || 0)) },
+        { id: 'catalyst', name_en: 'Catalyst', name_pt: 'Catalisador', max: 99, desc_en: 'Damage +20% base; greed compounds +2.8%/scroll devoured.', desc_pt: 'Dano +20% do base; a ganância ACUMULA +2,8% por pergaminho devorado.', apply: (p) => {
+            // [v14] CATALISADOR COMPOSTO: cada pergaminho devorado vale mais que
+            // o anterior (0.014*t*(t-1) ≈ +2,8% por pergaminho no ritmo médio).
+            // Antes era só +20% linear: o HP dos inimigos cresce QUADRÁTICO e o
+            // dano do mago ficava pra trás — a run virava parede de tempo.
+            const c = (p.perksCounts['catalyst'] || 0) + 1;
+            const cp = (p.perksCounts['catalyst_plus'] || 0);
+            const t = c + cp;
+            p.stats.damage = 10 * (1 + 0.2 * c + 0.4 * cp + 0.014 * t * (t - 1));
+        } },
         { id: 'eyesight', name_en: 'Eyesight', name_pt: 'Visão Aguçada', max: 5, desc_en: 'Crit Chance +5% (max 100%).', desc_pt: 'Chance Crítica +5% (máx 100%).', apply: (p) => p.stats.critChance = Math.min(1.0, p.stats.critChance + 0.05) },
         { id: 'growth', name_en: 'Growth', name_pt: 'Crescimento', max: 99, desc_en: 'Max HP +10.', desc_pt: 'Vida Máxima +10.', apply: (p) => { p.maxHp += 10; p.hp += 10; p.updateHpUI(); } },
         { id: 'impulse', name_en: 'Impulse', name_pt: 'Impulso', max: 99, desc_en: 'Jump Height +30% (max 20).', desc_pt: 'Altura do Pulo +30% (máx 20).', apply: (p) => p.stats.jumpPower = Math.min(20, p.stats.jumpPower * 1.3) },
@@ -2189,14 +2221,19 @@ const UPGRADES_DB = {
         { id: 'leech', name_en: 'Leech', name_pt: 'Sanguessuga', max: 1, desc_en: 'Heal 5% of kill dmg (Max 2% HP).', desc_pt: 'Cura 5% do dano ao matar (Max 2% HP).', apply: (p) => p.stats.lifesteal = 0.05 }
     ],
     uncommon: [
-        { id: 'catalyst_plus', name_en: 'Catalyst+', name_pt: 'Catalisador+', max: 99, desc_en: 'Damage +40% of base (additive).', desc_pt: 'Dano +40% do base (aditivo).', apply: (p) => p.stats.damage = 10 * (1 + 0.2 * (p.perksCounts['catalyst'] || 0) + 0.4 * ((p.perksCounts['catalyst_plus'] || 0) + 1)) },
+        { id: 'catalyst_plus', name_en: 'Catalyst+', name_pt: 'Catalisador+', max: 99, desc_en: 'Damage +40% base; greed compounds +2.8%/scroll devoured.', desc_pt: 'Dano +40% do base; a ganância ACUMULA +2,8% por pergaminho devorado.', apply: (p) => {
+            const c = (p.perksCounts['catalyst'] || 0);
+            const cp = (p.perksCounts['catalyst_plus'] || 0) + 1;
+            const t = c + cp;
+            p.stats.damage = 10 * (1 + 0.2 * c + 0.4 * cp + 0.014 * t * (t - 1));
+        } },
         { id: 'charge', name_en: 'Charge', name_pt: 'Carga', max: 99, desc_en: 'Projectile Size +20% (capped).', desc_pt: 'Tamanho do Projétil +20% (com limite).', apply: (p) => p.stats.projSize = Math.min(14, p.stats.projSize * 1.2) },
         { id: 'fragmentation', name_en: 'Fragmentation', name_pt: 'Fragmentação', max: 1, desc_en: 'Enemies explode into fragments.', desc_pt: 'Inimigos explodem em fragmentos.', apply: (p) => p.perks.fragmentation = true },
         { id: 'gush', name_en: 'Gush', name_pt: 'Jato', max: 5, desc_en: '+1 Double Jump (max 5).', desc_pt: '+1 Pulo Duplo (máx 5).', apply: (p) => p.stats.jumpsMax += 1 },
         { id: 'luck', name_en: 'Luck', name_pt: 'Sorte', max: 99, desc_en: 'Better RNG (max 10x).', desc_pt: 'Melhor RNG (máx 10x).', apply: (p) => game.luck = Math.min(10, game.luck + 0.2) },
         { id: 'precision', name_en: 'Precision', name_pt: 'Precisão', max: 10, desc_en: 'Crit Dmg +20% (max +200%).', desc_pt: 'Dano Crítico +20% (máx +200%).', apply: (p) => p.stats.critDmg = Math.min(4.0, p.stats.critDmg + 0.2) },
         { id: 'resonance_plus', name_en: 'Resonance+', name_pt: 'Ressonância+', max: 3, desc_en: 'Atk Speed +24% (max 2x).', desc_pt: 'Vel. de Ataque +24% (máx 2x).', apply: (p) => p.stats.fireRate = Math.max(575, p.stats.fireRate * 0.76) },
-        { id: 'shrink', name_en: 'Shrink', name_pt: 'Encolher', max: 99, desc_en: 'Player Size -10% (min limit).', desc_pt: 'Tamanho do Mago -10% (com mínimo).', apply: (p) => { p.width = Math.max(20, p.width * 0.9); p.height = Math.max(26, p.height * 0.9); } },
+        { id: 'shrink', name_en: 'Shrink', name_pt: 'Encolher', max: 5, desc_en: 'Player Size -10% (max 5x).', desc_pt: 'Tamanho do Mago -10% (máx 5x).', apply: (p) => { p.width = Math.max(20, p.width * 0.9); p.height = Math.max(26, p.height * 0.9); } },
         { id: 'swift_plus', name_en: 'Swift+', name_pt: 'Veloz+', max: 99, desc_en: 'Move Speed +40% (max 2x).', desc_pt: 'Velocidade +40% (máx 2x).', apply: (p) => p.stats.speed = Math.min(3.0, p.stats.speed * 1.4) },
         { id: 'thunderbolt', name_en: 'Lightning Bolt', name_pt: 'Raio', max: 3, desc_en: 'Lightning: 6/9/12% max HP (boss: 3/4/7%).', desc_pt: 'Raios: 6/9/12% da vida máx (boss: 3/4/7%).', apply: (p) => p.perks.thunderbolt++ },
         { id: 'homing', name_en: 'Homing Missiles', name_pt: 'Mísseis Teleguiados', max: 3, desc_en: 'Shots chase your aim (Lv 3: infallible).', desc_pt: 'Tiros perseguem sua mira (Nv 3: infalível).', apply: (p) => p.perks.homing++ },
@@ -2732,7 +2769,8 @@ class Game {
 
         // [v10] PERFORMANCE: teto de inimigos VIVOS na tela (40). Waves altas
         // fazem fila: a cada abate, entra o próximo até acabar a wave.
-        this.maxEnemiesAlive = 40;
+        this.maxEnemiesAlive = 40; // [v14] legado: o teto real agora é enemyAliveCap() (sobe com a wave)
+        this.guaranteeEpicNext = false; // [v14] marco a cada 25 waves: próxima 1ª carta é épica
         // [v10] teto GLOBAL de projéteis (a wave 2000 é o limite de dificuldade;
         // nada de mil projéteis simultâneos numa wave 9999)
         this.maxBullets = 340;
@@ -3449,6 +3487,25 @@ class Game {
         // Checar conquistas de wave
         this.checkWaveAchievements();
 
+        // [v14] MARCOS DA GANÂNCIA (a cada 25 waves): o jogo PAGA em almas +
+        // garante uma carta ÉPICA na próxima escolha — batida de dopamina e
+        // respiro tático no meio da escalada. A cada 100: a BÊNÇÃO (vida cheia)
+        if (this.wave > 1 && this.wave % 25 === 0) {
+            const bonus = 10 + Math.floor(this.wave / 5);
+            this.souls += bonus;
+            if (this.updateSoulsUI) this.updateSoulsUI();
+            this.guaranteeEpicNext = true;
+            this.addFloatingText(this.width / 2, 210, TEXTS[currentLang].milestoneWord + ' ' + this.wave + '! +' + bonus + ' ' + TEXTS[currentLang].soulsWord, '#ffd700', 17);
+            this.spawnShockwave(this.width / 2, 240, 260, '#ffd700', 700, 3);
+            audioManager.playSfx('perk_pick');
+            this.addShake(5);
+            if (this.wave % 100 === 0 && this.player) {
+                this.player.hp = this.player.maxHp;
+                this.player.updateHpUI();
+                this.addFloatingText(this.width / 2, 250, TEXTS[currentLang].milestoneHeal, '#7dff7d', 15);
+            }
+        }
+
         if (isBoss) {
             this.state = 'BOSS_CONFIRM';
             this.trackPauseStart(); // [FIX v4]
@@ -3457,7 +3514,7 @@ class Game {
             document.getElementById('boss-wave-title').style.color = (this.wave % CONFIG.bossWaveInterval === 0) ? 'red' : '#bf00ff';
             document.getElementById('boss-confirm-menu').classList.remove('hidden');
         } else {
-            let baseSpawns = 2 + (this.wave * 1);
+            let baseSpawns = waveEnemyCount(this.wave);
             if (this.player && this.player.perks.thunderbolt === 3) {
                 baseSpawns = Math.floor(baseSpawns * 1.3);
             }
@@ -3821,8 +3878,12 @@ class Game {
 
         let kami = false;
         if (this.wave >= 6 && !this.isGoldenWave) {
+            // [v14] PRESSÃO DE KAMIKAZE sobe com a wave: mais chance (10%->22%)
+            // e mais simultâneos (2->4) — a partir da 150 vira um terror de verdade
             const vivos = this.enemies.filter(e => e.kamikaze && !e.dead).length;
-            if (vivos < 2 && Math.random() < 0.10) kami = true;
+            const maxK = Math.min(4, 2 + Math.floor(this.wave / 150));
+            const chance = Math.min(0.22, 0.10 + this.wave / 2500);
+            if (vivos < maxK && Math.random() < chance) kami = true;
         }
         const types = ['triangulo', 'losango', 'redondo'];
         const type = types[Math.floor(Math.random() * types.length)];
@@ -3831,6 +3892,13 @@ class Game {
             e.kamikaze = true;
             e.kamikazeState = 'flutuando';
             e.kamikazeTriggerAt = Date.now() + 2500 + Math.random() * 3500;
+        }
+        // [v14] ELITES (wave 100+): variantes perigosas com aura e prêmio de
+        // almas — a wave fica READA (não só cheia) e o jackpot dá dopamina
+        if (!this.isGoldenWave && !kami && this.wave >= 100 && Math.random() < 0.06) {
+            const kinds = ['furia', 'veloz', 'tanque'];
+            e.elite = kinds[Math.floor(Math.random() * 3)];
+            if (e.elite === 'tanque') { e.hp *= 2.2; e.maxHp *= 2.2; }
         }
         if (this.isGoldenWave) {
             e.isGolden = true;
@@ -4567,13 +4635,18 @@ class Game {
         
         if (Date.now() - this.lastMeteorSpawn > spawnInterval && this.meteors.length < meteorCount) {
             this.lastMeteorSpawn = Date.now();
-            const targetX = 100 + Math.random() * (this.width - 200);
-            const targetY = 610 + Math.random() * 50;
+            // [v14] FÍSICA DE VERDADE: o impacto é medido na COLUNA DE QUEDA real
+            // (m.x) contra o TOPO do terreno daquela coluna. Antes o alvo era um
+            // Y fixo (610-660) num X que podia estar 100px distante da coluna —
+            // daí cratera e explosão FLUTUANDO NO AR e atravessando plataforma.
+            const fallX = 100 + Math.random() * (this.width - 200);
+            const gy = this.groundBelow(fallX, -600);
+            const targetY = (gy !== null ? gy : 650);
             const damage = this.player.maxHp * (0.20 + intensity * 0.55);
             this.meteors.push({
-                targetX: targetX, targetY: targetY,
-                x: targetX + (Math.random() - 0.5) * 200, y: -100,
-                vy: 3.5 + intensity * 2,
+                targetX: fallX, targetY: targetY,
+                x: fallX, y: -100 - Math.random() * 60,
+                vy: 2.8 + intensity * 1.6, grav: 0.011,
                 state: 'telegraph', timer: Date.now(),
                 damage: damage, rotation: Math.random() * Math.PI * 2,
                 spriteIndex: Math.floor(Math.random() * 3),
@@ -4588,31 +4661,39 @@ class Game {
             if (m.state === 'telegraph') {
                 if (Date.now() - m.timer >= 1500) {
                     m.state = 'falling';
-                    m.y = -100;
+                    // [v14] mantém a altura variável de spawn (não resetava p/ -100 fixo)
                 }
             } else if (m.state === 'falling') {
+                // [v14] aceleração gravitacional de verdade (a rocha CEDE à
+                // gravidade — nada de velocidade constante de elevador)
+                m.vy = Math.min(9, m.vy + (m.grav || 0.011) * window.timeScale);
                 m.y += m.vy * window.timeScale;
                 m.rotation += 0.05 * window.timeScale;
                 m.trail.push({ x: m.x + (Math.random() - 0.5) * 20, y: m.y - 30 });
                 if (m.trail.length > 8) m.trail.shift();
-                
-                if (m.y >= m.targetY) {
+
+                // [v14] o CHÃO de verdade na coluna de queda: se a coluna
+                // atravessa uma torre/plataforma, é LÁ que ele explode
+                const gyNow = this.groundBelow(m.x, -600);
+                const hitY = (gyNow !== null ? gyNow : m.targetY);
+                if (m.y >= hitY - 4) {
+                    m.y = hitY;
                     // Impacto! [v10] CRASH de fliperama + CRATERA de verdade
                     // no chão (que esfria e some em ~10s) + terra ejetada
-                    this.spawnMeteorCrater(m.x, m.targetY, intensity);
-                    this.createExplosion(m.x, m.targetY, '#ff6600', 25, 10, 7, 800);
-                    this.createExplosion(m.x, m.targetY, '#ffaa00', 15, 6, 4, 600);
+                    this.spawnMeteorCrater(m.x, hitY, intensity);
+                    this.createExplosion(m.x, hitY, '#ff6600', 25, 10, 7, 800);
+                    this.createExplosion(m.x, hitY, '#ffaa00', 15, 6, 4, 600);
                     // EJETA de terra/pedra: lascas escuras voando pra cima e pros lados
-                    this.createDebris(m.x, m.targetY - 4, '#3a2e45', 8, 5, 5.5, 900);
-                    this.createDebris(m.x, m.targetY - 4, '#584a66', 5, 3.6, 6.5, 750);
+                    this.createDebris(m.x, hitY - 4, '#3a2e45', 8, 5, 5.5, 900);
+                    this.createDebris(m.x, hitY - 4, '#584a66', 5, 3.6, 6.5, 750);
                     // [v11] IMPACTO PREMIUM: clarão laranja + anel de poeira no
                     // plano do chão + PEDRAS EM BRASA quicando pelo cenário
-                    this.spawnMeteorImpactFX(m.x, m.targetY, intensity);
+                    this.spawnMeteorImpactFX(m.x, hitY, intensity);
                     // [v11] SKID de poeira: terra rasteira correndo pelo chão pros lados
                     for (let sk = 0; sk < 10; sk++) {
                         if (this.particles.length >= this.particleCap) break;
                         const lado = Math.random() < 0.5 ? -1 : 1;
-                        const p2 = ObjectPool.getParticle(m.x + lado * 8, m.targetY - 3,
+                        const p2 = ObjectPool.getParticle(m.x + lado * 8, hitY - 3,
                             'rgba(150,135,175,0.55)', 3 + Math.random() * 4, 460 + Math.random() * 300, 0);
                         p2.vx = lado * (2.2 + Math.random() * 4.5);
                         p2.vy = -(0.3 + Math.random() * 1.4);
@@ -4623,7 +4704,7 @@ class Game {
                         if (this.particles.length >= this.particleCap) break;
                         const ang = -Math.PI / 2 + (Math.random() - 0.5) * 2.2;
                         const sp = 2 + Math.random() * 5;
-                        const p = ObjectPool.getParticle(m.x, m.targetY - 6,
+                        const p = ObjectPool.getParticle(m.x, hitY - 6,
                             Math.random() < 0.4 ? '#ffb763' : '#8a7a9e', 2.5 + Math.random() * 3.5, 520, 0);
                         p.vx = Math.cos(ang) * sp; p.vy = Math.sin(ang) * sp;
                         p.grav = 0.07;
@@ -4636,7 +4717,7 @@ class Game {
                     // Dano ao jogador se estiver perto
                     if (this.player) {
                         const dist = Math.hypot(this.player.x + this.player.width/2 - m.x, 
-                                                this.player.y + this.player.height/2 - m.targetY);
+                                                this.player.y + this.player.height/2 - hitY);
                         if (dist < 70) {
                             this.player.takeDamage(m.damage, false, true, 'meteor');
                             this.meteorHitsThisRun++;
@@ -4645,7 +4726,7 @@ class Game {
                     
                     // Dano a inimigos próximos
                     this.enemies.forEach(e => {
-                        if (!e.dead && Math.hypot(e.x + e.width/2 - m.x, e.y + e.height/2 - m.targetY) < 70) {
+                        if (!e.dead && Math.hypot(e.x + e.width/2 - m.x, e.y + e.height/2 - hitY) < 70) {
                             e.takeDamage(e.maxHp * 0.5);
                         }
                     });
@@ -4753,14 +4834,16 @@ class Game {
     drawMeteors(ctx) {
         this.meteors.forEach(m => {
             if (m.state === 'telegraph') {
-                // Círculo de aviso pulsante no chão
+                // [v14] o aviso fica ONDE a rocha vai cair de verdade (m.x, no
+                // chão daquela coluna) e em ELIPSE achatada — lê como marca NO
+                // SOLO, não como bolha no ar
                 const pulse = 0.3 + Math.sin(Date.now() / 150) * 0.2;
                 ctx.save();
                 ctx.globalAlpha = pulse;
                 ctx.strokeStyle = '#ff4400';
                 ctx.lineWidth = 3;
                 ctx.beginPath();
-                ctx.arc(m.targetX, m.targetY, 40, 0, Math.PI * 2);
+                ctx.ellipse(m.x, m.targetY, 40, 15, 0, 0, Math.PI * 2);
                 ctx.stroke();
                 ctx.globalAlpha = pulse * 0.5;
                 ctx.fillStyle = 'rgba(255,68,0,0.3)';
@@ -4770,7 +4853,7 @@ class Game {
                     ctx.fillStyle = '#ff6600';
                     ctx.font = '20px "Press Start 2P"';
                     ctx.textAlign = 'center';
-                    ctx.fillText('!', m.targetX, m.targetY + 7);
+                    ctx.fillText('!', m.x, m.targetY - 14);
                 }
                 ctx.restore();
             } else if (m.state === 'falling') {
@@ -5021,16 +5104,16 @@ class Game {
                     else this.streakMultiplier = 1;
 
                     if (this.streakCount === 5) {
-                        this.addFloatingText(this.width / 2, 130, '5 STREAK! \u00d72 ' + TEXTS[currentLang].soulsWord, '#ffd700');
+                        this.addFloatingText(this.width / 2, 130, '5 STREAK! ' + TEXTS[currentLang].streakDmg5, '#ffd700');
                         this.addShake(4);
                     }
                     if (this.streakCount === 10) {
-                        this.addFloatingText(this.width / 2, 130, '10 STREAK! \u00d73 ' + TEXTS[currentLang].soulsWord, '#ff6600');
+                        this.addFloatingText(this.width / 2, 130, '10 STREAK! ' + TEXTS[currentLang].streakDmg10, '#ff6600');
                         this.addShake(6);
                         this.hitStop(60);
                     }
                     if (this.streakCount === 20) {
-                        this.addFloatingText(this.width / 2, 130, 'RAMPAGE! \u00d73 ' + TEXTS[currentLang].soulsWord, '#ff2200');
+                        this.addFloatingText(this.width / 2, 130, 'RAMPAGE! ' + TEXTS[currentLang].streakDmg20, '#ff2200');
                         this.addShake(10);
                         this.hitStop(100);
                     }
@@ -5040,6 +5123,13 @@ class Game {
                         this.statGoldenKills++;
                         localStorage.setItem('statGoldenKills', this.statGoldenKills);
                         this.souls += 2;
+                    }
+                    // [v14] ELITE ABATIDO: jackpot de almas (a recompensa por
+                    // atravessar a tempestade de verdade)
+                    if (e.elite) {
+                        this.souls += 3;
+                        if (this.updateSoulsUI) this.updateSoulsUI();
+                        this.addFloatingText(e.x + e.width / 2, e.y - 26, '+3 ' + TEXTS[currentLang].soulsWord, '#38e0ff', 12);
                     }
                     this.addShake(2.5);
                     this.hitStop(30);
@@ -5104,8 +5194,11 @@ class Game {
         const streakEl = document.getElementById('streak-display');
         if (this.streakCount >= 2 && Date.now() - this.streakLastKill < 4000) {
             streakEl.style.display = 'block';
+            // [v14] o HUD mostra o BÔNUS DE DANO ativo (almas + dano)
+            const dK = this.streakDamageMult();
             const multTxt = this.streakMultiplier > 1 ? ` ×${this.streakMultiplier}` : '';
-            streakEl.innerText = `${this.streakCount} STREAK${multTxt}`;
+            const dmgTxt = dK > 1 ? ` ${TEXTS[currentLang].dmgWord} ×${dK}` : '';
+            streakEl.innerText = `${this.streakCount} STREAK${multTxt}${dmgTxt}`;
             
             const timeSinceKill = Date.now() - this.streakLastKill;
             if (timeSinceKill < 200) {
@@ -5121,6 +5214,17 @@ class Game {
         } else {
             streakEl.style.display = 'none';
         }
+    }
+
+    // [v14] SANGUE NOS OLHOS: o streak agora também multiplica o DANO dos
+    // tiros enquanto ativo — matar sem parar = bater mais forte. É a
+    // recompensa por jogar NO LIMITE (e o motor de dopamina do frenesi)
+    streakDamageMult() {
+        if (Date.now() - this.streakLastKill > 4000 || this.streakCount < 3) return 1;
+        if (this.streakCount >= 20) return 1.75;
+        if (this.streakCount >= 10) return 1.5;
+        if (this.streakCount >= 5) return 1.3;
+        return 1.15;
     }
 
     manageThunder() {
@@ -5205,12 +5309,16 @@ class Game {
             this.showUpgradeMenu();
         }
         if (this.enemiesToSpawn > 0) {
-            // [v10] TETO DE INIMIGOS VIVOS (40): a wave faz FILA — a cada abate
-            // entra o próximo. Nem a wave 9999 lota a tela além disso.
+            // [v10] TETO DE INIMIGOS VIVOS: a wave faz FILA — a cada abate
+            // entra o próximo. [v14] o teto SOBE com a wave (até 72): tela
+            // mais CHEIA = mais frenético (e a fila anda muito mais rápido)
             const vivos = this.enemies.filter(e => !e.dead).length;
-            if (vivos < (this.maxEnemiesAlive || 40)) {
-                // fila grande = reposição mais ágil (a wave nunca "trava" esperando)
-                const gap = this.enemiesToSpawn > 20 ? 550 : 1000;
+            if (vivos < this.enemyAliveCap()) {
+                // [v14] fila grande = reposição mais ágil, e o gap ENCURTA
+                // com a wave (550ms -> 160ms): o ritmo sobe junto com o perigo
+                const gap = this.enemiesToSpawn > 20
+                    ? Math.max(160, 550 - Math.floor((this.wave - 20) / 2))
+                    : Math.max(420, 1000 - this.wave * 2);
                 if (Date.now() - this.lastSpawnTime > gap) {
                     this.spawnPatternEnemy(); this.enemiesToSpawn--; this.lastSpawnTime = Date.now();
                 }
@@ -5560,7 +5668,19 @@ class Game {
             }
 
             if (!selectedUpgrade) {
-                let rarityRoll = Math.pow(Math.random(), 1 / Math.max(1, this.luck));
+                // [v14] MARCO: a 1ª carta pós-marco é ÉPICA garantida (o jogo
+                // PAGA a cada 25 waves — dopamina com cereja)
+                if (i === 0 && this.guaranteeEpicNext) {
+                    this.guaranteeEpicNext = false;
+                    selectedUpgrade = this.pickUniqueFrom(UPGRADES_DB.epic, chosenUpgrades);
+                    if (!selectedUpgrade) selectedUpgrade = this.pickUniqueFrom(UPGRADES_DB.uncommon, chosenUpgrades);
+                }
+            }
+
+            if (!selectedUpgrade) {
+                // [v14] a sorte da RARIDADE tem teto 5x (antes: com Sorte 10 a
+                // roleta dava 65% de épica — build degenerada de casino)
+                let rarityRoll = Math.pow(Math.random(), 1 / Math.min(5, Math.max(1, this.luck)));
                 let chosenPool = UPGRADES_DB.common;
                 if (rarityRoll > 0.90) chosenPool = UPGRADES_DB.epic;
                 else if (rarityRoll > 0.65) chosenPool = UPGRADES_DB.uncommon;
@@ -7115,6 +7235,13 @@ class Game {
         // nítido e sem blur — aqui ficou só o cenário vivo de fundo
     }
 
+    // [v14] TETO DINÂMICO de inimigos vivos: sobe com a wave (40 -> 72).
+    // Tela mais cheia = mais frenético E a fila anda mais rápido.
+    enemyAliveCap() { return Math.min(72, 40 + Math.floor(this.wave / 25)); }
+
+    // [v14] TETO DINÂMICO de projéteis inimigos (260 -> 340 no late game)
+    enemyBulletCap() { return Math.min(340, 260 + Math.floor(this.wave / 12)); }
+
     groundBelow(x, fromY) {
         let best = null;
         for (let i = 0; i < this.blocks.length; i++) {
@@ -8383,6 +8510,9 @@ class Player {
         let dmg = this.stats.damage;
         let critou = false;
         if (this.hp < this.maxHp / 2) dmg *= 1.5;
+        // [v14] SANGUE NOS OLHOS: streak ativo multiplica o dano (jogar
+        // freneticamente é RECOMPENSADO — o core do roguelike viciante)
+        if (typeof game !== 'undefined' && game.streakDamageMult) dmg *= game.streakDamageMult();
         if (Math.random() < this.stats.critChance) { dmg *= this.stats.critDmg; critou = true; }
         if (critou && !this.critDealt) {
             this.critDealt = true;
@@ -8401,6 +8531,7 @@ class Player {
             if (Math.random() < mChance) {
                 let offset = (Math.random() - 0.5) * 0.5;
                 let extraDmg = this.stats.damage * 0.6;
+                if (typeof game !== 'undefined' && game.streakDamageMult) extraDmg *= game.streakDamageMult();
                 if (Math.random() < this.stats.critChance) extraDmg *= this.stats.critDmg;
                 let extraStats = { ...bulletStats, isCritShot: false };
                 game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle + offset, extraDmg, true, extraStats));
@@ -8868,6 +8999,8 @@ class Enemy {
     reset(x, y, type) {
         this.x = x; this.y = y; this.width = 35; this.height = 35; this.type = type; this.dead = false;
         this.isGolden = false;
+        this.elite = null;                     // [v14] elite: 'furia' | 'veloz' | 'tanque'
+        this.fireJitter = 0.85 + Math.random() * 0.3; // [v14] cadência própria por inimigo
         // [MIRA PREDITIVA] estimativa de velocidade (px/s) para antecipar o movimento
         this.estVX = 0; this.estVY = 0;
         this._velSampleAt = 0; this._velSampleX = x; this._velSampleY = y;
@@ -8986,8 +9119,11 @@ class Enemy {
                     const dx = (game.player.x + game.player.width/2) - (this.x + this.width/2);
                     const dy = (game.player.y + game.player.height/2) - (this.y + this.height/2);
                     const d = Math.hypot(dx, dy) || 1;
-                    this.kamiVX = (dx / d) * 4.5;
-                    this.kamiVY = (dy / d) * 4.5;
+                    // [v14] o mergulho acelera com a wave (4.5 -> 7.5): no late
+                    // game ouvir o alerta é palavra de emergência
+                    const diveSpd = 4.5 + Math.min(3, game.wave / 600);
+                    this.kamiVX = (dx / d) * diveSpd;
+                    this.kamiVY = (dy / d) * diveSpd;
                 }
                 return;
             } else {
@@ -9101,7 +9237,12 @@ class Enemy {
         let fireRateMod = 1.0;
         if (Date.now() < this.coldUntil) fireRateMod = Math.pow(0.8, this.coldStacks); else this.coldStacks = 0;
 
-        let shootInterval = 2300 / fireRateMod;
+        // [v14] CADÊNCIA SOBE COM A WAVE (2300ms -> ~1250ms) com JITTER próprio
+        // por inimigo (cada um tem seu ritmo — nada de salvas sincronizadas)
+        // + elite FÚRIA (x0.55): a partir da wave 100 a tela é uma tempestade
+        let baseInt = 2300 - Math.min(1050, Math.max(0, game.wave - 30) * 1.5);
+        let shootInterval = baseInt * this.fireJitter / fireRateMod;
+        if (this.elite === 'furia') shootInterval *= 0.55;
         if (this.isGolden) shootInterval = shootInterval / 2;
         shootInterval = Math.max(380, shootInterval); // [v11] piso absoluto: ninguém fica mudo
         this.currentShootInterval = shootInterval;
@@ -9127,7 +9268,9 @@ class Enemy {
         // [v10] teto de projéteis INIMIGOS: com a tela cheia, espera a vez
         // [v11] ...mas conta só os tiros INIMIGOS (os do mago não contam — senão
         // um /perk all deixava TODO MUNDO mudo, chefes inclusive)
-        if (game.enemyBulletCount() >= (game.maxEnemyBullets || 260)) return;
+        // [v14] o teto agora é DINÂMICO (260 -> 340): o late game é uma
+        // tempestade de verdade, mas com freio de sanidade
+        if (game.enemyBulletCount() >= game.enemyBulletCap()) return;
         const lead = Math.max(0, Math.min(1, (game.wave - 25) / 25));
         let alvoX = game.player.x + 15;
         const alvoY = game.player.y + 20;
@@ -9137,7 +9280,11 @@ class Enemy {
         const possibleColors = ['red', '#4da6ff', '#800080', '#00ff00']; 
         const bulletColor = this.isGolden ? '#ffd700' : possibleColors[Math.floor(Math.random() * possibleColors.length)];
         let isBossAtk = (this.type === 'boss' || this.type === 'miniboss');
-        game.bullets.push(ObjectPool.getBullet(this.x + 15, this.y + 15, angle, this.damage, false, { speed: this.isGolden ? 1.4 : 1.0, color: bulletColor, isBossAttack: isBossAtk }));
+        // [v14] VELOCIDADE SOBE COM A WAVE (1.0 -> 2.1) + elite VELOZ (x1.5):
+        // a partir da wave 100 desviar exige ler a tela, não só andar
+        let bSpeed = (this.isGolden ? 1.4 : 1.0) + Math.min(1.1, Math.max(0, game.wave - 30) / 870);
+        if (this.elite === 'veloz') bSpeed *= 1.5;
+        game.bullets.push(ObjectPool.getBullet(this.x + 15, this.y + 15, angle, this.damage, false, { speed: bSpeed, color: bulletColor, isBossAttack: isBossAtk }));
     }
 
     takeDamage(amount, isCrit = false, srcTag = null) {
@@ -9355,6 +9502,39 @@ class Enemy {
     // do tipo. Agora SEMPRE VISÍVEL (o jogador mandou: ela nunca mais some —
     // cheia ou machucada, o tempo todo; o pop ao levar hit continua)
     drawHpBar(ctx) {
+        // [v14] AURA DE ELITE: anel duplo girando + etiqueta — dá pra LER de
+        // longe qual é o perigo daquele inimigo (FÚRIA/VELOZ/TANQUE)
+        if (this.elite) {
+            const colors = { furia: '#ff4d3d', veloz: '#38e0ff', tanque: '#ffb02e' };
+            const ec = colors[this.elite] || '#ffffff';
+            const T = TEXTS[currentLang];
+            const tag = this.elite === 'furia' ? T.eliteFuria : (this.elite === 'veloz' ? T.eliteVeloz : T.eliteTanque);
+            const cx = this.x + this.width / 2, cy = this.y + this.height / 2;
+            const nowMs = Date.now();
+            const rr1 = this.width * 0.95 + Math.sin(nowMs / 200 + this.movePhase) * 3;
+            ctx.save();
+            // anel externo tracejado girando
+            ctx.globalAlpha = 0.55;
+            ctx.strokeStyle = ec;
+            ctx.lineWidth = 1.8;
+            ctx.setLineDash([7, 6]);
+            ctx.lineDashOffset = -(nowMs / 40) % 13;
+            ctx.beginPath(); ctx.arc(cx, cy, rr1, 0, Math.PI * 2); ctx.stroke();
+            // anel interno sólido pulsando
+            ctx.setLineDash([]);
+            ctx.globalAlpha = 0.30 + Math.sin(nowMs / 160 + this.movePhase) * 0.12;
+            ctx.lineWidth = 3.2;
+            ctx.beginPath(); ctx.arc(cx, cy, rr1 - 6, 0, Math.PI * 2); ctx.stroke();
+            // etiqueta
+            ctx.globalAlpha = 0.92;
+            ctx.font = '7px "Press Start 2P", monospace';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = 'rgba(0,0,0,0.65)';
+            ctx.fillText(tag, cx + 1, this.y - 23);
+            ctx.fillStyle = ec;
+            ctx.fillText(tag, cx, this.y - 24);
+            ctx.restore();
+        }
         let hpRatio = Math.max(0, Math.min(1, this.hp / this.maxHp));
         const sinceHit = Date.now() - (this.lastHitTime || 0);
         const barVis = 1;
@@ -9508,7 +9688,7 @@ class Boss extends Enemy {
         // [v10] TETO GLOBAL DE PROJÉTEIS: acima disso o chefe segura a rajada
         // [v11] conta só os tiros INIMIGOS (bug do /perk all: chefe mudo)
         const nEnemyBullets = game.enemyBulletCount();
-        if (nEnemyBullets >= (game.maxEnemyBullets || 260)) return;
+        if (nEnemyBullets >= game.enemyBulletCap()) return;
         const centerX = this.x + this.width/2; const centerY = this.y + this.height/2;
         const lead = Math.max(0, Math.min(1, (game.wave - 25) / 25));
         let alvoX = game.player.x + 15 + game.player.vx * 85 * lead;
@@ -9524,7 +9704,7 @@ class Boss extends Enemy {
             const ringSpeed = projSpeed * 0.72;
             const ringOffset = Math.random() * Math.PI;
             for (let i = 0; i < ringCount; i++) {
-                if (i > 0 && nEnemyBullets + i >= (game.maxEnemyBullets || 260)) break; // [v10/v11] teto inimigo
+                if (i > 0 && nEnemyBullets + i >= game.enemyBulletCap()) break; // [v10/v11/v14] teto dinâmico
                 const angle = ringOffset + (i / ringCount) * Math.PI * 2;
                 game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: ringSpeed, isBossAttack: true, rgbBoss: true }));
             }
@@ -9544,7 +9724,7 @@ class Boss extends Enemy {
 
         const baseAngle = Math.atan2(alvoY - centerY, alvoX - centerX);
         for (let i = 0; i < shotCount; i++) {
-            if (i > 0 && nEnemyBullets + i >= (game.maxEnemyBullets || 260)) break; // [v10/v11] teto inimigo
+            if (i > 0 && nEnemyBullets + i >= game.enemyBulletCap()) break; // [v10/v11/v14] teto dinâmico
             const angle = baseAngle + (i - (shotCount - 1) / 2) * 0.2;
             game.bullets.push(ObjectPool.getBullet(centerX, centerY, angle, this.damage, false, { speed: projSpeed, isBossAttack: true, rgbBoss: true }));
         }
@@ -10618,7 +10798,33 @@ class Particle {
                 ctx.fill();
             }
             ctx.restore();
-        } else { ctx.fillStyle = this.color; ctx.fillRect(this.x, this.y, this.size, this.size); }
+        } else {
+            // [v14] PARTÍCULA DE VERDADE: círculo macio com fade-out (nada de
+            // quadradinho duro de fliperama de 1970) e RISCO de movimento
+            // quando voa rápido — o olho lê "brilho vivo", não "pixel solto"
+            const age = Date.now() - this.spawnTime;
+            const k = Math.max(0, Math.min(1, 1 - age / this.duration));
+            const fade = k > 0.35 ? 1 : k / 0.35;
+            if (fade <= 0.02) return;
+            const sp = Math.hypot(this.vx, this.vy);
+            ctx.save();
+            ctx.globalAlpha = fade;
+            if (sp > 3 && this.size < 5) {
+                ctx.strokeStyle = this.color;
+                ctx.lineWidth = Math.max(1, this.size * 0.8);
+                ctx.lineCap = 'round';
+                ctx.beginPath();
+                ctx.moveTo(this.x, this.y);
+                ctx.lineTo(this.x - this.vx * 0.9, this.y - this.vy * 0.9);
+                ctx.stroke();
+            } else {
+                ctx.fillStyle = this.color;
+                ctx.beginPath();
+                ctx.arc(this.x, this.y, Math.max(0.5, this.size * 0.62), 0, Math.PI * 2);
+                ctx.fill();
+            }
+            ctx.restore();
+        }
     }
 }
 
@@ -12179,11 +12385,22 @@ Game.prototype.finaleTick = function () {
         const dx = ccx - d.x, dy = ccy - d.y;
         const dd = Math.hypot(dx, dy) || 1;
         // SUCÇÃO gravitacional + componente tangencial = espiral de verdade
-        // ([v12] pedaços GRANDES aceleram mais devagar; [v13] vidro é leve e voa)
+        // ([v12] pedaços GRANDES aceleram mais devagar; [v13] vidro é leve e voa;
+        //  [v14] cada pedaço tem CURVATURA PRÓPRIA — as trajetórias divergem,
+        //  o céu inteiro espirala em fios diferentes, não num funil único)
         const massK = d.kind === 'snap' ? 0.82 : (d.kind === 'glass' ? 1.45 : 1);
+        const tang = d.spinK != null ? d.spinK : 0.6;
         const pull = 0.0027 * (dtMs / 16) * (1 + 620 / (dd + 90)) * massK;
-        d.vx += (dx / dd) * pull + (-dy / dd) * pull * 0.6;
-        d.vy += (dy / dd) * pull + (dx / dd) * pull * 0.6;
+        d.vx += (dx / dd) * pull + (-dy / dd) * pull * tang;
+        d.vy += (dy / dd) * pull + (dx / dd) * pull * tang;
+        // [v14] arrasto leve + TETO DE VELOCIDADE que abre perto do horizonte:
+        // o pedaço LÊ como corpo rígido acelerando na maré (não vira borrão
+        // nem "teleporta" pro centro — era isso que lia como física quebrada)
+        const dragK = Math.pow(0.9986, dtMs / 16);
+        d.vx *= dragK; d.vy *= dragK;
+        const spNow = Math.hypot(d.vx, d.vy);
+        const spCap = 6.4 + 300 / (dd + 45);
+        if (spNow > spCap) { d.vx *= spCap / spNow; d.vy *= spCap / spNow; }
         d.px = d.x; d.py = d.y;                        // [v13] posição anterior (rastro do movimento)
         d.x += d.vx * dtMs / 16;
         d.y += d.vy * dtMs / 16;
@@ -12253,7 +12470,9 @@ Game.prototype._finalePrepCity = function (layer, durMs, depth) {
         // [v13] mordidas em CHUNKS GRANDES e LEGÍVEIS: um andar inteiro por
         // mordida, com largura generosa — o prédio perde PAREDES INTEIRAS,
         // não farelo
-        b._floorH = 26 + Math.random() * 16;
+        // [v14] andares mais ALTOS ainda: o pedaço que passa pela tela é
+        // LAJE de verdade (30-48px), legível de longe
+        b._floorH = 30 + Math.random() * 18;
         b._nextBite = 0;
         b._rush = false;
         // [v12] estágio 1 — as RACHADURAS que vão crescer na fachada:
@@ -12375,7 +12594,7 @@ Game.prototype._finaleEatCity = function (dt, k, now) {
                 const yTop = b.top - 12 + b._eraseY;
                 const ch = Math.min(remain, b._floorH * (0.9 + Math.random() * 0.5));
                 const fullW = Math.random() < 0.20; // às vezes a LAJE INTEIRA cede de vez
-                const cw = fullW ? b.w : Math.max(22, b.w * (0.44 + Math.random() * 0.40));
+                const cw = fullW ? b.w : Math.max(24, b.w * (0.50 + Math.random() * 0.42));
                 const cx0 = fullW ? b.x : b.x + Math.random() * Math.max(2, b.w - cw);
                 // recorte DENTADO, clipado na faixa deste prédio (não come o vizinho)
                 g.save();
@@ -12409,8 +12628,8 @@ Game.prototype._finaleEatCity = function (dt, k, now) {
                 const nD = far ? 1 : (1 + (Math.random() < 0.45 ? 1 : 0));
                 for (let d = 0; d < nD && f.debris.length < 240; d++) {
                     this._finaleSpawnDebris(off + cx0 + Math.random() * sw, yTop + Math.random() * ch, cx, cy,
-                        far ? ['#231a38', '#0c0916'] : ['#171021', '#050308', '#231a38'],
-                        far ? 5 + Math.random() * 8 : 7 + Math.random() * 12,
+                        far ? ['#2c2144', '#170f28'] : ['#2b2140', '#1c142c', '#120b1e'],
+                        far ? 6 + Math.random() * 8 : 9 + Math.random() * 13,
                         far ? 0.15 : 0.35, !far);
                 }
                 // cacos de janela (o vidro arcano estilhaçando)
@@ -12503,7 +12722,7 @@ Game.prototype._finaleRoofOff = function (g, pristine, b, off, cx, cy, far, now)
     }
     for (let i = 0; i < (far ? 1 : 2) && f.debris.length < 240; i++) {
         this._finaleSpawnDebris(off + b.x + Math.random() * b.w, b.top + b._roofH - Math.random() * 10,
-            cx, cy, far ? ['#231a38', '#0c0916'] : ['#171021', '#050308'],
+            cx, cy, far ? ['#2c2144', '#170f28'] : ['#2b2140', '#1c142c'],
             6 + Math.random() * 10, 0.2, !far);
     }
     // o estrondo do telhado (throttle pra não virar metralhadora)
@@ -12516,6 +12735,8 @@ Game.prototype._finaleRoofOff = function (g, pristine, b, off, cx, cy, far, now)
 // [v12] pedaço de mundo sugado em ESPIRAL pro buraco. TIJOLO DE VERDADE:
 // face com gradiente, bisel claro em cima e sombra embaixo (pré-computado
 // no spawn — desenhar é só 2 fillRect + 2 linhas por tijolo)
+// [v14] tijolos MAIORES e com paleta mais clara na camada da frente (o
+// farelo quase-preto não lia contra o céu) + curvatura própria de espiral
 Game.prototype._finaleSpawnDebris = function (x, y, cx, cy, colors, sz, litK, withWindows) {
     const f = this.finale;
     if (!f || f.debris.length >= 240) return;
@@ -12527,23 +12748,30 @@ Game.prototype._finaleSpawnDebris = function (x, y, cx, cy, colors, sz, litK, wi
     const cl = (v, a) => Math.max(0, Math.min(255, Math.round(v + a)));
     f.debris.push({
         x: x, y: y, px: x, py: y, delay: 0,
-        vx: dx / dd * (0.5 + Math.random() * 0.9),
-        vy: dy / dd * (0.5 + Math.random() * 0.9) - 0.5,
+        vx: dx / dd * (0.5 + Math.random() * 0.9) + (Math.random() - 0.5) * 0.4,
+        vy: dy / dd * (0.5 + Math.random() * 0.9) - 0.5 + (Math.random() - 0.5) * 0.3,
         rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.14,
+        spinK: 0.42 + Math.random() * 0.4,
         w: sz, h: sz * (0.45 + Math.random() * 0.4),
         lit: withWindows && Math.random() < litK,
         hot: Math.random() < 0.14, // tijolos aquecidos pelo disco de acreção
         color: colHex,
-        cTop: 'rgb(' + cl(r, 26) + ',' + cl(gg, 24) + ',' + cl(b2, 34) + ')',
+        cTop: 'rgb(' + cl(r, 32) + ',' + cl(gg, 28) + ',' + cl(b2, 40) + ')',
         cBot: 'rgb(' + cl(r, -18) + ',' + cl(gg, -16) + ',' + cl(b2, -10) + ')',
         life: 2200 + Math.random() * 1400
     });
 };
 
-// [v12] PEDANÇO DE MUNDO DE VERDADE: um retângulo de PIXELS de um canvas
+// [v12→v14] PEDANÇO DE MUNDO DE VERDADE: um recorte de PIXELS de um canvas
 // real (cidade pristina / plataforma pristina) que arranca e voa pro buraco.
-// É a resposta ao "não quero partículas saindo do nada": o que voa é a
-// PRÓPRIA parede/telhado/laje, com janelas, runas e tijolos visíveis.
+// [v14] O PEDANÇO AGORA É PRÉ-RENDERIZADO no spawn com:
+//   (1) contorno DENTADO — o pedaço tem a FORMA da mordida que o arrancou
+//       (nada de retângulo clínico de cartolina);
+//   (2) VÉU DE LUAR VIOLETA + quinas iluminadas — as fachadas são quase
+//       PRETAS (#171021→#050308): sem isso o pedaço SUMIA contra o céu
+//       escuro (era essa a leitura de "confete horrível");
+//   (3) sombra própria na base — lê como MASSA caindo, não como sprite.
+// Por frame continua sendo UM drawImage (o pré-render é uma vez, no spawn).
 Game.prototype._finaleSpawnSnap = function (x, y, src, sx, sy, sw, sh, opts) {
     const f = this.finale;
     if (!f || !src || f.debris.length >= 240 || sw < 4 || sh < 3) return;
@@ -12553,14 +12781,71 @@ Game.prototype._finaleSpawnSnap = function (x, y, src, sx, sy, sw, sh, opts) {
     const dx = cx - mx, dy = cy - my;
     const dd = Math.hypot(dx, dy) || 1;
     const drift = o.drift != null ? o.drift : (0.10 + Math.random() * 0.28);
+
+    // ---- pré-render do pedaço (uma vez; forma + luz + volume) ----
+    let cv = null;
+    try {
+        const W = Math.max(1, Math.round(sw)), H = Math.max(1, Math.round(sh));
+        cv = document.createElement('canvas');
+        cv.width = W; cv.height = H;
+        const cg = cv.getContext('2d');
+        // polígono dentado: topo/fundo com dentes de laje, laterais tortas
+        const t = Math.max(2, Math.round(sw / 14));
+        const jx = Math.min(4, sw * 0.16), jy = Math.min(3.2, Math.max(1.2, sh * 0.26));
+        const jag = [];
+        jag.push([Math.random() * jx * 0.5, Math.random() * jy * 0.5]);
+        for (let i = 1; i <= t; i++) jag.push([sw * i / t + (Math.random() - 0.5) * jx, Math.random() * jy]);
+        jag.push([sw - Math.random() * jx * 0.4, sh * (0.3 + Math.random() * 0.35)]);
+        jag.push([sw - Math.random() * jx * 0.5, sh - Math.random() * jy]);
+        for (let i = t; i >= 0; i--) jag.push([sw * i / t + (Math.random() - 0.5) * jx, sh - Math.random() * jy * 1.4]);
+        jag.push([Math.random() * jx * 0.5, sh * (0.35 + Math.random() * 0.35)]);
+        const tracePath = (g2) => {
+            g2.beginPath();
+            g2.moveTo(jag[0][0], jag[0][1]);
+            for (let i = 1; i < jag.length; i++) g2.lineTo(jag[i][0], jag[i][1]);
+            g2.closePath();
+        };
+        cg.save();
+        tracePath(cg); cg.clip();
+        cg.drawImage(src, sx, sy, sw, sh, 0, 0, sw, sh);
+        // véu de luar (a fachada quase preta PRECISA de luz pra ler no escuro)
+        const bk = o.bright != null ? o.bright : 1;
+        cg.globalCompositeOperation = 'lighter';
+        const lg = cg.createLinearGradient(0, 0, sw * 0.8, sh);
+        lg.addColorStop(0, 'rgba(148,128,205,' + (0.17 * bk).toFixed(3) + ')');
+        lg.addColorStop(0.45, 'rgba(96,84,140,' + (0.06 * bk).toFixed(3) + ')');
+        lg.addColorStop(1, 'rgba(50,38,95,0)');
+        cg.fillStyle = lg;
+        cg.fillRect(0, 0, sw, sh);
+        cg.globalCompositeOperation = 'source-over';
+        // sombra interna na base (volume de massa)
+        const sgd = cg.createLinearGradient(0, sh * 0.55, 0, sh);
+        sgd.addColorStop(0, 'rgba(0,0,0,0)');
+        sgd.addColorStop(1, 'rgba(0,0,0,0.30)');
+        cg.fillStyle = sgd;
+        cg.fillRect(0, 0, sw, sh);
+        cg.restore();
+        // quina pegando luz (o recorte "respira")
+        cg.save();
+        tracePath(cg);
+        cg.strokeStyle = 'rgba(205,190,250,0.30)';
+        cg.lineWidth = 1.1;
+        cg.stroke();
+        cg.restore();
+    } catch (err) { cv = null; }
+
+    // [v14] rotação com INÉRCIA DE MASSA: laje grande gira DEVAGAR, tijolo
+    // pequeno gira rápido (antes tudo girava igual — lia como confete)
+    const massRot = (Math.random() - 0.5) * 0.085 * (44 / Math.max(16, sw));
     f.debris.push({
         x: mx, y: my, px: mx, py: my, delay: o.delay || 0,
-        vx: (dx / dd) * drift + (Math.random() - 0.5) * 0.25,
-        vy: (dy / dd) * drift - (o.up || 0) + (Math.random() - 0.5) * 0.25,
-        rot: (Math.random() - 0.5) * 0.16,
-        vrot: (Math.random() - 0.5) * (o.spin != null ? o.spin : 0.035) * 2,
+        vx: (dx / dd) * drift + (Math.random() - 0.5) * 0.55,
+        vy: (dy / dd) * drift - (o.up || 0) + (Math.random() - 0.5) * 0.35,
+        rot: (Math.random() - 0.5) * 0.14,
+        vrot: massRot * (o.spin != null ? (o.spin / 0.045) : 1),
         kind: 'snap',
-        snap: src, sxi: sx, syi: sy, sw: sw, sh: sh,
+        snap: src, sxi: sx, syi: sy, sw: sw, sh: sh, cv: cv,
+        spinK: 0.35 + Math.random() * 0.42,   // [v14] curvatura de espiral própria
         w: sw, h: sh,
         life: 2700 + Math.random() * 1300
     });
@@ -12605,6 +12890,7 @@ Game.prototype._finaleSpawnGlass = function (x, y, cx, cy, violet) {
         vx: (dx / dd) * (0.3 + Math.random() * 0.8) + (Math.random() - 0.5) * 1.7,
         vy: (dy / dd) * (0.3 + Math.random() * 0.8) - 0.45 + (Math.random() - 0.5) * 1.3,
         rot: Math.random() * 6.28, vrot: (Math.random() - 0.5) * 0.55,
+        spinK: 0.5 + Math.random() * 0.45,
         kind: 'glass', w: 2.6 + Math.random() * 3.6, h: 1.1 + Math.random() * 1.9,
         color: violet ? '#d7b6ff' : (Math.random() < 0.5 ? '#cfe2ff' : '#e8dcff'),
         life: 1300 + Math.random() * 800, glint: Math.random() * 6.28
@@ -12656,17 +12942,18 @@ Game.prototype._finaleCellBite = function (c, cx, cy) {
     const f = this.finale;
     const g = this.terrainCanvas.getContext('2d');
     this._finaleJagErase(g, c.x, c.y, c.w, c.h, Math.max(3, Math.round(c.w / 13)));
-    // o pedaço que voa (pixels reais do cenário)
+    // o pedaço que voa (pixels reais do cenário) — [v14] com o pré-render
+    // dentado + luz (o cenário é mais claro que a cidade: véu mais fraco)
     if (f.terrainPristine && c.w >= 12 && c.h >= 10) {
         const hang = Math.random() < 0.28 ? 60 + Math.random() * 200 : 0;
         this._finaleSpawnSnap(c.x, c.y, f.terrainPristine,
             Math.round(c.x), Math.round(c.y), Math.round(c.w), Math.round(c.h),
-            { up: 0.1 + Math.random() * 0.4, spin: 0.045, drift: 0.14 + Math.random() * 0.2, delay: hang });
+            { up: 0.1 + Math.random() * 0.4, spin: 0.045, drift: 0.14 + Math.random() * 0.2, delay: hang, bright: 0.55 });
         if (c.w > 52 && Math.random() < 0.6) {
             // célula grande: um calhau a mais racha dela
             this._finaleSpawnSnap(c.x + c.w * 0.5, c.y, f.terrainPristine,
                 Math.round(c.x + c.w * 0.45), Math.round(c.y), Math.round(c.w * 0.5), Math.round(c.h),
-                { up: 0.2 + Math.random() * 0.4, spin: 0.05, drift: 0.2, delay: 90 + Math.random() * 160 });
+                { up: 0.2 + Math.random() * 0.4, spin: 0.05, drift: 0.2, delay: 90 + Math.random() * 160, bright: 0.55 });
         }
     }
     // tijolinhos soltos (POUCOS: o SLAB de cenário é a estrela da mordida)
@@ -13054,7 +13341,7 @@ Game.prototype.drawFinale = function (g) {
             const stretch = Math.min(2.2, 1 + Math.max(0, 1 - dd / (bhR * 0.85)) * 1.9);
             g.save();
             g.globalAlpha = k;
-            if (d.kind === 'snap' && d.snap) {
+            if (d.kind === 'snap' && (d.cv || d.snap)) {
                 // [v13] RASTRO do pedanço: a posição anterior dele fica um
                 // instante no ar (motion blur de corpo rígido — vende velocidade)
                 const spd = Math.hypot(d.x - (d.px != null ? d.px : d.x), d.y - (d.py != null ? d.py : d.y));
@@ -13063,17 +13350,20 @@ Game.prototype.drawFinale = function (g) {
                     g.globalAlpha = k * 0.16;
                     g.translate(d.px, d.py);
                     g.rotate(d.rot);
-                    g.drawImage(d.snap, d.sxi, d.syi, d.sw, d.sh, -d.sw / 2, -d.sh / 2, d.sw, d.sh);
+                    if (d.cv) g.drawImage(d.cv, -d.sw / 2, -d.sh / 2, d.sw, d.sh);
+                    else g.drawImage(d.snap, d.sxi, d.syi, d.sw, d.sh, -d.sw / 2, -d.sh / 2, d.sw, d.sh);
                     g.restore();
                 }
-                // PEDANÇO DE MUNDO: os PIXELS de verdade (parede com janelas /
-                // telhado / lajota do palco), esticados NO EIXO do buraco
+                // [v14] PEDANÇO DE MUNDO: o recorte DENTADO pré-renderizado
+                // (pixels de verdade + luar + quinas + volume), esticado no
+                // eixo da maré perto do horizonte
                 const ang = Math.atan2(ccy - d.y, ccx - d.x);
                 g.translate(d.x, d.y);
                 g.rotate(ang);
                 g.scale(stretch, 1 / Math.sqrt(stretch));
                 g.rotate(-ang + d.rot);
-                g.drawImage(d.snap, d.sxi, d.syi, d.sw, d.sh, -d.sw / 2, -d.sh / 2, d.sw, d.sh);
+                if (d.cv) g.drawImage(d.cv, -d.sw / 2, -d.sh / 2, d.sw, d.sh);
+                else g.drawImage(d.snap, d.sxi, d.syi, d.sw, d.sh, -d.sw / 2, -d.sh / 2, d.sw, d.sh);
             } else if (d.kind === 'glass') {
                 // [v13] CACO DE VIDRO: lasca fina com glint piscando
                 g.translate(d.x, d.y);
@@ -13185,7 +13475,7 @@ Game.prototype.drawFinale = function (g) {
         for (const wb of f.recentBites) {
             const k = 1 - (nowWb - wb.t0) / 620;
             if (k <= 0) continue;
-            g.globalAlpha = k * 0.30;
+            g.globalAlpha = k * 0.22;
             const wg = g.createRadialGradient(wb.x, wb.y + wb.h / 2, 1, wb.x, wb.y + wb.h / 2, 26 + wb.h);
             wg.addColorStop(0, 'rgba(178,128,255,0.55)');
             wg.addColorStop(1, 'rgba(120,70,230,0)');
